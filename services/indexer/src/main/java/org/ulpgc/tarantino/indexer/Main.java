@@ -16,5 +16,6 @@ public class Main {
         Startup.start(config, connections, List.of(), routes -> {
         });
         Startup.retry("create the book state indexes", () -> MongoIndexes.ensureStateIndexes(connections.database()));
+        Thread.ofPlatform().name("index-batches").start(IndexerFactory.indexWorker(config, connections));
     }
 }
