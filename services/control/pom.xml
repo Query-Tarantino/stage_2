@@ -16,4 +16,11 @@
         <exec.mainClass>org.ulpgc.tarantino.control.Main</exec.mainClass>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.ulpgc.tarantino</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>

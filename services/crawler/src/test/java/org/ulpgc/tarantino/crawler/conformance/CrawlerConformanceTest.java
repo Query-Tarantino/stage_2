@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
-import org.ulpgc.tarantino.crawler.CrawlerConfig;
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
+import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.crawler.CrawlerFactory;
 import org.ulpgc.tarantino.crawler.model.book.BookText;
 import org.ulpgc.tarantino.crawler.model.book.GutenbergText;
@@ -13,6 +14,7 @@ import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,7 +54,7 @@ class CrawlerConformanceTest {
     }
 
     private static DatalakeStorage datalake(Path root) {
-        return CrawlerFactory.datalake(new CrawlerConfig(root, null));
+        return CrawlerFactory.datalake(TarantinoConfig.from(Map.of("TARANTINO_DATALAKE", root.toString()), TarantinoService.CRAWLER));
     }
 
     private static String name(JsonNode testCase) {

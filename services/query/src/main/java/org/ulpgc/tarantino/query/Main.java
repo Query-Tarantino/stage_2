@@ -1,5 +1,7 @@
 package org.ulpgc.tarantino.query;
 
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
+import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.query.commands.SearchCommand;
 import org.ulpgc.tarantino.query.model.BookMetadata;
 import org.ulpgc.tarantino.query.model.SearchResult;
@@ -7,7 +9,7 @@ import org.ulpgc.tarantino.query.model.SearchResult;
 public class Main {
 
     public static void main(String[] args) {
-        SearchCommand search = QueryFactory.searchCommand(QueryConfig.fromEnvironment());
+        SearchCommand search = QueryFactory.searchCommand(TarantinoConfig.fromEnvironment(TarantinoService.QUERY));
         print(search.execute(String.join(" ", args)));
     }
 

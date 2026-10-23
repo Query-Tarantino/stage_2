@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
-import org.ulpgc.tarantino.indexer.IndexerConfig;
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
+import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.indexer.IndexerFactory;
 import org.ulpgc.tarantino.indexer.model.book.Book;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
@@ -13,6 +14,7 @@ import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -55,8 +57,8 @@ class IndexerConformanceTest {
         return Files.writeString(file, content);
     }
 
-    private static IndexerConfig config(Path datalake) {
-        return new IndexerConfig(datalake, "mongodb://localhost:27017", Path.of("workload"));
+    private static TarantinoConfig config(Path datalake) {
+        return TarantinoConfig.from(Map.of("TARANTINO_DATALAKE", datalake.toString()), TarantinoService.INDEXER);
     }
 
     private static String name(JsonNode testCase) {

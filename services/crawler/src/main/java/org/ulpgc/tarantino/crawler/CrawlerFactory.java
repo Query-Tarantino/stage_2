@@ -1,5 +1,6 @@
 package org.ulpgc.tarantino.crawler;
 
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.GutenbergHttpDownloader;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.LocalMirrorDownloader;
@@ -12,15 +13,15 @@ public final class CrawlerFactory {
     private CrawlerFactory() {
     }
 
-    public static IngestBookCommand ingestCommand(CrawlerConfig config) {
+    public static IngestBookCommand ingestCommand(TarantinoConfig config) {
         return new IngestBookCommand(downloader(config), datalake(config));
     }
 
-    public static BookDownloader downloader(CrawlerConfig config) {
-        return config.mirror() == null ? new GutenbergHttpDownloader() : new LocalMirrorDownloader(config.mirror());
+    public static BookDownloader downloader(TarantinoConfig config) {
+        return config.mirror().<BookDownloader>map(LocalMirrorDownloader::new).orElseGet(GutenbergHttpDownloader::new);
     }
 
-    public static DatalakeStorage datalake(CrawlerConfig config) {
+    public static DatalakeStorage datalake(TarantinoConfig config) {
         return new BatchBasedDatalakeAdapter(config.datalake());
     }
 }

@@ -1,5 +1,6 @@
 package org.ulpgc.tarantino.control;
 
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
 
 import java.io.IOException;
@@ -7,24 +8,18 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 
 public final class ControlFactory {
-
-    private static final String DEFAULT_CANDIDATES = "sample_ids.txt";
 
     private ControlFactory() {
     }
 
-    /**
-     * The ids of the workload file given, in order. Without one, every book of the local mirror in ascending id
-     * order when there is a mirror, or else the sample dataset.
-     */
-    public static List<Integer> candidates(ControlConfig config, Optional<String> file) {
-        if (file.isEmpty() && config.mirror() != null) {
-            return new LocalMirror(config.mirror()).bookIds();
+    /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
+    public static List<Integer> candidates(TarantinoConfig config) {
+        if (TarantinoConfig.MIRROR_CANDIDATES.equals(config.candidates())) {
+            return new LocalMirror(config.mirror().orElseThrow()).bookIds();
         }
-        return ids(config.workload().resolve(file.orElse(DEFAULT_CANDIDATES)));
+        return ids(config.workload().resolve(config.candidates()));
     }
 
     private static List<Integer> ids(Path file) {
