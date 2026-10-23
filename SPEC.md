@@ -566,7 +566,7 @@ In Java, step 7 is `score += (1 + Math.log(tf)) * Math.log((double) N / df)` for
 
 ## 8. Failure matrix
 
-Each row is an F3 test with its script in `scripts/recovery/<nn>-<row>.sh`. The script brings the stack up, causes the crash as the last column says, restarts what went down without `TARANTINO_CRASH_AT` and checks that the book ends `PUBLISHED`, that `/search` finds it exactly once and that no book is in two published batches of the current generation. It leaves its run in `benchmarks/runs/<run_id>/`, with the recovery time.
+Each row is an F3 test with its script in `scripts/recovery/<nn>-<row>.sh`. The script brings the stack up, causes the crash as the last column says, restarts what went down without `TARANTINO_CRASH_AT` and checks that the book ends `PUBLISHED`, that `/search` finds it exactly once after `query` refreshes (§6.7) and that no book is in two published batches of the current generation. It leaves its run in `benchmarks/runs/<run_id>/`, with the recovery time.
 
 | What goes down | What is left | Who notices | How it recovers | How to cause it |
 | --- | --- | --- | --- | --- |
