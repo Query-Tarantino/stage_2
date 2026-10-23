@@ -3,7 +3,7 @@ package org.ulpgc.tarantino.query.adapters.index.mongo;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
-import org.ulpgc.tarantino.query.adapters.mongo.MongoDatabases;
+import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.query.ports.InvertedIndexReader;
 
 import java.util.Optional;

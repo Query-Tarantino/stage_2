@@ -1,4 +1,4 @@
-package org.ulpgc.tarantino.indexer.adapters.mongo;
+package org.ulpgc.tarantino.common.mongo;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;

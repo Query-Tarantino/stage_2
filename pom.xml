@@ -42,12 +42,6 @@
                 <type>test-jar</type>
             </dependency>
             <dependency>
-                <groupId>org.ulpgc.tarantino</groupId>
-                <artifactId>indexer</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-            <dependency>
                 <groupId>org.mongodb</groupId>
                 <artifactId>mongodb-driver-sync</artifactId>
                 <version>${mongodb-driver.version}</version>

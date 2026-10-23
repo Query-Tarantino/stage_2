@@ -10,8 +10,8 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
 import com.mongodb.client.model.WriteModel;
 import org.bson.Document;
+import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.indexer.adapters.index.PendingPostings;
-import org.ulpgc.tarantino.indexer.adapters.mongo.MongoDatabases;
 import org.ulpgc.tarantino.indexer.model.terms.TermOccurrences;
 import org.ulpgc.tarantino.indexer.ports.datamarts.InvertedIndexStorage;
 

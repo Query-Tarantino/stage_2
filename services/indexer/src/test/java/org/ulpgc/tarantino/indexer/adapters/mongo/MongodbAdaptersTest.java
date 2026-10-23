@@ -5,6 +5,8 @@ import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.ulpgc.tarantino.common.mongo.MongoDatabases;
+import org.ulpgc.tarantino.common.mongo.TemporaryMongoDatabase;
 import org.ulpgc.tarantino.indexer.adapters.index.mongo.MongodbIndexAdapter;
 import org.ulpgc.tarantino.indexer.adapters.metadata.MongodbMetadataAdapter;
 import org.ulpgc.tarantino.indexer.model.book.Book;

@@ -1,4 +1,4 @@
-package org.ulpgc.tarantino.indexer.adapters.mongo;
+package org.ulpgc.tarantino.common.mongo;
 
 import org.junit.jupiter.api.Test;
 

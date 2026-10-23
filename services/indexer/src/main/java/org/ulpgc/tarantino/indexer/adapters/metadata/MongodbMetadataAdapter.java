@@ -6,7 +6,7 @@ import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.ReplaceOptions;
 import org.bson.Document;
-import org.ulpgc.tarantino.indexer.adapters.mongo.MongoDatabases;
+import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.indexer.model.book.Book;
 import org.ulpgc.tarantino.indexer.ports.datamarts.MetadataStorage;
 
