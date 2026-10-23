@@ -22,6 +22,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <mongodb-driver.version>5.13.0</mongodb-driver.version>
+        <hazelcast.version>5.7.0</hazelcast.version>
         <jackson.version>2.22.3</jackson.version>
         <junit.version>5.11.4</junit.version>
         <slf4j.version>2.0.20</slf4j.version>
@@ -47,11 +48,21 @@
                 <version>${mongodb-driver.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.hazelcast</groupId>
+                <artifactId>hazelcast</artifactId>
+                <version>${hazelcast.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
