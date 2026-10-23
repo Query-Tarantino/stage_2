@@ -1,5 +1,7 @@
 package org.ulpgc.tarantino.common.http;
 
+import com.hazelcast.client.HazelcastClientOfflineException;
+import com.mongodb.MongoTimeoutException;
 import io.javalin.Javalin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +61,19 @@ class ProblemDetailsTest {
     }
 
     @Test
+    void answersMongoOrHazelcastNotAnsweringAsUnavailable() throws IOException, InterruptedException {
+        HttpResponse<String> mongo = server.get("/mongo-timeout");
+        HttpResponse<String> hazelcast = server.get("/hazelcast-offline");
+
+        assertEquals(503, mongo.statusCode());
+        assertEquals(Optional.of("5"), mongo.headers().firstValue("Retry-After"));
+        assertEquals("{\"type\":\"about:blank\",\"title\":\"Service Unavailable\",\"status\":503,"
+                + "\"code\":\"DEPENDENCY_UNAVAILABLE\",\"detail\":\"MongoDB does not answer\"}", mongo.body());
+        assertEquals(503, hazelcast.statusCode());
+        assertEquals(Optional.of("5"), hazelcast.headers().firstValue("Retry-After"));
+    }
+
+    @Test
     void answersAnythingUnexpectedWithoutCode() throws IOException, InterruptedException {
         HttpResponse<String> response = server.get("/bug");
 
@@ -73,6 +88,12 @@ class ProblemDetailsTest {
         });
         app.get("/book", context -> {
             throw new ProblemException(ProblemCode.BOOK_NOT_FOUND, "book_id", "Book 84 not found");
+        });
+        app.get("/mongo-timeout", context -> {
+            throw new MongoTimeoutException("Timed out waiting for a server");
+        });
+        app.get("/hazelcast-offline", context -> {
+            throw new HazelcastClientOfflineException();
         });
         app.get("/mongo", context -> {
             throw new ProblemException(ProblemCode.DEPENDENCY_UNAVAILABLE, "MongoDB does not answer");
