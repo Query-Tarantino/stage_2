@@ -1,8 +1,8 @@
 package org.ulpgc.tarantino.crawler.model.book;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -41,6 +41,6 @@ class GutenbergTextTest {
     void failsWhenMarkersAreMissing() {
         DownloadException error = assertThrows(DownloadException.class, () -> GutenbergText.bookText(1, "no markers"));
 
-        assertEquals(FailureReason.MISSING_MARKERS, error.reason());
+        assertEquals(BookErrorCode.MISSING_MARKERS, error.reason());
     }
 }

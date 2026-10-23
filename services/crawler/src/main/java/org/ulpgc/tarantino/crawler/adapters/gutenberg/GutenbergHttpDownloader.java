@@ -1,7 +1,7 @@
 package org.ulpgc.tarantino.crawler.adapters.gutenberg;
 
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 
 import java.io.IOException;
@@ -71,7 +71,7 @@ public class GutenbergHttpDownloader implements BookDownloader {
             }
             Duration wait = retryAfter(response).orElse(FIRST_WAIT.multipliedBy(1L << retries));
             if (retries == MAX_RETRIES || wait.compareTo(LONGEST_WAIT) > 0) {
-                throw new DownloadException(FailureReason.NETWORK_ERROR,
+                throw new DownloadException(BookErrorCode.NETWORK_ERROR,
                         "HTTP " + response.statusCode() + " for book " + bookId + ": the mirror is busy");
             }
             pauseTheMirror(wait);
@@ -85,7 +85,7 @@ public class GutenbergHttpDownloader implements BookDownloader {
                 pause.sleep(left);
             } catch (InterruptedException e) {
                 restoreInterruption(e);
-                throw new DownloadException(FailureReason.NETWORK_ERROR, "Interrupted waiting for the mirror, book " + bookId);
+                throw new DownloadException(BookErrorCode.NETWORK_ERROR, "Interrupted waiting for the mirror, book " + bookId);
             }
         }
     }
@@ -99,7 +99,7 @@ public class GutenbergHttpDownloader implements BookDownloader {
         HttpResponse<String> response = send(uri, bookId);
         for (int redirects = 0; REDIRECTS.contains(response.statusCode()); redirects++) {
             if (redirects == MAX_REDIRECTS) {
-                throw new DownloadException(FailureReason.NETWORK_ERROR, "Too many redirects for book " + bookId);
+                throw new DownloadException(BookErrorCode.NETWORK_ERROR, "Too many redirects for book " + bookId);
             }
             response = send(redirection(response, bookId), bookId);
         }
@@ -108,10 +108,10 @@ public class GutenbergHttpDownloader implements BookDownloader {
 
     private static URI redirection(HttpResponse<String> response, int bookId) {
         URI target = response.headers().firstValue("Location").flatMap(location -> resolved(response.uri(), location))
-                .orElseThrow(() -> new DownloadException(FailureReason.NETWORK_ERROR,
+                .orElseThrow(() -> new DownloadException(BookErrorCode.NETWORK_ERROR,
                         "HTTP " + response.statusCode() + " without a valid Location for book " + bookId));
         if (!response.uri().getHost().equalsIgnoreCase(target.getHost())) {
-            throw new DownloadException(FailureReason.NETWORK_ERROR,
+            throw new DownloadException(BookErrorCode.NETWORK_ERROR,
                     "Book " + bookId + " was redirected to " + target.getHost() + ", which is not the mirror");
         }
         return target;
@@ -131,7 +131,7 @@ public class GutenbergHttpDownloader implements BookDownloader {
             return client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (IOException | InterruptedException e) {
             restoreInterruption(e);
-            throw new DownloadException(FailureReason.NETWORK_ERROR, "Could not download book " + bookId + ": " + e);
+            throw new DownloadException(BookErrorCode.NETWORK_ERROR, "Could not download book " + bookId + ": " + e);
         }
     }
 
@@ -162,8 +162,8 @@ public class GutenbergHttpDownloader implements BookDownloader {
     private static String body(HttpResponse<String> response, int bookId) {
         return switch (response.statusCode()) {
             case 200 -> response.body();
-            case 404 -> throw new DownloadException(FailureReason.NOT_FOUND, "Book " + bookId + " not found");
-            default -> throw new DownloadException(FailureReason.NETWORK_ERROR, "HTTP " + response.statusCode() + " for book " + bookId);
+            case 404 -> throw new DownloadException(BookErrorCode.NOT_FOUND, "Book " + bookId + " not found");
+            default -> throw new DownloadException(BookErrorCode.NETWORK_ERROR, "HTTP " + response.statusCode() + " for book " + bookId);
         };
     }
 

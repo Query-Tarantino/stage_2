@@ -1,7 +1,7 @@
 package org.ulpgc.tarantino.crawler.model.book;
 
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -26,6 +26,6 @@ public final class GutenbergText {
     private static MatchResult marker(Pattern marker, String text, int from, int bookId) {
         return marker.matcher(text).region(from, text.length()).results()
                 .findFirst()
-                .orElseThrow(() -> new DownloadException(FailureReason.MISSING_MARKERS, "Missing Gutenberg markers in book " + bookId));
+                .orElseThrow(() -> new DownloadException(BookErrorCode.MISSING_MARKERS, "Missing Gutenberg markers in book " + bookId));
     }
 }

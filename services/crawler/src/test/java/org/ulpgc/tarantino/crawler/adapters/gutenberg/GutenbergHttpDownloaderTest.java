@@ -5,8 +5,8 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -62,20 +62,20 @@ class GutenbergHttpDownloaderTest {
     void mapsMissingBooksToNotFound() {
         answers.add(new Answer(404, Map.of()));
 
-        assertEquals(FailureReason.NOT_FOUND, failure(1342));
+        assertEquals(BookErrorCode.NOT_FOUND, failure(1342));
     }
 
     @Test
     void mapsServerErrorsToNetworkErrorWithoutRetrying() {
         answers.add(new Answer(500, Map.of()));
 
-        assertEquals(FailureReason.NETWORK_ERROR, failure(1342));
+        assertEquals(BookErrorCode.NETWORK_ERROR, failure(1342));
         assertEquals(1, requests.size());
     }
 
     @Test
     void mapsUnreachableServersToNetworkError() {
-        assertEquals(FailureReason.NETWORK_ERROR,
+        assertEquals(BookErrorCode.NETWORK_ERROR,
                 assertThrows(DownloadException.class, () -> downloader("http://localhost:1/%d/%d.txt").rawText(1)).reason());
     }
 
@@ -121,7 +121,7 @@ class GutenbergHttpDownloaderTest {
             answers.add(new Answer(429, Map.of("Retry-After", "0")));
         }
 
-        assertEquals(FailureReason.NETWORK_ERROR, failure(1342));
+        assertEquals(BookErrorCode.NETWORK_ERROR, failure(1342));
         assertEquals(6, requests.size());
     }
 
@@ -129,7 +129,7 @@ class GutenbergHttpDownloaderTest {
     void givesUpWhenTheMirrorAsksToWaitTooLong() {
         answers.add(new Answer(503, Map.of("Retry-After", "3600")));
 
-        assertEquals(FailureReason.NETWORK_ERROR, failure(1342));
+        assertEquals(BookErrorCode.NETWORK_ERROR, failure(1342));
         assertEquals(List.of(), waits);
         assertEquals(1, requests.size());
     }
@@ -154,14 +154,14 @@ class GutenbergHttpDownloaderTest {
         try {
             answers.add(new Answer(301, Map.of("Location", "http://localhost:" + otherHost.getAddress().getPort() + "/cache/epub/1342/pg1342.txt")));
 
-            assertEquals(FailureReason.NETWORK_ERROR, failure(1342));
+            assertEquals(BookErrorCode.NETWORK_ERROR, failure(1342));
             assertEquals(List.of(), otherRequests);
         } finally {
             otherHost.stop(0);
         }
     }
 
-    private FailureReason failure(int bookId) {
+    private BookErrorCode failure(int bookId) {
         return assertThrows(DownloadException.class, () -> downloader.rawText(bookId)).reason();
     }
 

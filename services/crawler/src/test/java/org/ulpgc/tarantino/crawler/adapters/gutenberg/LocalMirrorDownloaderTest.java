@@ -2,8 +2,8 @@ package org.ulpgc.tarantino.crawler.adapters.gutenberg;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,6 +29,6 @@ class LocalMirrorDownloaderTest {
     void reportsABookMissingFromTheMirrorAsNotFound() {
         DownloadException failure = assertThrows(DownloadException.class, () -> new LocalMirrorDownloader(mirror).rawText(84));
 
-        assertEquals(FailureReason.NOT_FOUND, failure.reason());
+        assertEquals(BookErrorCode.NOT_FOUND, failure.reason());
     }
 }

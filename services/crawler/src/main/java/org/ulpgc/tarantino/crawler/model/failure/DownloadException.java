@@ -1,5 +1,7 @@
 package org.ulpgc.tarantino.crawler.model.failure;
 
+import org.ulpgc.tarantino.common.model.BookErrorCode;
+
 import java.io.Serial;
 
 public class DownloadException extends RuntimeException {
@@ -7,14 +9,14 @@ public class DownloadException extends RuntimeException {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private final FailureReason reason;
+    private final BookErrorCode reason;
 
-    public DownloadException(FailureReason reason, String message) {
+    public DownloadException(BookErrorCode reason, String message) {
         super(message);
         this.reason = reason;
     }
 
-    public FailureReason reason() {
+    public BookErrorCode reason() {
         return reason;
     }
 }

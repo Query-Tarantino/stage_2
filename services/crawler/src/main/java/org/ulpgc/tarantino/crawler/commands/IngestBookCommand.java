@@ -1,8 +1,8 @@
 package org.ulpgc.tarantino.crawler.commands;
 
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.book.GutenbergText;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 
@@ -48,7 +48,7 @@ public class IngestBookCommand {
         try {
             return IngestResult.success(download.bookId(), datalake.save(download.text()));
         } catch (UncheckedIOException e) {
-            return IngestResult.failure(download.bookId(), FailureReason.STORAGE_ERROR);
+            return IngestResult.failure(download.bookId(), BookErrorCode.STORAGE_ERROR);
         }
     }
 }

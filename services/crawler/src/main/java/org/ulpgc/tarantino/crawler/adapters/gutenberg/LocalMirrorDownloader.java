@@ -1,7 +1,7 @@
 package org.ulpgc.tarantino.crawler.adapters.gutenberg;
 
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 
 import java.io.IOException;
@@ -26,12 +26,12 @@ public class LocalMirrorDownloader implements BookDownloader {
     public String rawText(int bookId) throws DownloadException {
         Path file = file(bookId);
         if (!Files.isRegularFile(file)) {
-            throw new DownloadException(FailureReason.NOT_FOUND, "Book " + bookId + " not found in the mirror " + mirror);
+            throw new DownloadException(BookErrorCode.NOT_FOUND, "Book " + bookId + " not found in the mirror " + mirror);
         }
         try {
             return Files.readString(file, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new DownloadException(FailureReason.NETWORK_ERROR, "Could not read book " + bookId + " from the mirror: " + e);
+            throw new DownloadException(BookErrorCode.NETWORK_ERROR, "Could not read book " + bookId + " from the mirror: " + e);
         }
     }
 

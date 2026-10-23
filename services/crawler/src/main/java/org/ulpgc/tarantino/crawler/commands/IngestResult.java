@@ -1,15 +1,15 @@
 package org.ulpgc.tarantino.crawler.commands;
 
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.book.StoredPaths;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 
-public record IngestResult(int bookId, StoredPaths paths, FailureReason failure) {
+public record IngestResult(int bookId, StoredPaths paths, BookErrorCode failure) {
 
     public static IngestResult success(int bookId, StoredPaths paths) {
         return new IngestResult(bookId, paths, null);
     }
 
-    public static IngestResult failure(int bookId, FailureReason reason) {
+    public static IngestResult failure(int bookId, BookErrorCode reason) {
         return new IngestResult(bookId, null, reason);
     }
 

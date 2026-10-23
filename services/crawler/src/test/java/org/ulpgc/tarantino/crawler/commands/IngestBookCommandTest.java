@@ -1,10 +1,10 @@
 package org.ulpgc.tarantino.crawler.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.book.BookText;
 import org.ulpgc.tarantino.crawler.model.book.StoredPaths;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
-import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 
@@ -45,16 +45,16 @@ class IngestBookCommandTest {
     @Test
     void reportsDownloadFailuresWithoutStoring() {
         BookDownloader missing = bookId -> {
-            throw new DownloadException(FailureReason.NOT_FOUND, "missing");
+            throw new DownloadException(BookErrorCode.NOT_FOUND, "missing");
         };
 
-        assertEquals(IngestResult.failure(5, FailureReason.NOT_FOUND), new IngestBookCommand(missing, datalake).execute(5));
+        assertEquals(IngestResult.failure(5, BookErrorCode.NOT_FOUND), new IngestBookCommand(missing, datalake).execute(5));
         assertFalse(datalake.books.containsKey(5));
     }
 
     @Test
     void reportsBooksWithoutMarkersAsMissingMarkers() {
-        assertEquals(IngestResult.failure(5, FailureReason.MISSING_MARKERS), new IngestBookCommand(bookId -> "no markers", datalake).execute(5));
+        assertEquals(IngestResult.failure(5, BookErrorCode.MISSING_MARKERS), new IngestBookCommand(bookId -> "no markers", datalake).execute(5));
     }
 
     @Test
@@ -73,7 +73,7 @@ class IngestBookCommandTest {
     void storesNothingForAFailedDownload() {
         IngestBookCommand ingest = new IngestBookCommand(UNREACHABLE, datalake);
 
-        assertEquals(IngestResult.failure(5, FailureReason.NETWORK_ERROR), ingest.store(DownloadResult.failure(5, FailureReason.NETWORK_ERROR)));
+        assertEquals(IngestResult.failure(5, BookErrorCode.NETWORK_ERROR), ingest.store(DownloadResult.failure(5, BookErrorCode.NETWORK_ERROR)));
         assertFalse(datalake.books.containsKey(5));
     }
 
@@ -86,7 +86,7 @@ class IngestBookCommandTest {
             }
         };
 
-        assertEquals(IngestResult.failure(5, FailureReason.STORAGE_ERROR), new IngestBookCommand(bookId -> RAW, broken).execute(5));
+        assertEquals(IngestResult.failure(5, BookErrorCode.STORAGE_ERROR), new IngestBookCommand(bookId -> RAW, broken).execute(5));
     }
 
     private static class InMemoryDatalake implements DatalakeStorage {
