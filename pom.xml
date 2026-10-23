@@ -23,6 +23,7 @@
 
         <mongodb-driver.version>5.13.0</mongodb-driver.version>
         <hazelcast.version>5.7.0</hazelcast.version>
+        <javalin.version>6.7.0</javalin.version>
         <jackson.version>2.22.3</jackson.version>
         <junit.version>5.11.4</junit.version>
         <slf4j.version>2.0.20</slf4j.version>
@@ -51,6 +52,11 @@
                 <groupId>com.hazelcast</groupId>
                 <artifactId>hazelcast</artifactId>
                 <version>${hazelcast.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.javalin</groupId>
+                <artifactId>javalin</artifactId>
+                <version>${javalin.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
