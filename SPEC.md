@@ -607,6 +607,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 - Scripts only start containers and launch jars. The load generator and result processing (`coordination.csv`, `summary.csv` and the charts, with XChart) are Java, in the `bench` module.
 - Before measuring, the script checks the corpus against `workload/corpus.sha256` (id and SHA-256 of each text) and stops if it does not match: Gutenberg updates its texts, so two caches filled on different days may differ.
 - Books come from the local mirror, as in Stage 1, so the network is not measured. One factor changes at a time, with the hypothesis written before measuring.
+- `workload/sample_ids.txt` holds 20 books of the corpus, so all of them are in the cache and in the mirror: with the mirror, a book outside it would end `FAILED` with `NOT_FOUND`. They include books in German and French and one in German and English, so the checks cover the `language` filter.
 - Each complexity bound in the report states which assumptions it depends on and is checked with at least three sizes. In Mongo, the plan of each measured query is saved too.
 
 | Run file | Content |
