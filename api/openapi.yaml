@@ -98,6 +98,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /books/{book_id}:
     servers: *front-end-servers
@@ -121,6 +123,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /search/filters:
     servers: *front-end-servers
@@ -138,6 +142,8 @@ paths:
                 $ref: "#/components/schemas/SearchFilters"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /ingest/{book_id}:
     servers: &operational-servers
@@ -173,6 +179,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /ingest/status/{book_id}:
     servers: *operational-servers
@@ -192,6 +200,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /ingest/list:
     servers: *operational-servers
@@ -209,6 +219,8 @@ paths:
                 $ref: "#/components/schemas/IngestList"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /index/update/{book_id}:
     servers: *operational-servers
@@ -243,6 +255,8 @@ paths:
           $ref: "#/components/responses/Conflict"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /index/status/{book_id}:
     servers: *operational-servers
@@ -262,6 +276,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /index/rebuild:
     servers: *operational-servers
@@ -282,6 +298,8 @@ paths:
                 $ref: "#/components/schemas/Rebuild"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /index/status:
     servers: *operational-servers
@@ -299,6 +317,8 @@ paths:
                 $ref: "#/components/schemas/IndexStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /control/status:
     servers: *operational-servers
@@ -316,6 +336,8 @@ paths:
                 $ref: "#/components/schemas/ControlStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /health:
     servers:
@@ -349,6 +371,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
 components:
   parameters:
@@ -405,6 +429,12 @@ components:
             $ref: "#/components/schemas/Problem"
     Conflict:
       description: "`NOT_DOWNLOADED`: the book is `QUEUED`, `DOWNLOADING` or `FAILED`."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    InternalError:
+      description: An unexpected exception, without `code` (SPEC.md §6.6).
       content:
         application/problem+json:
           schema:

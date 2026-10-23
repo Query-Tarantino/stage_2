@@ -430,6 +430,8 @@ There are no internal endpoints between services: that coordination goes through
 | Operational | `control` (7004) | 8081 | `GET /control/status` | Admin and benchmarks | `200`, `503` |
 | Health | All, on their own port | None | `GET /health` | Compose healthchecks | `200`, `503` |
 
+Besides the responses in the table, every endpoint answers `500` to an unexpected exception, as §6.6 says.
+
 ### 6.2 Book state
 
 `GET /ingest/status/{book_id}` and `GET /index/status/{book_id}` return the same thing, read from `book_states`, and it is also the body of every `200` and every `202` from `POST /ingest/{book_id}` and `POST /index/update/{book_id}`:
