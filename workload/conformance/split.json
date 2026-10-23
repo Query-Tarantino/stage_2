@@ -1,5 +1,5 @@
 {
-  "spec": "§5 header and body split; failure cases name the failure reason",
+  "spec": "header and body split at the Gutenberg markers; a text without them fails with MISSING_MARKERS (§4.5)",
   "cases": [
     {
       "name": "basic",

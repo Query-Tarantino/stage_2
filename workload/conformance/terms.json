@@ -1,5 +1,5 @@
 {
-  "spec": "§7 tokenizer: term frequencies of a body with the given stopwords",
+  "spec": "§6.3 common tokenizer: term frequencies of a body with the given stopwords",
   "stopwords": [
     "the",
     "and",

@@ -1,5 +1,5 @@
 {
-  "spec": "§10 search over a small corpus: ids of the books containing every term, ascending",
+  "spec": "§7 search over a small corpus: ids of the books containing every term; their scores tie, so they come by ascending book_id",
   "stopwords": [
     "the",
     "and",

@@ -1,5 +1,5 @@
 {
-  "spec": "§10 step 1: query terms, distinct, in order of first appearance",
+  "spec": "§7 step 2: terms of q with the common tokenizer, distinct, in order of first appearance",
   "stopwords": [
     "the",
     "and",

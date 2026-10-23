@@ -1,5 +1,5 @@
 {
-  "spec": "§7 header fields: first match per field, stripped, null when missing",
+  "spec": "§4.3 header fields: first match per field, stripped, null when missing",
   "cases": [
     {
       "name": "all fields",

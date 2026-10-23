@@ -1,5 +1,5 @@
 {
-  "spec": "§6 datalake: header and body paths relative to the root; time uses the UTC instant of the save",
+  "spec": "§4.6 datalake: header and body paths relative to the root, in the directory of book_id / 1000",
   "cases": [
     {
       "id": 999,
