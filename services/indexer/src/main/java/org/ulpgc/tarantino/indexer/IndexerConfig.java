@@ -2,15 +2,11 @@ package org.ulpgc.tarantino.indexer;
 
 import java.nio.file.Path;
 
-public record IndexerConfig(Path datalake, Path datamarts, String index,
-                            String metadata, String mongoUri, Path workload) {
+public record IndexerConfig(Path datalake, String mongoUri, Path workload) {
 
     public static IndexerConfig fromEnvironment() {
         return new IndexerConfig(
                 Path.of(variable("TARANTINO_DATALAKE", "datalake")),
-                Path.of(variable("TARANTINO_DATAMARTS", "datamarts")),
-                variable("TARANTINO_INDEX", "json"),
-                variable("TARANTINO_METADATA", "sqlite"),
                 variable("TARANTINO_MONGO_URI", "mongodb://localhost:27017"),
                 Path.of(variable("TARANTINO_WORKLOAD", "workload")));
     }

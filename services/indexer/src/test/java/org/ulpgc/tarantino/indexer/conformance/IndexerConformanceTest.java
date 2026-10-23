@@ -70,8 +70,7 @@ class IndexerConformanceTest {
     }
 
     private static IndexerConfig config(Path datalake) {
-        return new IndexerConfig(datalake, Path.of("datamarts"), "json", "sqlite", "mongodb://localhost:27017",
-                Path.of("workload"));
+        return new IndexerConfig(datalake, "mongodb://localhost:27017", Path.of("workload"));
     }
 
     private static String name(JsonNode testCase) {
