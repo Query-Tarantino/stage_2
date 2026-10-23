@@ -23,13 +23,9 @@
         <sqlite-jdbc.version>3.53.4.0</sqlite-jdbc.version>
         <mongodb-driver.version>5.13.0</mongodb-driver.version>
         <jackson.version>2.22.3</jackson.version>
-        <jmh.version>1.37</jmh.version>
         <junit.version>5.11.4</junit.version>
         <slf4j.version>2.0.20</slf4j.version>
         <testcontainers.version>2.0.5</testcontainers.version>
-
-        <benchmark.runner>org.ulpgc.tarantino.${project.artifactId}.benchmarking.BenchmarkRunner</benchmark.runner>
-        <benchmark.skip>true</benchmark.skip>
     </properties>
 
     <dependencyManagement>
@@ -84,11 +80,6 @@
                 <version>${slf4j.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.openjdk.jmh</groupId>
-                <artifactId>jmh-core</artifactId>
-                <version>${jmh.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
                 <version>${testcontainers.version}</version>
@@ -120,15 +111,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
-                    <configuration>
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>org.openjdk.jmh</groupId>
-                                <artifactId>jmh-generator-annprocess</artifactId>
-                                <version>${jmh.version}</version>
-                            </path>
-                        </annotationProcessorPaths>
-                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -141,67 +123,15 @@
                     <version>3.5.1</version>
                     <executions>
                         <execution>
-                            <id>benchmark-support</id>
+                            <id>test-support</id>
                             <goals>
                                 <goal>test-jar</goal>
                             </goals>
-                            <configuration>
-                                <excludes>
-                                    <exclude>META-INF/BenchmarkList</exclude>
-                                    <exclude>META-INF/CompilerHints</exclude>
-                                    <exclude>**/jmh_generated/**</exclude>
-                                </excludes>
-                            </configuration>
                         </execution>
                     </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.5.0</version>
-                    <configuration>
-                        <cleanupDaemonThreads>false</cleanupDaemonThreads>
-                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
     </build>
-
-    <profiles>
-        <profile>
-            <id>benchmark</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>run-benchmarks</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>exec</goal>
-                                </goals>
-                                <configuration>
-                                    <skip>${benchmark.skip}</skip>
-                                    <executable>java</executable>
-                                    <classpathScope>test</classpathScope>
-                                    <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
-                                    <arguments>
-                                        <argument>-Xmx1g</argument>
-                                        <argument>--enable-native-access=ALL-UNNAMED</argument>
-                                        <argument>--sun-misc-unsafe-memory-access=allow</argument>
-                                        <argument>-classpath</argument>
-                                        <classpath/>
-                                        <argument>${benchmark.runner}</argument>
-                                    </arguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>
