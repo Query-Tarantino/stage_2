@@ -1,13 +1,19 @@
-# For development. Benchmarks need MongoDB outside any virtual machine with a 1 GB cache (SPEC §11):
-# on Linux, the README's docker run with host networking; on macOS, a native install.
 services:
   mongo:
     image: mongo:7.0
-    container_name: tarantino-mongo
-    ports:
-      - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  hazelcast:
+    image: hazelcast/hazelcast:5.7.0
+    environment:
+      HZ_CLUSTERNAME: tarantino
 
 volumes:
   mongo-data:
