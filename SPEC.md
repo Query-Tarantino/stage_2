@@ -381,13 +381,13 @@ Only a `DOWNLOADED` book can be claimed. An `INDEXING` book only goes back to `D
 
 **At startup**, after “Create the pointer” and ensuring its indexes, it seeds: it reads the candidates from `TARANTINO_CANDIDATES`, applies “Create the state” to each one and enqueues only the ones it created, without calling `crawler` or `indexer`. Then it reconciles for the first time.
 
-**Reconciliation**, every `TARANTINO_RECONCILE_SECONDS` and in this order. Each step is idempotent, so a `control` crash halfway leaves nothing half-done.
+**Reconciliation**, every `TARANTINO_RECONCILE_SECONDS` and in this order. Each step is idempotent, and every write of `control` that enqueues, seeding included, sends its `BookTask` right after it: a `control` crash halfway leaves at most books in their new state without their message, which step 4 requeues.
 
 1. Expired downloads: find `{status: "DOWNLOADING", $expr: {$lte: ["$lease_until", "$$NOW"]}}` and apply “Release an expired download” to each.
 2. Expired batches: in every `batches_g<k>` that exists, find the `WRITING` ones whose `lease_until` has passed and apply “Abandon a batch” to each. All generations are checked so that an old batch does not wait for its generation's `drop`.
 3. `INDEXING` books: look up each one's batch in `batches_g<book's generation>`. If it is `WRITING`, leave it; if it is `ABANDONED` or missing, “Release its books”; if it is `PUBLISHED`, “Complete a publication”.
 4. Lost messages: if `books-to-download` is empty, apply “Requeue a lost message” to the `QUEUED` books whose `enqueued_at` is older than `$$NOW − R`; if `books-to-index` is empty, do the same with the `DOWNLOADED` books. This also rebuilds the queues if Hazelcast restarts. That is why `REQUEUE > BATCH_TIMEOUT`: an indexer holds the messages of its batch for up to `BATCH_TIMEOUT` before claiming them.
-5. Abandoned batches: for each `ABANDONED` batch whose `abandoned_at` is older than `$$NOW − TARANTINO_GC_SECONDS`, delete its postings (`deleteMany({batch_id: B})` in `postings_g<k>`) and then the batch. Metadata is not deleted: it is per book, it is overwritten when the book is published in another batch and `query` only reads the metadata of its snapshot.
+5. Abandoned batches: for each `ABANDONED` batch whose `abandoned_at` is older than `$$NOW − TARANTINO_GC_SECONDS`, delete its postings (`deleteMany({batch_id: B})` in `postings_g<k>`). The batch stays `ABANDONED` until its generation is dropped, so this step repeats on every reconciliation and also deletes the postings that a zombie indexer (§8) writes after the first deletion. Metadata is not deleted: it is per book, it is overwritten when the book is published in another batch and `query` only reads the metadata of its snapshot.
 6. Generations:
    1. Apply “Reindex into another generation” to every `PUBLISHED` book with `generation < w`, where `w` is the target if a rebuild is `RUNNING` and `current.generation` otherwise. Outside a rebuild, it only finds books from an indexer that read the generation right before a switch.
    2. With a `RUNNING` rebuild targeting `t`: if `current.generation` is `t − 1` and the condition in step 4 of §5.4 holds, apply “Switch generation” and then “Finish the rebuild”. If `current.generation` is already `t` because `control` crashed between the two, only “Finish the rebuild”.
@@ -576,8 +576,9 @@ Each row is an F3 test with its script in `scripts/recovery/<nn>-<row>.sh`. The 
 | `indexer` while writing a batch | `WRITING` batch, `INDEXING` books, half-written postings | `control`, when the batch expires | `ABANDONED`; its books go back to `DOWNLOADED` and to the queue, and its postings are deleted after `GC` | `during-batch-write` in `indexer` |
 | `indexer` after publishing and before marking the books | `PUBLISHED` batch, `INDEXING` books | `control` | Completes the publication | `after-publish` in `indexer` |
 | `indexer` after marking the books and before notifying | `PUBLISHED` batch without `BatchPublished` | `query`, on its refresh | Sees it within `TARANTINO_SNAPSHOT_SECONDS` | `after-mark` in `indexer` |
-| `indexer` stopped longer than its lease | A zombie indexer that keeps writing | Its renewal fails | It stops writing; its conditional publish fails and `control` deletes its postings | `docker pause` for more than `TARANTINO_LEASE_SECONDS` and `docker unpause` |
-| `control` | Nothing half-done: it only reconciles | Nobody needs it right away | When it comes back, it reconciles from Mongo | `docker kill` and `docker start` |
+| `crawler` stopped longer than its lease | A zombie worker that may still write the book to the datalake | `control`, when the lease expires | Back to `QUEUED` and to the queue; the zombie's renewal, “Finish a download” and “Fail a download” fail on `claim_id`, and its atomic rename only replaces the files with another complete copy of the book | `docker pause` for more than `TARANTINO_LEASE_SECONDS` and `docker unpause` |
+| `indexer` stopped longer than its lease | A zombie indexer that keeps writing | Its renewal fails | It stops writing at its next renewal; its conditional publish fails and `control` deletes its postings, also those it writes late (§5.3) | `docker pause` for more than `TARANTINO_LEASE_SECONDS` and `docker unpause` |
+| `control` | At most books in their new state without their `BookTask`, if it died between a write and its enqueue | Its own reconciliation, once it is back: empty queue and old `enqueued_at` | It reconciles from Mongo and requeues those books (§5.3) | `docker kill` and `docker start` |
 | Hazelcast | Empty queues | `control`: empty queue and old `enqueued_at` | Requeues the `QUEUED` and `DOWNLOADED` books | `docker restart` |
 | MongoDB | No half-done transition: each one is a single write | Healthchecks; services answer `503` | When it comes back, everything continues from the last state | `docker stop` and `docker start` |
 | A `query` replica | Nothing: it does not write | nginx stops sending it requests | The others serve; at startup, it rebuilds its snapshot | `docker kill` of that replica |
@@ -591,9 +592,16 @@ Each row is an F3 test with its script in `scripts/recovery/<nn>-<row>.sh`. The 
 | `after-datalake-write` | `crawler` | After renaming the header and the body and before “Finish a download” |
 | `after-downloaded` | `crawler` | After “Finish a download” and before enqueuing in `books-to-index` |
 | `after-dequeue` | `indexer` | After taking the batch's messages and before “Open a batch” |
-| `during-batch-write` | `indexer` | After the first postings `bulkWrite` and before “Publish a batch” |
+| `during-batch-write` | `indexer` | After the metadata `bulkWrite` and the first postings `bulkWrite`, and before “Publish a batch” |
 | `after-publish` | `indexer` | After “Publish a batch” and before marking its books |
 | `after-mark` | `indexer` | After marking its books `PUBLISHED` and before sending `BatchPublished` |
+
+**Between two points.** A crash between two points is recovered like a row of the matrix, so it has no point of its own:
+
+- `crawler`, halfway through a datalake write: as `after-claim`, plus an orphan `.tmp` that the cleanup deletes once it is older than `TARANTINO_TMP_MAX_AGE_SECONDS`.
+- `crawler`, after “Fail a download” leaves the book `QUEUED` and before enqueuing it, or `POST /ingest` between its write and its enqueue: as `after-dequeue`.
+- `indexer`, after “Open a batch” and before “Claim its books”: as `after-dequeue`, plus an empty batch that `control` abandons with no books to release.
+- `indexer`, after “Claim its books” and before the first postings `bulkWrite`: as `during-batch-write`.
 
 If Mongo or Hazelcast fail halfway through a job outside these tests, the service does the same as after a crash: it drops the job without marking anything, the leases expire and `control` redoes it.
 
