@@ -11,8 +11,8 @@ import java.nio.file.Path;
 
 /**
  * Reads books from a local copy of Project Gutenberg's generated collection, made in bulk with rsync
- * (SPEC §4), instead of one HTTP request per book. Same files, same failures: a missing book is NOT_FOUND
- * and any other I/O error NETWORK_ERROR.
+ * (SPEC §4.7), instead of one HTTP request per book. Same files, same failures (§4.5): a missing book is
+ * NOT_FOUND and any other I/O error NETWORK_ERROR.
  */
 public class LocalMirrorDownloader implements BookDownloader {
 

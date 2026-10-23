@@ -10,9 +10,8 @@ import java.io.UncheckedIOException;
 import java.util.Optional;
 
 /**
- * Ingests a book (SPEC §9): looks it up in the datalake and, if it is not there, downloads, splits and stores it.
- * Callers that download several books at once use the three steps apart: downloading writes nothing, so it can run
- * in other threads, while looking up and storing stay in the one thread that uses the datalake.
+ * Ingests a book: looks it up in the datalake and, if it is not there, downloads, splits and stores it. A book is
+ * in the datalake once its body exists (SPEC §4.6).
  */
 public class IngestBookCommand {
 
@@ -41,7 +40,7 @@ public class IngestBookCommand {
         }
     }
 
-    /** Stores a downloaded book in the datalake; a failed download stores nothing (SPEC §4). */
+    /** Stores a downloaded book in the datalake; a failed download stores nothing. */
     public IngestResult store(DownloadResult download) {
         if (!download.succeeded()) {
             return IngestResult.failure(download.bookId(), download.failure());

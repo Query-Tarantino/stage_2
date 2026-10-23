@@ -10,8 +10,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Postings added since the last flush, drained in term order: a flush then writes the terms of each folder
- * together and inserts into MongoDB's term index in key order, and does so the same way on every run.
+ * Postings added since the last flush, drained in term order: a flush then inserts into MongoDB's term index in
+ * key order, and does so the same way on every run.
  */
 public final class PendingPostings {
 

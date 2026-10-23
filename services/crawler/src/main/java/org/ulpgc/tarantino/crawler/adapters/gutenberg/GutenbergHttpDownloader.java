@@ -22,10 +22,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 /**
- * Downloads books from the official Project Gutenberg mirror of Old Dominion University (SPEC §4), never from
+ * Downloads books from the official Project Gutenberg mirror of Old Dominion University, never from
  * www.gutenberg.org, whose robot policy forbids automated access: redirects are followed only within the mirror.
- * The control service downloads several books at once through one downloader, so when the mirror answers that it is
- * busy (429 or 503) every download waits as long as it asks before its next request.
+ * Downloads running at once share one downloader, so when the mirror answers that it is busy (429 or 503) every
+ * download waits as long as it asks before its next request.
  */
 public class GutenbergHttpDownloader implements BookDownloader {
 

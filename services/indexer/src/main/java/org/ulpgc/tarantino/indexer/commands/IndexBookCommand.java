@@ -31,7 +31,7 @@ public class IndexBookCommand {
         return execute(List.of(bookId)).getFirst();
     }
 
-    /** Indexes the books and flushes the inverted index once for all of them (SPEC §9). */
+    /** Indexes the books and flushes the inverted index once for all of them. */
     public List<IndexResult> execute(List<Integer> bookIds) {
         List<IndexResult> results = bookIds.stream().map(this::add).toList();
         if (results.stream().anyMatch(IndexResult::indexed)) {

@@ -12,7 +12,6 @@ public class Main {
         index.execute(Arrays.stream(args).map(Integer::valueOf).toList()).stream().map(Main::line).forEach(System.out::println);
     }
 
-    /** One line per book, in the words of the control service (SPEC §14). */
     private static String line(IndexResult result) {
         return "[INDEXER] " + result.bookId() + ": "
                 + (result.indexed() ? result.uniqueTerms() + " unique terms indexed" : "skipped, not found in the datalake");

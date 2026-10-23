@@ -13,7 +13,6 @@ public class Main {
         Arrays.stream(args).map(Integer::parseInt).map(ingest::execute).map(Main::line).forEach(System.out::println);
     }
 
-    /** One line per book, in the words of the control service (SPEC §14). */
     private static String line(IngestResult result) {
         return "[CRAWLER] " + result.bookId() + ": "
                 + (result.succeeded() ? "stored in " + result.paths().body().getParent() : "skipped, " + result.failure());

@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * The language-neutral cases of TARANTINO_WORKLOAD/conformance (SPEC §13), which every implementation must pass.
+ * The cases of TARANTINO_WORKLOAD/conformance inherited from Stage 1 that still apply (SPEC §10).
  * Without the variable, workload/conformance is looked for from the working directory upwards, so the tests run
  * from the project root, from a module directory and from an IDE alike.
  */

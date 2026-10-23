@@ -18,7 +18,7 @@ public final class ControlFactory {
 
     /**
      * The ids of the workload file given, in order. Without one, every book of the local mirror in ascending id
-     * order when there is a mirror, or else the sample dataset (SPEC §9).
+     * order when there is a mirror, or else the sample dataset.
      */
     public static List<Integer> candidates(ControlConfig config, Optional<String> file) {
         if (file.isEmpty() && config.mirror() != null) {

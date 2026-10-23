@@ -6,10 +6,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Terms of SPEC §7, found by scanning code points instead of matching {@code \p{L}+}: the same letters
- * ({@link Character#isLetter(int)} is general category L), without a match object per word nor a stream.
- * The whole text is still lowercased at once, because lowercasing letter by letter differs for final sigma
- * and for letters whose lowercase form is longer.
+ * The terms shared by indexing and search (SPEC §6.3): runs of at least two letters, lowercased with
+ * {@link Locale#ROOT} and without stopwords. They are found by scanning code points instead of matching
+ * {@code \p{L}+}: the same letters ({@link Character#isLetter(int)} is general category L), without a match object
+ * per word nor a stream. The whole text is still lowercased at once, because lowercasing letter by letter differs
+ * for final sigma and for letters whose lowercase form is longer.
  */
 public class Tokenizer {
 

@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/** The tokenizer scans code points by hand; it must count exactly what the regular expression of SPEC §7 finds. */
+/** The tokenizer scans code points by hand; it must count exactly what the regular expression {@code \p{L}+} finds. */
 class TokenizerEquivalenceTest {
 
     private static final Pattern TERM = Pattern.compile("\\p{L}+");
