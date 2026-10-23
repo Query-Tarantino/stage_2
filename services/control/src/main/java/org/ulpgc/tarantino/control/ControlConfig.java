@@ -2,15 +2,17 @@ package org.ulpgc.tarantino.control;
 
 import java.nio.file.Path;
 
-public record ControlConfig(Path control, Path workload, int parallelDownloads, int indexBatch) {
+/** {@code mirror} is the local Gutenberg mirror whose books can be the candidates, or null without one. */
+public record ControlConfig(Path workload, Path mirror, int parallelDownloads, int indexBatch) {
 
     private static final String PARALLEL_DOWNLOADS = "TARANTINO_PARALLEL_DOWNLOADS";
     private static final String INDEX_BATCH = "TARANTINO_INDEX_BATCH";
 
     public static ControlConfig fromEnvironment() {
+        String mirror = variable("TARANTINO_MIRROR", "");
         return new ControlConfig(
-                Path.of(variable("TARANTINO_CONTROL", "control")),
                 Path.of(variable("TARANTINO_WORKLOAD", "workload")),
+                mirror.isBlank() ? null : Path.of(mirror),
                 positiveInteger(PARALLEL_DOWNLOADS, variable(PARALLEL_DOWNLOADS, "8")),
                 positiveInteger(INDEX_BATCH, variable(INDEX_BATCH, "100")));
     }

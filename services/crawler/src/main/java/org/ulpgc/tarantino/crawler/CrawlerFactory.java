@@ -10,7 +10,6 @@ import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -39,11 +38,6 @@ public final class CrawlerFactory {
 
     public static BookDownloader downloader(CrawlerConfig config) {
         return config.mirror() == null ? new GutenbergHttpDownloader() : new LocalMirrorDownloader(config.mirror());
-    }
-
-    /** Every book of the local mirror of the configuration, in ascending id order. */
-    public static List<Integer> mirrorBookIds(CrawlerConfig config) {
-        return new LocalMirrorDownloader(config.mirror()).bookIds();
     }
 
     public static DatalakeStorage datalake(CrawlerConfig config) {

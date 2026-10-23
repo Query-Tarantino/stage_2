@@ -8,7 +8,6 @@ import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -31,15 +30,5 @@ class LocalMirrorDownloaderTest {
         DownloadException failure = assertThrows(DownloadException.class, () -> new LocalMirrorDownloader(mirror).rawText(84));
 
         assertEquals(FailureReason.NOT_FOUND, failure.reason());
-    }
-
-    @Test
-    void listsTheBooksWithATextInIdOrder() throws IOException {
-        for (String file : List.of("1342/pg1342.txt", "84/pg84.txt", "11/pg11-images.epub", "README", "cache/pgcache.txt")) {
-            Files.createDirectories(mirror.resolve(file).getParent());
-            Files.writeString(mirror.resolve(file), "text");
-        }
-
-        assertEquals(List.of(84, 1342), new LocalMirrorDownloader(mirror).bookIds());
     }
 }

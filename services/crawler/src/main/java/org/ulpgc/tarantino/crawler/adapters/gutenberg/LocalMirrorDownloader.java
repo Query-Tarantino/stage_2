@@ -5,13 +5,9 @@ import org.ulpgc.tarantino.crawler.model.failure.FailureReason;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /**
  * Reads books from a local copy of Project Gutenberg's generated collection, made in bulk with rsync
@@ -19,8 +15,6 @@ import java.util.stream.Stream;
  * and any other I/O error NETWORK_ERROR.
  */
 public class LocalMirrorDownloader implements BookDownloader {
-
-    private static final Pattern BOOK_ID = Pattern.compile("[1-9][0-9]{0,8}");
 
     private final Path mirror;
 
@@ -38,20 +32,6 @@ public class LocalMirrorDownloader implements BookDownloader {
             return Files.readString(file, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new DownloadException(FailureReason.NETWORK_ERROR, "Could not read book " + bookId + " from the mirror: " + e);
-        }
-    }
-
-    /** The books of the mirror in ascending id order: the directories named by a book id that hold its text. */
-    public List<Integer> bookIds() {
-        try (Stream<Path> entries = Files.list(mirror)) {
-            return entries.map(entry -> entry.getFileName().toString())
-                    .filter(BOOK_ID.asMatchPredicate())
-                    .map(Integer::valueOf)
-                    .filter(bookId -> Files.isRegularFile(file(bookId)))
-                    .sorted()
-                    .toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 
