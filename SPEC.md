@@ -537,6 +537,7 @@ Problem Details (RFC 9457), with `Content-Type: application/problem+json`, in al
 ### 6.7 Asynchrony, retries and CORS
 
 - Whatever changes state answers `202` and is checked later at its `Location`, or `200` if it was already done. An accepted book has finished when its state is `PUBLISHED`, and has failed when it is `FAILED`, with the reason in `last_error`.
+- Outside a rebuild, a book shows up in `/search` when each `query` replica refreshes after its batch is published: at once on `BatchPublished`, and at most `TARANTINO_SNAPSHOT_SECONDS` later if the message is lost. Its state is not in step with that: it can read `INDEXING` while the book is already searchable, until the indexer marks it or, after a crash, `control` completes the publication (§8), and it can read `PUBLISHED` up to `TARANTINO_SNAPSHOT_SECONDS` before a replica shows it. So a client, and the checks, wait for `PUBLISHED` at the `Location` and then give `/search` up to `TARANTINO_SNAPSHOT_SECONDS`. During a rebuild, new books wait for the switch (§5.4).
 - Handlers never wait for long jobs: they answer in milliseconds. A client can use a 5 s timeout and, on a `503`, retry after `Retry-After`.
 - Repeating a `POST` duplicates nothing: state lives in Mongo and every transition is conditional.
 - `query` allows CORS from `TARANTINO_CORS_ORIGIN`; nginx adds no headers.
