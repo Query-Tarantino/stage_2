@@ -6,7 +6,6 @@ import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
 import org.ulpgc.tarantino.crawler.CrawlerConfig;
 import org.ulpgc.tarantino.crawler.CrawlerFactory;
-import org.ulpgc.tarantino.crawler.adapters.datalake.time.TimeBasedDatalakeAdapter;
 import org.ulpgc.tarantino.crawler.model.book.BookText;
 import org.ulpgc.tarantino.crawler.model.book.GutenbergText;
 import org.ulpgc.tarantino.crawler.model.book.StoredPaths;
@@ -14,9 +13,6 @@ import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 
 import java.nio.file.Path;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,25 +41,22 @@ class CrawlerConformanceTest {
     }
 
     @TestFactory
-    Stream<DynamicTest> storesBooksAtTheirLayoutPaths() {
+    Stream<DynamicTest> storesBooksAtTheirBatchPaths() {
         return cases(file("datalake_paths.json")).stream().map(testCase -> DynamicTest.dynamicTest(name(testCase), () -> {
-            Path layoutRoot = root.resolve(testCase.get("layout").asText() + "-" + testCase.get("id").asInt());
-            StoredPaths paths = datalake(testCase, layoutRoot).save(new BookText(testCase.get("id").asInt(), "header", "body"));
-            assertEquals(testCase.get("header").asText(), relative(layoutRoot, paths.header()));
-            assertEquals(testCase.get("body").asText(), relative(layoutRoot, paths.body()));
+            int bookId = testCase.get("id").asInt();
+            Path bookRoot = root.resolve(String.valueOf(bookId));
+            StoredPaths paths = datalake(bookRoot).save(new BookText(bookId, "header", "body"));
+            assertEquals(testCase.get("header").asText(), relative(bookRoot, paths.header()));
+            assertEquals(testCase.get("body").asText(), relative(bookRoot, paths.body()));
         }));
     }
 
-    private static DatalakeStorage datalake(JsonNode testCase, Path root) {
-        String layout = testCase.get("layout").asText();
-        if (!"time".equals(layout)) {
-            return CrawlerFactory.datalake(new CrawlerConfig(root, layout));
-        }
-        return new TimeBasedDatalakeAdapter(root, Clock.fixed(Instant.parse(testCase.get("saved_at").asText()), ZoneOffset.UTC));
+    private static DatalakeStorage datalake(Path root) {
+        return CrawlerFactory.datalake(new CrawlerConfig(root, null));
     }
 
     private static String name(JsonNode testCase) {
-        return testCase.get("layout").asText() + " " + testCase.get("id").asInt() + " at " + testCase.get("saved_at").asText();
+        return "book " + testCase.get("id").asInt();
     }
 
     private static String relative(Path root, Path file) {

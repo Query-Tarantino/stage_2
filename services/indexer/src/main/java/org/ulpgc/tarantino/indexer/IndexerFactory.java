@@ -1,8 +1,6 @@
 package org.ulpgc.tarantino.indexer;
 
 import org.ulpgc.tarantino.indexer.adapters.datalake.batch.BatchBasedDatalakeReader;
-import org.ulpgc.tarantino.indexer.adapters.datalake.book.BookBasedDatalakeReader;
-import org.ulpgc.tarantino.indexer.adapters.datalake.time.TimeBasedDatalakeReader;
 import org.ulpgc.tarantino.indexer.adapters.index.folders.FolderPerTermIndexAdapter;
 import org.ulpgc.tarantino.indexer.adapters.index.json.MonolithicJsonIndexAdapter;
 import org.ulpgc.tarantino.indexer.adapters.index.mongo.MongodbIndexAdapter;
@@ -22,11 +20,6 @@ import java.util.function.Function;
 
 public final class IndexerFactory {
 
-    private static final Map<String, Function<IndexerConfig, DatalakeReader>> DATALAKE_LAYOUTS = Map.of(
-            "time", config -> new TimeBasedDatalakeReader(config.datalake()),
-            "book", config -> new BookBasedDatalakeReader(config.datalake()),
-            "batch", config -> new BatchBasedDatalakeReader(config.datalake()));
-
     private static final Map<String, Function<IndexerConfig, InvertedIndexStorage>> INDEX_STRUCTURES = Map.of(
             "json", config -> new MonolithicJsonIndexAdapter(config.datamarts().resolve("inverted_index.json")),
             "folders", config -> new FolderPerTermIndexAdapter(config.datamarts().resolve("inverted_index")),
@@ -45,7 +38,7 @@ public final class IndexerFactory {
     }
 
     public static DatalakeReader datalakeReader(IndexerConfig config) {
-        return option(DATALAKE_LAYOUTS, config.datalakeLayout(), "datalake layout").apply(config);
+        return new BatchBasedDatalakeReader(config.datalake());
     }
 
     public static InvertedIndexStorage invertedIndex(IndexerConfig config) {

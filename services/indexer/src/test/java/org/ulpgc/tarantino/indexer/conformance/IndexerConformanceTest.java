@@ -31,16 +31,15 @@ class IndexerConformanceTest {
     Path root;
 
     @TestFactory
-    Stream<DynamicTest> readsBooksAtTheirLayoutPaths() {
+    Stream<DynamicTest> readsBooksAtTheirBatchPaths() {
         return cases(file("datalake_paths.json")).stream().map(testCase -> DynamicTest.dynamicTest(name(testCase), () -> {
-            String layout = testCase.get("layout").asText();
             int bookId = testCase.get("id").asInt();
-            Path layoutRoot = root.resolve(layout + "-" + bookId);
-            store(layoutRoot.resolve(testCase.get("header").asText()), "header of " + bookId);
-            Path body = store(layoutRoot.resolve(testCase.get("body").asText()), "body of " + bookId);
+            Path bookRoot = root.resolve(String.valueOf(bookId));
+            store(bookRoot.resolve(testCase.get("header").asText()), "header of " + bookId);
+            Path body = store(bookRoot.resolve(testCase.get("body").asText()), "body of " + bookId);
 
             assertEquals(Optional.of(new BookText(bookId, "header of " + bookId, "body of " + bookId, body)),
-                    IndexerFactory.datalakeReader(config(layoutRoot, layout)).bookText(bookId));
+                    IndexerFactory.datalakeReader(config(bookRoot)).bookText(bookId));
         }));
     }
 
@@ -70,13 +69,13 @@ class IndexerConformanceTest {
         return Files.writeString(file, content);
     }
 
-    private static IndexerConfig config(Path datalake, String layout) {
-        return new IndexerConfig(datalake, layout, Path.of("datamarts"), "json", "sqlite", "mongodb://localhost:27017",
+    private static IndexerConfig config(Path datalake) {
+        return new IndexerConfig(datalake, Path.of("datamarts"), "json", "sqlite", "mongodb://localhost:27017",
                 Path.of("workload"));
     }
 
     private static String name(JsonNode testCase) {
-        return testCase.get("layout").asText() + " " + testCase.get("id").asInt() + " at " + testCase.get("saved_at").asText();
+        return "book " + testCase.get("id").asInt();
     }
 
     private static Map<String, Integer> frequencies(JsonNode terms) {

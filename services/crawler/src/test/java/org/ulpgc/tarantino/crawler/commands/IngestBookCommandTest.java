@@ -11,11 +11,9 @@ import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -108,16 +106,6 @@ class IngestBookCommandTest {
         @Override
         public Optional<StoredPaths> pathsOf(int bookId) {
             return Optional.of(bookId).filter(books::containsKey).map(InMemoryDatalake::paths);
-        }
-
-        @Override
-        public Set<Integer> idsStoredSince(Instant instant) {
-            return books.keySet();
-        }
-
-        @Override
-        public int removeIncompleteWrites() {
-            return 0;
         }
     }
 }

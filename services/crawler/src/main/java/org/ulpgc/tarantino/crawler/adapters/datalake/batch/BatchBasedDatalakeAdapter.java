@@ -6,10 +6,7 @@ import org.ulpgc.tarantino.crawler.model.book.StoredPaths;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class BatchBasedDatalakeAdapter implements DatalakeStorage {
 
@@ -31,20 +28,6 @@ public class BatchBasedDatalakeAdapter implements DatalakeStorage {
     @Override
     public Optional<StoredPaths> pathsOf(int bookId) {
         return BookFiles.existing(paths(bookId));
-    }
-
-    @Override
-    public int removeIncompleteWrites() {
-        return BookFiles.removeIncompleteWrites(root);
-    }
-
-    @Override
-    public Set<Integer> idsStoredSince(Instant instant) {
-        return BookFiles.children(root).stream()
-                .flatMap(batch -> BookFiles.children(batch).stream())
-                .filter(file -> file.getFileName().toString().endsWith(BODY_SUFFIX) && BookFiles.modifiedSince(file, instant))
-                .map(file -> BookFiles.bookId(file, BODY_SUFFIX))
-                .collect(Collectors.toSet());
     }
 
     private StoredPaths paths(int bookId) {

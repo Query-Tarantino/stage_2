@@ -9,7 +9,6 @@ public class Main {
 
     public static void main(String[] args) {
         CrawlerConfig config = CrawlerConfig.fromEnvironment();
-        CrawlerFactory.removeIncompleteWrites(config);
         IngestBookCommand ingest = CrawlerFactory.ingestCommand(config);
         Arrays.stream(args).map(Integer::parseInt).map(ingest::execute).map(Main::line).forEach(System.out::println);
     }
