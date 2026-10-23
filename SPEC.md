@@ -93,10 +93,10 @@ stage_2/
 
 | Path | Owner |
 | --- | --- |
-| `../../Downloads/stage_2-en/services/crawler`, `docker-compose.yml`, `Dockerfile` | A |
-| `../../Downloads/stage_2-en/services/indexer` | B |
-| `../../Downloads/stage_2-en/services/query`, `nginx/`, `api/openapi.yaml`, `checks/` | C |
-| `../../Downloads/stage_2-en/services/control`, `scripts/recovery/` | D |
+| `services/crawler`, `docker-compose.yml`, `Dockerfile` | A |
+| `services/indexer` | B |
+| `services/query`, `nginx/`, `api/openapi.yaml`, `checks/` | C |
+| `services/control`, `scripts/recovery/` | D |
 | `bench/` | C, the load generator; D, the shared part and result processing |
 | `scripts/bench/<experiment>.sh` | Whoever owns the experiment in the plan's split |
 | `common`, `SPEC.md`, root `CLAUDE.md`, parent `pom.xml`, `workload/` | All four, in a separate PR |
