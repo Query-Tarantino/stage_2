@@ -5,8 +5,8 @@ Version 1.0 · October 21, 2026
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
 - It replaces the Stage 1 `SPEC.md`, which was the cross-language contract and does not move to `stage_2`.
-- The reasons behind each decision are in the Stage 2 plan. If the plan and this file disagree, this file wins and the plan gets fixed.
-- A contract change goes in a separate PR reviewed by all four members. That PR bumps the version of this file and updates `common`, `api/openapi.yaml` and, when affected, the `CLAUDE.md` files and the plan, all at once. Nobody changes a contract inside the PR for their own service.
+- The reasons behind each decision are in the Stage 2 plan, which the team keeps outside the repository. If the plan and this file disagree, this file wins and the plan gets fixed.
+- A contract change goes in a separate PR reviewed by all four members. That PR bumps the version of this file and updates `common`, `api/openapi.yaml` and, when affected, the plan and the team's notes for each module, all at once. Nobody changes a contract inside the PR for their own service.
 
 ## 1. Scope and assumptions
 
@@ -70,15 +70,15 @@ The life of a book: `control` seeds it, `crawler` downloads and enqueues it, `in
 
 ```text
 stage_2/
-├── SPEC.md, CLAUDE.md, README.md
+├── SPEC.md, README.md
 ├── pom.xml                  parent: modules and every version
 ├── docker-compose.yml, Dockerfile, .gitignore
-├── common/                  with its CLAUDE.md
+├── common/
 ├── services/
-│   ├── crawler/             with its CLAUDE.md
-│   ├── indexer/             with its CLAUDE.md
-│   ├── query/               with its CLAUDE.md
-│   └── control/             with its CLAUDE.md
+│   ├── crawler/
+│   ├── indexer/
+│   ├── query/
+│   └── control/
 ├── bench/
 ├── checks/
 ├── api/openapi.yaml
@@ -99,10 +99,10 @@ stage_2/
 | `services/control`, `scripts/recovery/` | D |
 | `bench/` | C, the load generator; D, the shared part and result processing |
 | `scripts/bench/<experiment>.sh` | Whoever owns the experiment in the plan's split |
-| `common`, `SPEC.md`, root `CLAUDE.md`, parent `pom.xml`, `workload/` | All four, in a separate PR |
+| `common`, `SPEC.md`, parent `pom.xml`, `workload/` | All four, in a separate PR |
 
 - Dependency and plugin versions live only in the parent `pom.xml` (`dependencyManagement` and `pluginManagement`). The Hazelcast client uses the same version as the member image.
-- `benchmarks/runs/` is versioned; `benchmarks/cache/`, `benchmarks/mirror/`, `benchmarks/tmp.noindex/`, `datalake/`, `target/` and `CLAUDE.local.md` stay out of git.
+- `benchmarks/runs/` is versioned; `benchmarks/cache/`, `benchmarks/mirror/`, `benchmarks/tmp.noindex/`, `datalake/` and `target/` stay out of git, and so do the plan and the team's notes, which are shared outside it.
 
 ### 2.4 Docker Compose
 
