@@ -153,6 +153,7 @@ Hazelcast runs as one member in its own container (cluster `tarantino`, port 570
 - Hazelcast is not the source of truth: a message can be lost or repeated, and no ordering is assumed.
 - A message is acknowledged by the claim in Mongo. If the conditional write does not match, the message is a duplicate or stale and is simply dropped.
 - `BookTask.enqueued_at` is the producer's time (`Instant.now()`) and is only used to measure queue wait (§4.8). Rescuing lost messages uses `book_states.enqueued_at`, which is written with `$$NOW` (§5.3).
+- `BatchPublished` copies the batch as “Publish a batch” left it (§5.1): `book_count` is the size of its `book_ids`, at least 1, and `published_at` is its `published_at`.
 - If enqueuing fails after writing to Mongo, the book stays in its state and `control` enqueues it again (§5.3).
 - A lost `BatchPublished` does not matter: `query` re-reads the batches every `TARANTINO_SNAPSHOT_SECONDS`. Generation switches are not announced.
 
@@ -208,7 +209,7 @@ The database is the one in the path of `TARANTINO_MONGO_URI`, or `tarantino`, as
 | `claim_id` | String | UUID of the indexer's lease |
 | `owner` | String | Hostname of the replica writing it, for the logs |
 | `lease_until` | Date | Lease end; only in `WRITING` |
-| `book_ids` | [Int32] | Empty in `WRITING`; the final books, ascending, once published |
+| `book_ids` | [Int32] | Empty in `WRITING`; once published, the final books, ascending and at least one |
 | `opened_at`, `published_at`, `abandoned_at` | Date | When it reached that state; absent until then |
 
 **`index_state`**: two documents.
@@ -333,7 +334,7 @@ transition entity=book id=1342 from=QUEUED to=DOWNLOADING batch_id=- generation=
 
 - `entity` is `book` or `batch`, and `id` is the `book_id` or the `batch_id`. In a batch line, `batch_id` is `-`.
 - `from` and `to` are states from §4.5; `from` is `-` when the document is created.
-- `enqueued_at` is the one from the `BookTask` when the transition comes from a message (claiming a download or a book for a batch); otherwise, `-`.
+- `enqueued_at` is the one from the `BookTask` when the transition comes from a message (claiming a download or a book for a batch); otherwise, `-`. When a batch drained several messages for the same book, it is the earliest of them.
 - `at` is `Instant.now()` when the write finishes, and `replica` is the container hostname.
 - It is only written when the conditional write matches. `bench` derives `coordination.csv` (§9) from these lines, searching from `transition`, because `slf4j-simple` puts its prefix in front.
 
@@ -362,8 +363,8 @@ Dates compared across processes use the Mongo server's time (`$$NOW`), never the
 | Open a batch | `indexer` | `{_id: B}` in `batches_g<w>`, with upsert | `[{$set: {status: "WRITING", claim_id: C, owner: host, lease_until: {$add: ["$$NOW", L]}, book_ids: [], opened_at: "$$NOW"}}]` | Cannot happen: `B` is new |
 | Claim its books | `indexer` | `updateMany` with `{_id: {$in: ids}, status: "DOWNLOADED"}` | `[{$set: {status: "INDEXING", batch_id: B, generation: w, updated_at: "$$NOW"}}]`; then `find({batch_id: B, status: "INDEXING"})` gives the batch's books | The others are ignored; if none is left, it stops renewing the batch and `control` abandons it when it expires |
 | Renew a batch | `indexer`, every `HEARTBEAT` | `{_id: B, status: "WRITING", claim_id: C}` | `[{$set: {lease_until: {$add: ["$$NOW", L]}}}]` | Lease lost: stops writing |
-| Fail at indexing | `indexer` | `{_id: id, status: "INDEXING", batch_id: B}` | `[{$set: {status: "FAILED", last_error: "NOT_IN_DATALAKE", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; the book leaves the batch | No longer in this batch: nothing |
-| Publish a batch | `indexer` | `{_id: B, status: "WRITING", claim_id: C, $expr: {$gt: ["$lease_until", "$$NOW"]}}` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", book_ids: books}}, {$unset: "lease_until"}]`; then `updateMany({batch_id: B, status: "INDEXING"}, [{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}])` and `BatchPublished` | Lease lost: neither marks books nor notifies |
+| Fail at indexing | `indexer` | `{_id: id, status: "INDEXING", batch_id: B}` | `[{$set: {status: "FAILED", last_error: "NOT_IN_DATALAKE", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; the book leaves the batch, and if none is left the batch is not published, as in “Claim its books” | No longer in this batch: nothing |
+| Publish a batch | `indexer` | `{_id: B, status: "WRITING", claim_id: C, $expr: {$gt: ["$lease_until", "$$NOW"]}}`, with `findOneAndUpdate` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", book_ids: books}}, {$unset: "lease_until"}]`, with `books` never empty; then `updateMany({batch_id: B, status: "INDEXING"}, [{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}])` and `BatchPublished` from the document it returns (§4.2) | Lease lost: neither marks books nor notifies |
 | Abandon a batch | `control` | `{_id: B, status: "WRITING", $expr: {$lte: ["$lease_until", "$$NOW"]}}` | `[{$set: {status: "ABANDONED", abandoned_at: "$$NOW"}}, {$unset: "lease_until"}]` | It was published or renewed: untouched |
 | Release its books | `control` | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `ABANDONED` or without a document | `[{$set: {status: "DOWNLOADED", enqueued_at: "$$NOW", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; then `BookTask` to `books-to-index` | Someone changed it first: nothing |
 | Complete a publication | `control` | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `PUBLISHED` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}]` | Already done |

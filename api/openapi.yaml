@@ -771,6 +771,8 @@ components:
         book_count:
           type: integer
           format: int32
-          minimum: 0
+          minimum: 1
+          description: Size of the published batch's `book_ids`.
         published_at:
+          description: The batch's `published_at`, written by Mongo.
           $ref: "#/components/schemas/Timestamp"
