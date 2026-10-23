@@ -17,8 +17,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.ulpgc.tarantino.crawler.conformance.ConformanceCases.cases;
-import static org.ulpgc.tarantino.crawler.conformance.ConformanceCases.file;
+import static org.ulpgc.tarantino.common.conformance.ConformanceCases.cases;
+import static org.ulpgc.tarantino.common.conformance.ConformanceCases.file;
 
 class CrawlerConformanceTest {
 

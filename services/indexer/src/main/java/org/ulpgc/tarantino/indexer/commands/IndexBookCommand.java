@@ -1,9 +1,9 @@
 package org.ulpgc.tarantino.indexer.commands;
 
+import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
 import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import org.ulpgc.tarantino.indexer.model.terms.TermOccurrences;
-import org.ulpgc.tarantino.indexer.model.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.ports.datamarts.InvertedIndexStorage;
 import org.ulpgc.tarantino.indexer.ports.datamarts.MetadataStorage;
 import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
@@ -48,7 +48,7 @@ public class IndexBookCommand {
 
     private IndexResult add(BookText text) {
         metadata.save(headerParser.book(text));
-        TermOccurrences occurrences = tokenizer.occurrences(text.bookId(), text.body());
+        TermOccurrences occurrences = new TermOccurrences(text.bookId(), tokenizer.frequencies(text.body()));
         invertedIndex.add(occurrences);
         return IndexResult.success(text.bookId(), occurrences.frequencies().size());
     }

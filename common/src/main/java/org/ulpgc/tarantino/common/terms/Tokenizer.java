@@ -1,9 +1,12 @@
-package org.ulpgc.tarantino.indexer.model.terms;
+package org.ulpgc.tarantino.common.terms;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * The terms shared by indexing and search (SPEC §6.3): runs of at least two letters, lowercased with
@@ -22,13 +25,22 @@ public class Tokenizer {
         this.stopwords = stopwords;
     }
 
-    public TermOccurrences occurrences(int bookId, String body) {
-        return new TermOccurrences(bookId, frequencies(body));
+    /** How many times each term appears in the text, for the indexer. */
+    public Map<String, Integer> frequencies(String text) {
+        Map<String, int[]> counts = new HashMap<>();
+        forEachTerm(text, term -> counts.computeIfAbsent(term, key -> new int[1])[0]++);
+        return frequenciesOf(counts);
     }
 
-    private Map<String, Integer> frequencies(String body) {
-        String text = body.toLowerCase(Locale.ROOT);
-        Map<String, int[]> counts = new HashMap<>();
+    /** The terms without repeats in order of first appearance, for {@code q}, {@code author} and {@code author_terms}. */
+    public List<String> distinctTerms(String text) {
+        Set<String> terms = new LinkedHashSet<>();
+        forEachTerm(text, terms::add);
+        return List.copyOf(terms);
+    }
+
+    private void forEachTerm(String original, Consumer<String> action) {
+        String text = original.toLowerCase(Locale.ROOT);
         int index = 0;
         while (index < text.length()) {
             int start = index;
@@ -38,18 +50,17 @@ public class Tokenizer {
                 codePoints++;
             }
             if (codePoints >= MIN_TERM_LENGTH) {
-                count(text.substring(start, index), counts);
+                accept(text.substring(start, index), action);
             }
             if (codePoints == 0) {
                 index += Character.charCount(text.codePointAt(index));
             }
         }
-        return frequenciesOf(counts);
     }
 
-    private void count(String term, Map<String, int[]> counts) {
+    private void accept(String term, Consumer<String> action) {
         if (!stopwords.contains(term)) {
-            counts.computeIfAbsent(term, key -> new int[1])[0]++;
+            action.accept(term);
         }
     }
 

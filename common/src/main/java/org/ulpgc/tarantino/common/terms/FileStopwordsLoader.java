@@ -1,6 +1,4 @@
-package org.ulpgc.tarantino.query.adapters.stopwords;
-
-import org.ulpgc.tarantino.query.ports.StopwordsLoader;
+package org.ulpgc.tarantino.common.terms;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -11,7 +9,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class FileStopwordsLoader implements StopwordsLoader {
+public class FileStopwordsLoader {
 
     private final Path file;
 
@@ -19,7 +17,6 @@ public class FileStopwordsLoader implements StopwordsLoader {
         this.file = file;
     }
 
-    @Override
     public Set<String> stopwords() {
         return lines().stream()
                 .map(line -> line.strip().toLowerCase(Locale.ROOT))

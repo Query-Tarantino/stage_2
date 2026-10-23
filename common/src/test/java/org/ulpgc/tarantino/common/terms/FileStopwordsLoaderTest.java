@@ -1,4 +1,4 @@
-package org.ulpgc.tarantino.indexer.adapters.stopwords;
+package org.ulpgc.tarantino.common.terms;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

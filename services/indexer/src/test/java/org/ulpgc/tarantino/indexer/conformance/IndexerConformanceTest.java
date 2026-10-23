@@ -9,21 +9,17 @@ import org.ulpgc.tarantino.indexer.IndexerFactory;
 import org.ulpgc.tarantino.indexer.model.book.Book;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
 import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
-import org.ulpgc.tarantino.indexer.model.terms.Tokenizer;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.ulpgc.tarantino.crawler.conformance.ConformanceCases.cases;
-import static org.ulpgc.tarantino.crawler.conformance.ConformanceCases.file;
-import static org.ulpgc.tarantino.crawler.conformance.ConformanceCases.stopwords;
-import static org.ulpgc.tarantino.crawler.conformance.ConformanceCases.textOrNull;
+import static org.ulpgc.tarantino.common.conformance.ConformanceCases.cases;
+import static org.ulpgc.tarantino.common.conformance.ConformanceCases.file;
+import static org.ulpgc.tarantino.common.conformance.ConformanceCases.textOrNull;
 
 class IndexerConformanceTest {
 
@@ -54,16 +50,6 @@ class IndexerConformanceTest {
         }));
     }
 
-    @TestFactory
-    Stream<DynamicTest> countsTermsOfABody() {
-        JsonNode terms = file("terms.json");
-        Tokenizer tokenizer = new Tokenizer(stopwords(terms));
-        return cases(terms).stream().map(testCase -> DynamicTest.dynamicTest(testCase.get("name").asText(), () -> {
-            Map<String, Integer> counted = tokenizer.occurrences(1, testCase.get("text").asText()).frequencies();
-            assertEquals(frequencies(testCase.get("terms")), new TreeMap<>(counted));
-        }));
-    }
-
     private static Path store(Path file, String content) throws IOException {
         Files.createDirectories(file.getParent());
         return Files.writeString(file, content);
@@ -75,11 +61,5 @@ class IndexerConformanceTest {
 
     private static String name(JsonNode testCase) {
         return "book " + testCase.get("id").asInt();
-    }
-
-    private static Map<String, Integer> frequencies(JsonNode terms) {
-        Map<String, Integer> frequencies = new TreeMap<>();
-        terms.properties().forEach(term -> frequencies.put(term.getKey(), term.getValue().asInt()));
-        return frequencies;
     }
 }

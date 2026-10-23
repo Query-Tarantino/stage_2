@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.query.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.query.model.BookMetadata;
 import org.ulpgc.tarantino.query.model.SearchResult;
 import org.ulpgc.tarantino.query.ports.InvertedIndexReader;
@@ -33,7 +34,7 @@ class SearchCommandTest {
             return List.of();
         }
     };
-    private final SearchCommand search = new SearchCommand(invertedIndex, metadata, Set.of("the"));
+    private final SearchCommand search = new SearchCommand(invertedIndex, metadata, new Tokenizer(Set.of("the")));
 
     @Test
     void returnsBooksContainingEveryTermOrderedById() {

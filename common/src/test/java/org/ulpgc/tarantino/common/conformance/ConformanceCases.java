@@ -1,7 +1,7 @@
-package org.ulpgc.tarantino.crawler.conformance;
+package org.ulpgc.tarantino.common.conformance;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -19,7 +19,6 @@ import java.util.TreeSet;
  */
 public final class ConformanceCases {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Path DIRECTORY = directory();
 
     private ConformanceCases() {
@@ -41,7 +40,7 @@ public final class ConformanceCases {
 
     public static JsonNode file(String name) {
         try {
-            return MAPPER.readTree(DIRECTORY.resolve(name).toFile());
+            return TarantinoJson.mapper().readTree(DIRECTORY.resolve(name).toFile());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -1,12 +1,12 @@
 package org.ulpgc.tarantino.indexer;
 
+import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
+import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.adapters.datalake.batch.BatchBasedDatalakeReader;
 import org.ulpgc.tarantino.indexer.adapters.index.mongo.MongodbIndexAdapter;
 import org.ulpgc.tarantino.indexer.adapters.metadata.MongodbMetadataAdapter;
-import org.ulpgc.tarantino.indexer.adapters.stopwords.FileStopwordsLoader;
 import org.ulpgc.tarantino.indexer.commands.IndexBookCommand;
 import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
-import org.ulpgc.tarantino.indexer.model.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.ports.datamarts.InvertedIndexStorage;
 import org.ulpgc.tarantino.indexer.ports.datamarts.MetadataStorage;
 import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;

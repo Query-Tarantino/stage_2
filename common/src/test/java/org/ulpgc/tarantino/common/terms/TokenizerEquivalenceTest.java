@@ -1,4 +1,4 @@
-package org.ulpgc.tarantino.indexer.model.terms;
+package org.ulpgc.tarantino.common.terms;
 
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +36,7 @@ class TokenizerEquivalenceTest {
             for (int piece = random.nextInt(12); piece >= 0; piece--) {
                 body.append(PIECES[random.nextInt(PIECES.length)]).append(random.nextBoolean() ? " " : "");
             }
-            assertEquals(reference(body.toString()), tokenizer.occurrences(1, body.toString()).frequencies(), body::toString);
+            assertEquals(reference(body.toString()), tokenizer.frequencies(body.toString()), body::toString);
         }
     }
 

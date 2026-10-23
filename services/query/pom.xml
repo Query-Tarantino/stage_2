@@ -18,13 +18,12 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.mongodb</groupId>
-            <artifactId>mongodb-driver-sync</artifactId>
+            <groupId>org.ulpgc.tarantino</groupId>
+            <artifactId>common</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <scope>test</scope>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -38,7 +37,7 @@
         </dependency>
         <dependency>
             <groupId>org.ulpgc.tarantino</groupId>
-            <artifactId>crawler</artifactId>
+            <artifactId>common</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

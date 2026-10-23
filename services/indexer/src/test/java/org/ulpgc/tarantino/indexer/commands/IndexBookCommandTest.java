@@ -1,11 +1,11 @@
 package org.ulpgc.tarantino.indexer.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.book.Book;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
 import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import org.ulpgc.tarantino.indexer.model.terms.TermOccurrences;
-import org.ulpgc.tarantino.indexer.model.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.ports.datamarts.InvertedIndexStorage;
 import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 
