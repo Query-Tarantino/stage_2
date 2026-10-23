@@ -1,0 +1,732 @@
+openapi: 3.1.0
+info:
+  title: Query Tarantino API
+  version: "1.0"
+  description: |
+    HTTP API of Query Tarantino Stage 2, derived from SPEC.md §6; `info.version` follows the SPEC.md version.
+
+    The services also coordinate through Hazelcast (SPEC.md §4.2), which is not HTTP and has no paths here.
+    Its messages are the `BookTask` and `BatchPublished` schemas, carried as JSON text:
+
+    | Name | Type | Message |
+    | --- | --- | --- |
+    | `books-to-download` | Queue | `BookTask` |
+    | `books-to-index` | Queue | `BookTask` |
+    | `published-batches` | Topic | `BatchPublished` |
+
+tags:
+  - name: front-end
+    description: Searches used by the front-end, served by `query` (7003) through nginx port 8080.
+  - name: operational
+    description: Ingestion, indexing and control, through nginx port 8081 to `crawler` (7001), `indexer` (7002) and `control` (7004).
+  - name: health
+    description: Health of each service on its own port, never through nginx.
+
+paths:
+  /search:
+    servers: &front-end-servers
+      - url: http://{host}:8080
+        description: nginx front-end port, to `query`.
+        variables:
+          host:
+            default: localhost
+    get:
+      tags: [front-end]
+      operationId: search
+      summary: Search books by TF-IDF with optional filters
+      description: "Consumer: front-end. Service: `query` (7003). nginx port: 8080."
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Terms every book must contain. Missing or blank gives `400` with `MISSING_PARAMETER`.
+          schema:
+            type: string
+            pattern: \S
+        - name: author
+          in: query
+          description: Every word must be in the book's `author_terms`. Empty counts as absent; no word left gives `400`.
+          schema:
+            type: string
+        - name: language
+          in: query
+          description: ISO 639-1 code; a book with several languages matches any of them. Empty counts as absent.
+          schema:
+            type: string
+            pattern: ^[a-z]{2}$
+        - name: year
+          in: query
+          description: Gutenberg publication year (`year`). Empty counts as absent.
+          schema:
+            type: string
+            pattern: ^[0-9]{4}$
+        - name: offset
+          in: query
+          description: Empty counts as absent.
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          description: Empty counts as absent.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: The page of results, by descending score and ascending `book_id`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /books/{book_id}:
+    servers: *front-end-servers
+    get:
+      tags: [front-end]
+      operationId: getBook
+      summary: A book of the snapshot
+      description: "Consumer: front-end. Service: `query` (7003). nginx port: 8080."
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: The book is in a published batch of the snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /search/filters:
+    servers: *front-end-servers
+    get:
+      tags: [front-end]
+      operationId: getSearchFilters
+      summary: Languages and years of the snapshot's books
+      description: "Consumer: front-end. Service: `query` (7003). nginx port: 8080."
+      responses:
+        "200":
+          description: The filters summary of the snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchFilters"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /ingest/{book_id}:
+    servers: &operational-servers
+      - url: http://{host}:8081
+        description: nginx operational port, to `crawler`, `indexer` and `control`.
+        variables:
+          host:
+            default: localhost
+    post:
+      tags: [operational]
+      operationId: ingestBook
+      summary: Ask for a book to be downloaded
+      description: "Consumer: load and admin scripts. Service: `crawler` (7001). nginx port: 8081."
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "202":
+          description: Queued, retried after `FAILED`, or already `QUEUED` or `DOWNLOADING`.
+          headers:
+            Location:
+              $ref: "#/components/headers/IngestLocation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookState"
+        "200":
+          description: Already `DOWNLOADED`, `INDEXING` or `PUBLISHED`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /ingest/status/{book_id}:
+    servers: *operational-servers
+    get:
+      tags: [operational]
+      operationId: getIngestStatus
+      summary: A book's state
+      description: "Consumer: whoever got a `202`; checks. Service: `crawler` (7001). nginx port: 8081."
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /ingest/list:
+    servers: *operational-servers
+    get:
+      tags: [operational]
+      operationId: listDownloadedBooks
+      summary: Books in `DOWNLOADED`, `INDEXING` or `PUBLISHED`
+      description: "Consumer: checks. Service: `crawler` (7001). nginx port: 8081."
+      responses:
+        "200":
+          description: The books, ascending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestList"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /index/update/{book_id}:
+    servers: *operational-servers
+    post:
+      tags: [operational]
+      operationId: updateIndex
+      summary: Ask for a downloaded book to be indexed
+      description: "Consumer: admin. Service: `indexer` (7002). nginx port: 8081."
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "202":
+          description: "`DOWNLOADED` and enqueued, or already `INDEXING`."
+          headers:
+            Location:
+              $ref: "#/components/headers/IndexLocation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookState"
+        "200":
+          description: Already `PUBLISHED`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /index/status/{book_id}:
+    servers: *operational-servers
+    get:
+      tags: [operational]
+      operationId: getIndexBookStatus
+      summary: A book's state
+      description: "Consumer: whoever got a `202`. Service: `indexer` (7002). nginx port: 8081."
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookState"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /index/rebuild:
+    servers: *operational-servers
+    post:
+      tags: [operational]
+      operationId: rebuildIndex
+      summary: Open a rebuild into the next generation
+      description: "Consumer: admin. Service: `indexer` (7002). nginx port: 8081."
+      responses:
+        "202":
+          description: The rebuild opened, or the one already running.
+          headers:
+            Location:
+              $ref: "#/components/headers/IndexStatusLocation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rebuild"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /index/status:
+    servers: *operational-servers
+    get:
+      tags: [operational]
+      operationId: getIndexStatus
+      summary: The index of the current generation
+      description: "Consumer: admin and benchmarks. Service: `indexer` (7002). nginx port: 8081."
+      responses:
+        "200":
+          description: Figures of the current generation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexStatus"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /control/status:
+    servers: *operational-servers
+    get:
+      tags: [operational]
+      operationId: getControlStatus
+      summary: Books by state, queue sizes and the last reconciliation
+      description: "Consumer: admin and benchmarks. Service: `control` (7004). nginx port: 8081."
+      responses:
+        "200":
+          description: The system's state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ControlStatus"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /health:
+    servers:
+      - url: http://{host}:{port}
+        description: Each service on its own port; no nginx port.
+        variables:
+          host:
+            default: localhost
+          port:
+            enum: ["7001", "7002", "7003", "7004"]
+            default: "7001"
+            description: "`crawler`, `indexer`, `query` and `control`."
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Whether the service reaches its dependencies
+      description: "Consumer: Compose healthchecks. Service: all four, on their own port. nginx port: none."
+      responses:
+        "200":
+          description: Everything answers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: Something does not answer; `application/json`, not Problem Details.
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+components:
+  parameters:
+    BookId:
+      name: book_id
+      in: path
+      required: true
+      description: A positive integer; anything else gives `400` with `INVALID_PARAMETER`.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+
+  headers:
+    RetryAfter:
+      description: Seconds to wait before retrying.
+      schema:
+        type: integer
+        const: 5
+    IngestLocation:
+      description: The book's state.
+      schema:
+        type: string
+        pattern: ^/ingest/status/[1-9][0-9]*$
+    IndexLocation:
+      description: The book's state.
+      schema:
+        type: string
+        pattern: ^/index/status/[1-9][0-9]*$
+    IndexStatusLocation:
+      description: The index status.
+      schema:
+        type: string
+        const: /index/status
+
+  responses:
+    BookState:
+      description: The book's state in `book_states`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookState"
+    BadRequest:
+      description: "A missing, malformed or out-of-range parameter: `MISSING_PARAMETER` or `INVALID_PARAMETER`, naming it in `parameter`."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: "`BOOK_NOT_FOUND`."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: "`NOT_DOWNLOADED`: the book is `QUEUED`, `DOWNLOADING` or `FAILED`."
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ServiceUnavailable:
+      description: "`DEPENDENCY_UNAVAILABLE`: Mongo or Hazelcast do not answer, or `query` has no snapshot yet."
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    BookStatus:
+      type: string
+      enum: [QUEUED, DOWNLOADING, DOWNLOADED, INDEXING, PUBLISHED, FAILED]
+    BookErrorCode:
+      type: string
+      enum: [NOT_FOUND, MISSING_MARKERS, NETWORK_ERROR, STORAGE_ERROR, LEASE_EXPIRED, NOT_IN_DATALAKE]
+    RebuildStatus:
+      type: string
+      enum: [RUNNING, DONE]
+    ProblemCode:
+      type: string
+      enum: [MISSING_PARAMETER, INVALID_PARAMETER, BOOK_NOT_FOUND, NOT_DOWNLOADED, DEPENDENCY_UNAVAILABLE]
+    BookId:
+      type: integer
+      format: int32
+      minimum: 1
+    Generation:
+      type: integer
+      format: int32
+      minimum: 1
+    LanguageCode:
+      type: string
+      pattern: ^[a-z]{2}$
+    Year:
+      type: integer
+      format: int32
+    Timestamp:
+      type: string
+      format: date-time
+      description: ISO-8601 UTC with `Z`, optionally with a fraction of a second.
+      pattern: Z$
+
+    BookState:
+      description: A book's state (SPEC.md §6.2).
+      type: object
+      required: [book_id, status, attempts, last_error, updated_at]
+      properties:
+        book_id:
+          $ref: "#/components/schemas/BookId"
+        status:
+          $ref: "#/components/schemas/BookStatus"
+        attempts:
+          type: integer
+          format: int32
+          minimum: 0
+        last_error:
+          oneOf:
+            - $ref: "#/components/schemas/BookErrorCode"
+            - type: "null"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+
+    SearchResponse:
+      description: SPEC.md §6.3.
+      type: object
+      required: [query, filters, total, offset, limit, results]
+      properties:
+        query:
+          type: string
+          description: "`q` as received."
+        filters:
+          type: object
+          description: The filters present, as received; without filters, `{}`.
+          properties:
+            author:
+              type: string
+            language:
+              type: string
+            year:
+              $ref: "#/components/schemas/Year"
+        total:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Matches with the filters applied, not just those on the page.
+        offset:
+          type: integer
+          format: int32
+          minimum: 0
+        limit:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+        results:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SearchResult"
+
+    SearchResult:
+      type: object
+      required: [book_id, title, author, language, year]
+      properties:
+        book_id:
+          $ref: "#/components/schemas/BookId"
+        title:
+          type: [string, "null"]
+        author:
+          type: [string, "null"]
+        language:
+          description: The first code in `languages`, or `null`.
+          oneOf:
+            - $ref: "#/components/schemas/LanguageCode"
+            - type: "null"
+        year:
+          oneOf:
+            - $ref: "#/components/schemas/Year"
+            - type: "null"
+
+    Book:
+      description: SPEC.md §6.4; a search result plus `languages` and `original_year`.
+      allOf:
+        - $ref: "#/components/schemas/SearchResult"
+        - type: object
+          required: [languages, original_year]
+          properties:
+            languages:
+              type: array
+              items:
+                $ref: "#/components/schemas/LanguageCode"
+            original_year:
+              oneOf:
+                - $ref: "#/components/schemas/Year"
+                - type: "null"
+
+    SearchFilters:
+      description: SPEC.md §6.4, computed from the snapshot's books.
+      type: object
+      required: [languages, years, total_books]
+      properties:
+        languages:
+          type: array
+          description: From most to fewest books.
+          items:
+            type: object
+            required: [code, name, books]
+            properties:
+              code:
+                $ref: "#/components/schemas/LanguageCode"
+              name:
+                type: string
+              books:
+                type: integer
+                format: int32
+                minimum: 1
+        years:
+          type: object
+          required: [min, max]
+          properties:
+            min:
+              oneOf:
+                - $ref: "#/components/schemas/Year"
+                - type: "null"
+            max:
+              oneOf:
+                - $ref: "#/components/schemas/Year"
+                - type: "null"
+        total_books:
+          type: integer
+          format: int32
+          minimum: 0
+
+    IngestList:
+      description: SPEC.md §6.5.
+      type: object
+      required: [count, books]
+      properties:
+        count:
+          type: integer
+          format: int32
+          minimum: 0
+        books:
+          type: array
+          description: Ascending.
+          items:
+            $ref: "#/components/schemas/BookId"
+
+    Rebuild:
+      description: SPEC.md §6.5.
+      type: object
+      required: [generation, target_generation, status]
+      properties:
+        generation:
+          $ref: "#/components/schemas/Generation"
+        target_generation:
+          $ref: "#/components/schemas/Generation"
+        status:
+          $ref: "#/components/schemas/RebuildStatus"
+
+    IndexStatus:
+      description: SPEC.md §6.5, all for the current generation.
+      type: object
+      required: [generation, books_indexed, batches_published, last_update, index_size_mb, rebuild]
+      properties:
+        generation:
+          $ref: "#/components/schemas/Generation"
+        books_indexed:
+          type: integer
+          format: int32
+          minimum: 0
+        batches_published:
+          type: integer
+          format: int32
+          minimum: 0
+        last_update:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        index_size_mb:
+          type: number
+          minimum: 0
+        rebuild:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [target_generation, status, books_pending]
+              properties:
+                target_generation:
+                  $ref: "#/components/schemas/Generation"
+                status:
+                  $ref: "#/components/schemas/RebuildStatus"
+                books_pending:
+                  type: integer
+                  format: int32
+                  minimum: 0
+
+    ControlStatus:
+      description: SPEC.md §6.5.
+      type: object
+      required: [generation, books, queues, last_reconciliation]
+      properties:
+        generation:
+          $ref: "#/components/schemas/Generation"
+        books:
+          type: object
+          description: All six states, always.
+          required: [QUEUED, DOWNLOADING, DOWNLOADED, INDEXING, PUBLISHED, FAILED]
+          additionalProperties:
+            type: integer
+            format: int32
+            minimum: 0
+        queues:
+          type: object
+          required: [books-to-download, books-to-index]
+          properties:
+            books-to-download:
+              type: integer
+              format: int32
+              minimum: 0
+            books-to-index:
+              type: integer
+              format: int32
+              minimum: 0
+        last_reconciliation:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+
+    Health:
+      description: SPEC.md §6.5; `down` only when `DOWN`.
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+        down:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum: [mongo, hazelcast, snapshot]
+
+    Problem:
+      description: Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500`.
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          $ref: "#/components/schemas/ProblemCode"
+        parameter:
+          type: string
+          description: Only in `400` responses.
+        detail:
+          type: string
+
+    BookTask:
+      description: "Hazelcast message (SPEC.md §4.2) on the `books-to-download` and `books-to-index` queues."
+      type: object
+      required: [book_id, enqueued_at]
+      properties:
+        book_id:
+          $ref: "#/components/schemas/BookId"
+        enqueued_at:
+          $ref: "#/components/schemas/Timestamp"
+
+    BatchPublished:
+      description: "Hazelcast message (SPEC.md §4.2) on the `published-batches` topic."
+      type: object
+      required: [batch_id, generation, book_count, published_at]
+      properties:
+        batch_id:
+          type: string
+          pattern: ^[0-9a-f]{24}$
+        generation:
+          $ref: "#/components/schemas/Generation"
+        book_count:
+          type: integer
+          format: int32
+          minimum: 0
+        published_at:
+          $ref: "#/components/schemas/Timestamp"
