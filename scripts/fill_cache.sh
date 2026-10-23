@@ -108,6 +108,17 @@ fill_with_http() {
     done
 }
 
+mirror_the_cache() {
+    local id entry
+    for id in $(cached_ids); do
+        mkdir -p "$mirror_dir/$id"
+        ln -f "$cache_dir/$id.txt" "$mirror_dir/$id/pg$id.txt"
+    done
+    find "$mirror_dir" -mindepth 1 -maxdepth 1 | while IFS= read -r entry; do
+        [[ -f "$cache_dir/$(basename "$entry").txt" ]] || rm -rf "$entry"
+    done
+}
+
 fail() {
     echo "$1" >&2
     exit 1
@@ -123,7 +134,8 @@ main() {
         *) fail "Unknown TARANTINO_CACHE_SOURCE: $source (expected rsync or http)" ;;
     esac
     (( $(cached_count) >= target_books )) || fail "$workload_dir/book_ids.txt has fewer than $target_books downloadable books"
-    echo "Cache ready in $cache_dir: $(cached_count) books ($(wc -l < "$skipped_file" | tr -d ' ') skipped)"
+    mirror_the_cache
+    echo "Corpus ready: $(cached_count) books in $cache_dir and in $mirror_dir ($(wc -l < "$skipped_file" | tr -d ' ') skipped)"
 }
 
 main "$@"
