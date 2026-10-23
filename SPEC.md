@@ -1,743 +1,631 @@
-# Query Tarantino — Stage 1 Specification
-
-This document is the contract shared by every language implementation (Java, Python, C++).
-Two implementations are **conformant** when, given the same `../Query_Tarantino-Java/workload` and the same configuration,
-they produce equivalent datalakes, datamarts, control files and search results, so that benchmark
-differences come only from the language and the storage structure.
-
-"Equivalent" means equal content, not byte-identical files: JSON whitespace, key order in documents
-and SQLite page layout are free. Everything else in this document is normative.
-
-**Java is the reference implementation.** Where a rule is stated through Java behaviour, Python and C++ use
-the closest equivalent listed in §14. Conformance has two levels:
-
-- **Equal results** (§1–§10): the same datalake, datamarts, control files and search results, checked by
-  the cases of §13.
-- **Comparable measurements** (§11): every implementation does the same work in each measured operation,
-  with the same data structures and algorithms as far as its language allows, so that differences come
-  from the language and not from a different design.
-
-The command-line interface, the layout of the code and the tests every implementation has are in §15–§17.
-
-## 1. General rules
-
-- Book ids are positive integers.
-- Every text file is read and written as **UTF-8 without BOM**, with **LF** (`\n`) line endings,
-  on every operating system.
-- Paths stored as data (metadata `path`) use `/` as separator and are relative to the working
-  directory, exactly as built from the configured root (e.g. `datalake/20250925/14/1342.body.txt`).
-- `strip` removes leading and trailing whitespace as Java `String.strip` defines it (`Character.isWhitespace`):
-  U+0009–U+000D, U+001C–U+001F, U+0020, U+1680, U+2000–U+2006, U+2008–U+200A, U+2028, U+2029, U+205F and
-  U+3000. It does **not** remove U+0085, U+00A0, U+2007 or U+202F. Python's bare `str.strip()` removes
-  those four too, so Python passes the characters above explicitly (§14): with bare `str.strip()`, 1 of the
-  2 800 books of the benchmark cache already gets a different body.
-- A **line** ends only at `\n`. `\r`, U+0085, U+2028 and U+2029 are ordinary characters inside a line.
-- Letters and case mapping follow the Unicode version of the runtime: 16.0 in Java 25 and ICU 76, 15.1 in
-  Python 3.13. Each implementation records it (§11); §12 gives the effect of the difference.
-- Every service runs from the project root; relative roots are resolved against it.
-
-## 2. Configuration
-
-| Variable                       | Default                     | Values                     |
-|--------------------------------|-----------------------------|----------------------------|
-| `TARANTINO_DATALAKE`           | `datalake`                  | path                       |
-| `TARANTINO_DATAMARTS`          | `datamarts`                 | path                       |
-| `TARANTINO_CONTROL`            | `control`                   | path                       |
-| `TARANTINO_BENCHMARKS`         | `benchmarks`                | path                       |
-| `TARANTINO_WORKLOAD`           | `workload`                  | path                       |
-| `TARANTINO_DATALAKE_LAYOUT`    | `time`                      | `time`, `book`, `batch`    |
-| `TARANTINO_INDEX`              | `json`                      | `json`, `folders`, `mongo` |
-| `TARANTINO_METADATA`           | `sqlite`                    | `sqlite`, `mongo`          |
-| `TARANTINO_MONGO_URI`          | `mongodb://localhost:27017` | connection string          |
-| `TARANTINO_PARALLEL_DOWNLOADS` | `8`                         | positive integer           |
-| `TARANTINO_INDEX_BATCH`        | `100`                       | positive integer           |
-| `TARANTINO_MIRROR`             | (none)                      | path, or empty             |
-
-An unknown value is a configuration error and must stop the service with a message naming the value.
-
-## 3. Workload
-
-All files live in `TARANTINO_WORKLOAD`, one entry per line; lines are stripped and empty lines ignored.
-
-| File             | Content                                                               |
-|------------------|-----------------------------------------------------------------------|
-| `book_ids.txt`   | Candidate ids for the benchmark cache, in order (1 to 4000).          |
-| `sample_ids.txt` | Small sample dataset; default candidates of the control service (§9). |
-| `stopwords.txt`  | Stopwords; each entry is stripped and lowercased (see §7) on load.    |
-| `queries.txt`    | Search benchmark workload, one `<category>: <query>` per line (§11).  |
-| `conformance/`   | Conformance cases every implementation must pass (§13).               |
-
-## 4. Download
-
-- URL: `https://mirror.cs.odu.edu/gutenberg-epub/<id>/pg<id>.txt`. This is the official high-speed mirror
-  of Project Gutenberg at Old Dominion University (listed in `https://www.gutenberg.org/MIRRORS.ALL`); it
-  serves the same generated files as `www.gutenberg.org/cache/epub`. Books are downloaded only from official
-  mirrors, never from `www.gutenberg.org`, whose robot policy forbids automated access to the website, so
-  redirects are followed only within the mirror's host (at most 5): a redirect to any other host fails
-  with `NETWORK_ERROR` before any request is sent there.
-- The response body is decoded as UTF-8.
-- HTTP 200 returns the text. HTTP 404 fails with `NOT_FOUND`. Any other status, timeout or I/O error
-  fails with `NETWORK_ERROR`, except the two that mean the mirror is busy, below.
-- Every request has a 30 second timeout, to connect and to receive the answer, and sends the header
-  `User-Agent: query-tarantino/1.0 (ULPGC Big Data course project)`, so the mirror's operators can tell
-  who is downloading.
-- **Busy mirror.** HTTP 429 (Too Many Requests) and 503 (Service Unavailable) are retried, at most 5 times,
-  after waiting what the `Retry-After` header asks, in seconds or as an HTTP date, or 1, 2, 4, 8 and 16
-  seconds on successive answers without it. The wait applies to every download from the mirror, as
-  several run at once (§9): none sends its next request before it ends. If the mirror asks to wait more
-  than 5 minutes, or is still busy after 5 retries, the download fails with `NETWORK_ERROR`.
-- A failed download stores nothing.
-- **Local mirror.** When `TARANTINO_MIRROR` is set, the crawler reads `<mirror>/<id>/pg<id>.txt` from a
-  local copy of the same generated collection instead of downloading it, decoded as UTF-8. A missing file
-  fails with `NOT_FOUND` and any other I/O error with `NETWORK_ERROR`. The copy is made in bulk with
-  rsync, Project Gutenberg's documented way to mirror the collection (the website itself is for human
-  users only), for example
-  `rsync -av --include='*/' --include='pg[0-9]*.txt' --exclude='*' rsync.ibiblio.org::gutenberg-epub/ <mirror>/`
-  for the plain texts alone. One transfer instead of one request per book is what makes a collection of
-  hundreds of thousands of books practical to ingest. The books of the mirror are its directories named by
-  a book id that hold that `pg<id>.txt`; without a candidates file, the control layer takes them all (§9).
-
-## 5. Header and body split
-
-1. Replace every `\r\n` with `\n`.
-2. Find the first match of the start marker:
-   `\*\*\* ?START OF (THE|THIS) PROJECT GUTENBERG EBOOK[^\n]*\n`
-3. Find the first match of the end marker **after the end of the start marker**:
-   `\*\*\* ?END OF (THE|THIS) PROJECT GUTENBERG EBOOK`
-4. If either marker is missing, fail with `MISSING_MARKERS` and store nothing.
-5. `header` = text before the start marker, stripped.
-   `body` = text between the end of the start marker (its whole line included) and the start of the
-   end marker, stripped. The footer is discarded.
-
-Each marker is also the earliest occurrence of its literal forms: `***START OF THE`, `*** START OF THE`,
-`***START OF THIS` and `*** START OF THIS`, each followed by ` PROJECT GUTENBERG EBOOK` (and the same with
-`END`); the start marker then runs to the next `\n`, which it includes, and is missing if there is none.
-C++ finds them that way (§14): `std::regex` is slow and, in libstdc++, can exhaust the stack on texts of
-hundreds of kilobytes.
-
-Failure reasons are exactly: `NOT_FOUND`, `NETWORK_ERROR`, `MISSING_MARKERS`, `STORAGE_ERROR`.
-
-## 6. Datalake
-
-Every layout stores exactly two files per book, `header` and `body`, with the content of §5.
-
-| Layout  | Header file                              | Body file                              |
-|---------|------------------------------------------|----------------------------------------|
-| `time`  | `<root>/<YYYYMMDD>/<HH>/<id>.header.txt` | `<root>/<YYYYMMDD>/<HH>/<id>.body.txt` |
-| `book`  | `<root>/<id>/header.txt`                 | `<root>/<id>/body.txt`                 |
-| `batch` | `<root>/<id div 1000>/<id>.header.txt`   | `<root>/<id div 1000>/<id>.body.txt`   |
-
-- `time`: date and hour of the moment the book is saved, in **UTC**, zero-padded
-  (`20250925`, `14`). Books saved in different hours end up in different directories.
-- `batch`: the directory is the integer division of the id by 1000, without padding
-  (`1342` → `1/`, `64317` → `64/`).
-
-Writing and lookup:
-
-1. Each file is written to `<file>.tmp` and then renamed over the final name (atomic move, Java
-   `Files.move` with `ATOMIC_MOVE`, §14). Files are not synced to disk (§12).
-2. The header is written before the body. **A book exists in the datalake if and only if its body
-   file exists**, so an interrupted write never produces a book without header.
-3. Saving a book that is already stored does not create a second copy (see §9, ingestion).
-4. Lookup by id: `book` and `batch` compute the path directly and check that the body file exists; `time`
-   walks `<root>` depth first, up to depth 3, and stops at the first file with the body's name. A lookup
-   keeps nothing in memory for the next one and does not read the files.
-5. Before ingesting anything, the crawler and the control layer remove what an interrupted run left
-   behind: every `.tmp` file, every header whose body does not exist next to it, and every directory
-   under `<root>` left empty. Without it `time` would keep, in the old hour directory, the header and
-   the `.tmp` body of a book that the resumed run stores again in a new one. It runs once at start,
-   with no other process writing the datalake.
-
-New books detection lists the ids of the books stored since an instant:
-
-- `time`: every book in the hour directories from the hour that contains the instant (UTC) onwards,
-  decided by the directory names alone.
-- `book` and `batch`: every book whose body file was last modified at or after the instant, comparing
-  times at the full precision the file system keeps (nanoseconds on APFS and ext4).
-
-## 7. Metadata extraction and tokenization
-
-**Header fields.** For each of `Title`, `Author` and `Language`, take the first match of
-`^<Field>:[ \t]*(.+)$` in multiline mode over the header, where only `\n` ends a line (§1; Java adds
-`Pattern.UNIX_LINES`), and strip it. Equivalently, without regular expressions: the first line that starts
-with `<Field>:` and has at least one character after the colon; the value is the rest of that line,
-stripped, so a value made only of blanks is the empty string, not `null`. A missing field is `null`.
-The value is stored as written (e.g. `English`, not `en`).
-
-**Tokenizer.** Applied to the body when indexing and to the query when searching:
-
-1. Lowercase the whole text at once with the locale-independent full Unicode mapping, which is
-   context-sensitive (a final `Σ` becomes `ς`) and may lengthen the text (`İ` becomes `i` + U+0307):
-   Java `toLowerCase(Locale.ROOT)`, Python `str.lower`, C++ ICU `icu::UnicodeString::toLower` with the root
-   locale (§14). Lowercasing character by character is not conformant.
-2. A term is a maximal run of Unicode letters, i.e. characters of category `L`: Java scans code points with
-   `Character.isLetter`, which is exactly category `L` (equivalent to `\p{L}+`); Python uses the `regex`
-   package's `\p{L}+` (the standard `re` module has no `\p{L}`) or `unicodedata.category`; C++ ICU's
-   `u_isalpha`.
-   Digits, apostrophes, hyphens and any other character split terms:
-   `don't` → `don`, `t`; `1984year` → `year`.
-3. Discard terms shorter than **2 code points** and terms in the stopword list.
-4. No stemming and no Unicode normalization.
-
-Indexing counts the frequency of each term per book in a hash map; the storage structures below keep only
-book ids.
-
-On the 2 800 books of the benchmark cache, Java and Python (with the strip of §1, and either `regex` or
-`unicodedata`) give exactly the same header, body and term frequencies for every book (checked).
-
-## 8. Datamarts
-
-### 8.1 Inverted index
-
-Adding a book adds its id to the postings of each of its terms. Postings never contain duplicates,
-so indexing the same book twice leaves the index unchanged. Postings are ordered ascending wherever
-the structure has an order.
-
-| Structure | Location                                         | Format |
-|-----------|--------------------------------------------------|--------|
-| `json`    | `<datamarts>/inverted_index.json`                | One JSON object: term → array of ids, e.g. `{"island": [5, 1342]}` |
-| `folders` | `<datamarts>/inverted_index/<c>/<name>.txt`      | One id per line; `<name>` encodes the term and `<c>` its first code point (below) |
-| `mongo`   | database `tarantino`*, collection `inverted_index` | One document per term: `{"term": "island", "postings": [5, 1342]}`, unique index on `term` |
-
-- `json` is rewritten completely, and atomically (`.tmp` + rename), each time the index is flushed.
-- `folders` rewrites, on each flush, every affected term file with the union of its stored ids and the
-  new ones, sorted and atomically (`.tmp` + rename). Term files that gain no new id are not touched.
-- `folders` and `mongo` write the affected terms of a flush in ascending ordinal string order (UTF-16
-  code units in Java, code points in Python, UTF-8 bytes in C++, which order like code points; they differ
-  from Java only for supplementary characters), so
-  the files of each `<c>` directory are written together and MongoDB's `term` index receives its keys
-  in order. The order is not observable in the result, but it changes the cost of a flush.
-- `folders` file names: in the UTF-8 bytes of the term, ASCII `a`–`z` are kept and every other byte is
-  written as `%` and two uppercase hexadecimal digits (`island` → `island`, `écume` → `%C3%A9cume`). If
-  the result is longer than 200 characters, the name is `#` followed by the lowercase hexadecimal SHA-256
-  of the term's UTF-8 bytes. `<c>` is the first code point of the term encoded the same way
-  (`%C3%A9/%C3%A9cume.txt`). Case-insensitive and normalization-insensitive file systems (APFS, NTFS)
-  would otherwise store distinct terms such as `shape` and `ſhape`, or `café` in NFC and NFD, in the same
-  file, and names would exceed the 255-byte limit for long terms.
-- `mongo` upserts one document per affected term, adding the ids with `$addToSet`; readers must treat
-  `postings` as a set.
-
-**Writing.** What is added since the last flush is kept in memory and written by the flush:
-
-- `json` loads the whole stored index when it is opened, or on the first add, and keeps it in memory as a
-  sorted map of sorted sets (Java `TreeMap<String, TreeSet<Integer>>`); every flush serializes all of it
-  with the language's usual JSON library (§14).
-- `folders` and `mongo` keep only the pending postings, a hash map from term to the sorted set of its new
-  ids, sorted by term when flushed. On a flush, `folders` reads each affected term file, writes it only if
-  it gained an id, and creates each `<c>` directory at most once; `mongo` sends **one unordered bulk write**
-  (`ordered: false`) holding one `updateOne` per affected term, `{"term": t}` with
-  `{"$addToSet": {"postings": {"$each": [ids]}}}` and `upsert: true`, never one request per term (the
-  driver splits it into batches of the server's limit). The unique index on `term` is created when the
-  structure is opened.
-
-**Reading** (the query service). No structure caches postings between lookups, other than `json` holding
-its file:
-
-- `json` loads the whole file the first time a term is looked up and keeps it as a hash map from term to a
-  hash set of ids (Java `HashMap<String, HashSet<Integer>>`, which Jackson builds).
-- `folders` reads the term's file on every lookup; a missing file is an empty list.
-- `mongo` sends one `find` by `term` on every lookup and reads the whole document; a missing document is an
-  empty list.
-
-**MongoDB clients.** Each process opens one client per connection string the first time it needs it and
-reuses it for every database and collection, with the driver's default pool, timeouts and write concern.
-
-\* Or the database named in the path of `TARANTINO_MONGO_URI` (`mongodb://host:27017/<database>`).
-
-### 8.2 Metadata
-
-Fields: `book_id`, `title`, `author`, `language`, `path` (the body file of §6, see §1 for the format).
-Saving a book that already exists replaces its row or document. Each backend opens its connection once
-and reuses it for every save and query; each save is committed before it returns, because §9 marks a
-book as indexed right after.
-
-| Backend  | Location                            | Schema |
-|----------|-------------------------------------|--------|
-| `sqlite` | `<datamarts>/metadata.db`, table `books` | `book_id INTEGER PRIMARY KEY, title TEXT, author TEXT, language TEXT, path TEXT NOT NULL` |
-| `mongo`  | database `tarantino`*, collection `books` | Same fields, unique index on `book_id`, missing fields stored as `null` |
-
-- `sqlite` sets no `PRAGMA`, so it keeps SQLite's defaults: rollback journal (`journal_mode=DELETE`),
-  `synchronous=FULL` and autocommit, which makes each save its own transaction. The table is created with
-  `CREATE TABLE IF NOT EXISTS` when the connection opens, and every save runs the same prepared
-  `INSERT OR REPLACE`. Python's `sqlite3` module does not autocommit by default (it opens a transaction and
-  leaves it uncommitted), so it connects in autocommit mode (§14).
-- `mongo` saves a book with one `replaceOne` by `book_id` with `upsert: true`; the unique index is created
-  when the backend is opened.
-- Reading a book by id is one `SELECT … WHERE book_id = ?`, or one `find` by `book_id`.
-- Reading the books of an author (§10) is `SELECT … WHERE author LIKE ? ESCAPE '\' ORDER BY book_id`, with
-  the author between `%` signs and its `\`, `%` and `_` escaped with `\`, so they match literally; or a
-  `find` with `{"author": {"$regex": <the author with every regular expression metacharacter escaped>,
-  "$options": "i"}}` sorted by `book_id` ascending.
-- If `metadata.db` does not exist, readers return no books instead of creating it.
-
-## 9. Control layer
-
-**State files** in `TARANTINO_CONTROL`: `downloaded_books.txt` and `indexed_books.txt`, one id per line.
-They are append-only. On read, lines that are not a whole number after stripping are ignored,
-so a partially written last line is harmless. File order is preserved. They are read once when a run
-starts; during the run the control layer keeps the state in memory and only appends to the files, so a
-step costs the same however many books are already done.
-
-**Ingestion** of a book is idempotent: if the datalake already contains it (§6), it succeeds with the
-existing paths without downloading again.
-
-**Downloads.** Up to D books are downloaded at once, D = `TARANTINO_PARALLEL_DOWNLOADS` (8 by default).
-Whenever fewer than D are running, the next candidates, in candidates-file order, that are not in
-`downloaded_books.txt`, have not failed during this run and are not being downloaded start downloading;
-they finish in any order. Only the download (§4) and the split (§5) run in parallel: looking a book up in
-the datalake before downloading it, storing it (§6), the state files and the datamarts are used by one
-thread at a time, the control layer's own, so the datalake keeps a single writer and `time` lookups never
-walk a directory that another thread is changing.
-
-**Books to index** are the ids of `downloaded_books.txt`, in file order (the order in which their
-downloads finished), that are not in `indexed_books.txt` and have not failed during this run. They are
-indexed in batches of K books, K = `TARANTINO_INDEX_BATCH` (100 by default).
-
-**Next step**, evaluated before every step, once the downloads above are started:
-
-1. `INDEX` the first K books to index, if there are at least K, or all of them if there is at least one
-   and no download is running.
-2. Otherwise, if a download is running, `DOWNLOAD`: wait for the first one to finish, whichever it is,
-   and store its book.
-3. Otherwise `IDLE`: the run ends.
-
-Downloads go on while a batch is indexed. With D = 1 books are downloaded one at a time, in
-candidates-file order. Each download runs in a thread of its own (§14): Java starts a virtual thread per
-download; Python uses a `ThreadPoolExecutor` of D threads, which suits downloads because waiting on the
-network releases the GIL; C++ a pool of D threads.
-
-The control layer prints one line per step (§15).
-
-**After each step**, each id is appended to the matching state file **only if it succeeded**.
-A failed id is remembered in memory for the current run and retried on the next run.
-Indexing a batch writes the metadata of each book, adds every book to the inverted index and flushes
-it **once**; only then are the books that succeeded marked as indexed. An interrupted batch marks none
-of its books, so the next run indexes it again, which is harmless because indexing a book twice leaves
-the index unchanged (§8.1) and metadata is replaced (§8.2).
-
-Batching only changes when the index is written, never its content: after the same books, the index is
-the same for any K, and so are search results. A book becomes searchable when its batch is flushed.
-Flushing once per batch instead of once per book is what makes it cheaper: `json` rewrites the whole
-file on every flush and `folders` every term file of the flushed books (see `incremental_update_time`
-and `batch_update_time`, §11). K = 1 indexes book by book.
-
-Candidates come from `TARANTINO_WORKLOAD/<file>`, where `<file>` is the first argument of the control
-service. Without an argument they are every book of the local mirror (§4) in ascending id order when
-`TARANTINO_MIRROR` is set, and the ids of `sample_ids.txt` otherwise.
-
-## 10. Search
-
-1. Turn the query into terms with the tokenizer of §7, removing duplicates and keeping the order in
-   which they first appear.
-2. If no term remains, the result is empty.
-3. The result is the set of books whose postings contain **every** term (AND), computed as Java does: for
-   each term, in query order, look its postings up (§8.1) and copy them into a sorted set (Java `TreeSet`,
-   C++ `std::set`); keep in the first set only the ids present in each following one (Java `retainAll`).
-   Every term is looked up even once the result is empty, and postings are not reordered by length; a
-   better plan (shortest list first, stop when empty) is a Stage 2 change for every language. Python has
-   no sorted set in its standard library: it builds a `set` per term, intersects with `&=` and sorts the
-   result once (§12).
-4. Each id, in ascending order, is resolved through the metadata backend with one lookup by id (§8.2), not
-   one query for all of them; ids without metadata are dropped.
-5. Results are ordered by `book_id` ascending.
-
-Author lookup is a case-insensitive substring match (§8.2): SQLite's `LIKE` folds ASCII letters only and
-MongoDB's `i` option folds every letter (§12).
-
-## 11. Benchmarks
-
-**Dataset.** `../Query_Tarantino-Java/scripts/fill_cache.sh` copies raw texts once to `<benchmarks>/cache/<id>.txt`, unchanged,
-following `book_ids.txt`, until the cache holds 2 800 books. By default it copies the candidates in one
-rsync transfer from `rsync.ibiblio.org::gutenberg-epub` (§4, local mirror) to `<benchmarks>/mirror/`;
-with `TARANTINO_CACHE_SOURCE=http`, for networks that block the rsync port, it downloads them over HTTP
-(§4), 16 at a time. Both give the same files. Only books with both markers (§5) are cached; missing ids
-(404 or absent from the mirror) and ids without markers are listed in `<benchmarks>/cache/skipped.txt` and
-never retried, while network errors are retried on the next run.
-The cached ids, in `book_ids.txt` order, are the **cache order**. Every implementation reads from the
-same cache, so the network is never measured.
-
-**Sizes.** N ∈ {100, 300, 1000}, evenly spread on a logarithmic scale. The dataset of size N is the first
-N ids in cache order. The
-**new books** are always the same 100: positions 1001 to 1100 in cache order. They never belong to a
-dataset and are the same for every N, so results at different N differ only by N.
-
-**Simulated download time.** The datalake benchmarks save the books of a dataset as a crawl
-downloading 100 books per hour would: the book at position i (0-based) is saved at T₀ + ⌊i / 100⌋ hours,
-so `time` spreads N books over ⌈N / 100⌉ hour directories. In new books detection that instant is also
-set as the modification time of each body file, which `book` and `batch` read (§6); the other
-benchmarks leave it unchanged, so writing costs the same for every layout.
-
-**Execution.**
-
-- Benchmarks target any Unix system: Linux is the reference platform and macOS is compatible. Same
-  machine for all languages, with nothing else running.
-- The files that benchmarks write go under `<benchmarks>/tmp.noindex/` and are kept out of desktop file
-  indexers: macOS Spotlight skips directories whose name ends in `.noindex`; on a Linux desktop whose
-  indexer covers the project (KDE Baloo indexes the whole home directory by default), exclude `<benchmarks>`
-  in its settings. Servers have no indexer.
-- The machine stays awake, on mains power and out of any power-saving mode for the whole run, for example
-  `systemd-inhibit --what=idle:sleep <command>` on Linux or `caffeinate -i <command>` on macOS. A laptop
-  that sleeps stops the run, and one that slows down under sustained load, as fanless laptops do,
-  penalizes whatever is measured later.
-- Same MongoDB for all languages: **MongoDB 7.0 on the benchmark machine itself, not inside a virtual
-  machine**, with the WiredTiger cache fixed at 1 GB (`storage.wiredTiger.engineConfig.cacheSizeGB: 1`, or
-  `--wiredTigerCacheSizeGB 1`), using one database per benchmark. On Linux, a native install or a Docker
-  container with host networking both qualify, since containers share the host kernel. On macOS (and
-  Windows), Docker runs containers inside a virtual machine that reserves its own memory and adds a
-  network round trip to every operation, so MongoDB must be installed natively there.
-- Record CPU, RAM, OS and the MongoDB version, and the versions of the runtime or compiler, of Unicode
-  (§1) and of every library of §14, SQLite's included (Java's `sqlite-jdbc` bundles its own SQLite, 3.53.4
-  in the reference run).
-- **Runtimes.** Java 25 (HotSpot) runs each measured process with a fixed 4 GB heap (`-Xms4g -Xmx4g`) and
-  the default G1 collector. Python runs on CPython 3.13 or later, without flags. C++ is C++20 built in
-  release mode (`-O2 -DNDEBUG`) with Clang or GCC.
-- **Harness.** Java uses JMH. Python and C++ follow the same scheme with a runner of their own that starts
-  one operating-system process per benchmark, structure, size and pass (Python `subprocess`, C++
-  `fork`/`exec`) and times with a monotonic clock (Java `System.nanoTime`, Python `time.perf_counter_ns`,
-  C++ `std::chrono::steady_clock`). For one operation, the runner repeats it for one second and the sample
-  is that second divided by the operations completed (JMH `AverageTime`); queries are also timed one by one
-  (JMH `SampleTime`). C++ keeps every result observable, as JMH's `Blackhole` does, so that the compiler
-  cannot drop the work (a `volatile` sink or `benchmark::DoNotOptimize`).
-- **Random choices** (a book, a query, an author) are uniform and drawn inside the timed operation, as in
-  Java: Java `ThreadLocalRandom`, Python `random.randrange`, C++ `std::mt19937_64` with
-  `std::uniform_int_distribution`.
-- Each benchmark runs in **2 separate processes** for every structure and size, one in each of two
-  passes over all the benchmarks of a service. The second pass takes the structures and the sizes in
-  reverse order, so whatever drifts during a run, such as the temperature of the machine or the writes
-  left by the benchmark before, weighs alike on every structure instead of always on the last ones.
-  Each process runs warm-up iterations, which are discarded, and then measured iterations. Every
-  measured iteration is one **sample**:
-
-| Kind of metric                                            | Warm-up per process                                 | Measured per process | Samples |
-|-----------------------------------------------------------|-----------------------------------------------------|----------------------|--------:|
-| Full build                                                | building 100 books                                  | 3 runs               |       6 |
-| Incremental and batch update                              | the first 10 new books into an empty index, one by one and then together | 3 runs |  6 |
-| Other whole runs: write, insertion, index open            | 1 run                                               | 3 runs               |       6 |
-| One operation: lookup, detection, query, metadata queries | 3 × 1 second                                        | 5 × 1 second         |      10 |
-
-  Warming up only compiles the code, so full builds and updates warm up on a small input with the same code
-  instead of a whole run of N books, which for `folders` alone would cost minutes per process.
-  A sample of the first kind is the time of one run. A sample of the second kind is the mean time per
-  operation during one second.
-- Before every run of the first kind, warm-up included, storage is reset without timing it: emptied,
-  except for index open, which only reads, and the incremental and batch updates, which start every run
-  from exactly the index of the dataset of size N. Putting back right before each run only the terms of
-  the new books is enough, and costs a fraction of copying the whole index.
-- The **value** of a metric is the mean of its samples. Its **error** is the half-width of the 95%
-  confidence interval of that mean, t₀.₉₇₅,ₙ₋₁ · s / √n over the n samples, computed from the samples
-  (JMH's own `Score Error` is fixed at 99.9%). Two structures are **tied** when their intervals overlap:
-  |a − b| ≤ error(a) + error(b).
-- 95% is the usual confidence level in statistics; JMH's 99.9% is far stricter. With it, 2 processes give
-  narrower intervals than 3 processes at 99.9% (t₀.₉₇₅,₅ / √6 = 1.05 against t₀.₉₉₉₅,₈ / √9 = 1.68 for 6
-  and 9 samples) with a third fewer runs. What 2 processes capture less is the variation between
-  processes, and samples of one process are not fully independent, so intervals may be slightly
-  optimistic.
-
-**Validation.** Before measuring, each benchmark checks that the structure gives the correct result,
-and the benchmark run fails without writing results otherwise:
-
-- Lookup: every book of the dataset is found, and both of its files exist.
-- New books detection: exactly the ids of the 100 new books.
-- Query: for every query of `queries.txt`, the same ids as a reference computed in memory from the
-  tokenized books of the dataset (§7, §10).
-- Full index build: after the last build, every structure holds exactly as many terms as the distinct
-  terms of the tokenized books of the dataset (`term_count`).
-- Metadata queries: every id returns the book with that id, and every author returns at least every
-  book of the dataset with exactly that author.
-
-**Results.** Each implementation writes `<benchmarks>/results/<language>-<service>.csv`, `<language>` being
-`java`, `python` or `cpp`, with the header
-`language,structure,metric,n_books,value,error,unit`, e.g. `java,time,write_throughput,1000,812.4,35.2,books/s`.
-`error` is in the unit of the metric. It is `0` for exact metrics (counts, sizes and `recovery_ok`) and
-empty when it cannot be computed (fewer than 2 samples). For a value derived from a time, such as
-`write_throughput` = N / time, the error is the value times the relative error of the time.
-With the results of every language in that directory, `../Query_Tarantino-Java/scripts/compare_results.py` builds the
-comparison report in `<benchmarks>/report/`, where tied structures share the first place.
-
-| Group    | Structures                   | Metric                     | Unit    |
-|----------|------------------------------|----------------------------|---------|
-| Datalake | `time`, `book`, `batch`      | `write_throughput`         | books/s |
-|          |                              | `lookup_time`              | µs/op   |
-|          |                              | `new_books_detection_time` | ms      |
-|          |                              | `recovery_ok`              | 0 or 1  |
-|          |                              | `recovery_leftover_files`  | files   |
-|          |                              | `file_count`               | files   |
-|          |                              | `directory_count`          | dirs    |
-|          |                              | `disk_usage`               | bytes   |
-|          |                              | `disk_allocated`           | bytes   |
-| Index    | `json`, `folders`, `mongo`   | `full_build_time`          | ms      |
-|          |                              | `incremental_update_time`  | ms/book |
-|          |                              | `batch_update_time`        | ms/book |
-|          |                              | `index_open_time`          | ms      |
-|          |                              | `query_time`               | µs/query|
-|          |                              | `query_time_p99`           | µs/query|
-|          |                              | `query_time_<category>`    | µs/query|
-|          |                              | `build_memory`             | bytes   |
-|          |                              | `index_memory`             | bytes   |
-|          |                              | `memory_allocated`         | bytes   |
-|          |                              | `term_count`               | terms   |
-|          |                              | `disk_usage`               | bytes   |
-|          |                              | `disk_allocated`           | bytes   |
-| Metadata | `sqlite`, `mongo`            | `bulk_insertion_time`      | ms      |
-|          |                              | `book_by_id_time`          | µs/op   |
-|          |                              | `books_by_author_time`     | µs/op   |
-
-- `write_throughput`: N divided by the time to ingest the N cached books as the crawler does (§9,
-  ingestion): look the book up in the datalake (§6, lookup), then read, split (§5) and store it. The
-  lookup is part of real ingestion, and for `time` it searches the whole datalake. Each run starts from an
-  empty datalake.
-- `lookup_time`: time to find the header and body paths of a random book of the dataset (§6, lookup, which
-  checks that the body exists without reading it).
-- `new_books_detection_time`: time to list the 100 new books (§6, new books detection). The N books of
-  the dataset are saved first, ending one day before the new ones, which are then saved at the current time.
-- `recovery_ok`: measured with 100 books. Half of them are ingested; the next one is interrupted after
-  its header is written, leaving its body as `.tmp`; one hour later a new run removes incomplete writes
-  (§6) and ingests all 100 again. It is 1 if every book ends with exactly one body file, 0 otherwise.
-- `recovery_leftover_files`: after the same scenario, the number of files in the datalake that are
-  neither the header nor the body of a stored book (`.tmp` files and orphaned headers).
-- `file_count`, `directory_count`, `disk_usage`, `disk_allocated`: the datalake after writing N books;
-  directories do not count the root, and `disk_usage` is the sum of file sizes in bytes.
-- `disk_allocated`, for the datalake and the file-based indexes: the same files, each size rounded up to
-  whole blocks of the file system that holds them (an empty file takes none). The block size is the one
-  the file system reports: Java `FileStore.getBlockSize()`, Python `os.statvfs(path).f_frsize` and C++
-  `statvfs(path, &stats)`'s `f_frsize` (not `f_bsize`, the preferred I/O size), 4096 bytes on default APFS,
-  ext4 and NTFS. It is close to what the
-  files really take: the `folders` index of 2000 books has 587 545 term files and about 55 MB of
-  `disk_usage`, but at one 4096-byte block per file at least it takes about 2.4 GB. All the footprint
-  metrics of a tree are measured in one walk.
-- `full_build_time` and `memory_allocated`: time and bytes allocated to read, split, tokenize and index
-  N books into an empty index, flushing once at the end. `memory_allocated` is counted by every thread
-  around the build alone, never around emptying the storage, one sample per measured run. It counts
-  garbage too: it measures the pressure on the garbage collector, not the memory required. Before its
-  first run each process reads the N texts once, untimed, so that every run finds them in the operating
-  system cache. A build saves no metadata.
-- `build_memory`: memory retained while building, i.e. heap in use after a full garbage collection once
-  the N books are added and before the flush, minus the same measure before the build.
-- `incremental_update_time`: mean time per book to index the first 10 new books into an index of exactly
-  the N books of the dataset book by book, as the control layer does with K = 1 (§9): each book is read
-  from the cache, split, tokenized, added and flushed. Only 10 books, because flushing after each one is
-  far slower (`folders` rewrites every term file of every book).
-- `batch_update_time`: mean time per book to index the 100 new books into an index of exactly the N
-  books of the dataset with a single flush at the end, as the control layer does with the default
-  K = 100 (§9): the 100 books are read, split, tokenized and added, then flushed once. No update saves
-  metadata. Compared with `incremental_update_time`, it shows what batching saves.
-- Both updates open the index before timing, as a running control layer has it open: loading it (all of
-  `json`) is measured by `index_open_time`, and timing it here would spread it over 10 books in one
-  metric and over 100 in the other.
-- `index_open_time`: time to open an index of N books from storage with a new reader, holding nothing
-  in memory from previous runs, as a new process would, and answer the first query of `queries.txt`.
-  The operating system cache and an open MongoDB connection may be reused, so it measures loading the
-  index, not starting a process. The query goes through the search of §10 with the metadata reader of
-  `query_time`.
-- `query_time`: time of a random query of `queries.txt` against an open index of N books, through the
-  search of §10 with a metadata reader that returns a fixed record for every id without any I/O (Java
-  `QueryWorkload`): metadata is not read, so only the index is measured. Every query is timed; a sample is
-  the mean of one measured second.
-- `query_time_p99`: the 99th percentile of the query times of each measured second, over the queries
-  of `query_time`; its samples are those 10 percentiles. A search engine is judged by its slowest
-  queries as much as by its mean.
-- `query_time_<category>`: `query_time` restricted to the queries of one category of `queries.txt`,
-  measured in the same run: each query is also timed on its own, and a sample is the mean time of the
-  queries of the category during one measured second (10 samples). Timing each query adds a few tens of
-  nanoseconds, which only matters for the fastest queries. The cost of a query depends mostly on how long
-  the postings it reads and intersects are, and terms follow a Zipf distribution, so the workload has 5
-  queries of each category:
-
-  | Category   | Queries                                                | Postings read            |
-  |------------|--------------------------------------------------------|--------------------------|
-  | `frequent` | one term in nearly every book (`love`, `time`)         | one very long list       |
-  | `rare`     | one term in 2 or 3 of the first 2000 books, all within the first 100 | one tiny list |
-  | `mixed`    | a frequent term and a rare one                         | long list ∩ tiny list    |
-  | `long`     | four common terms (`ship captain sea voyage`)          | four long lists          |
-  | `empty`    | two rare terms that no book has together               | two tiny lists, no result |
-  | `nonascii` | one term with non-ASCII letters (`cæsar`, `façade`)    | encoded file names in `folders` |
-- `index_memory`: memory retained by an index of N books open for querying, i.e. heap in use after a
-  full garbage collection with the index open and every query of `queries.txt` answered once, minus the
-  same measure before opening it. Each process opens the index once without measuring it and then
-  measures 5 openings, so there are 10 samples. For `mongo` only the client side is measured, with the
-  client already connected.
-- `term_count`: distinct terms in the index of N books.
-- `bulk_insertion_time`: time to save the metadata of N books one by one, through a single open backend,
-  into an empty backend. The headers are parsed before timing; the timed run creates the backend, opens
-  it (its connection, and the table or the index if missing; the process's MongoDB client may already
-  exist, §8.1) and saves the N books.
-- `book_by_id_time`: a random id of the dataset.
-- `books_by_author_time`: a random author among the **distinct** authors of the dataset, leaving out books
-  without one (at N = 1000, 426 authors for the 974 books that have one). It is not the author of a random
-  book, which would favour prolific authors (Stevenson, with 43 books, would come up 4.4% of the time
-  instead of 0.23%).
-- For `mongo`, `disk_usage` is the `storageSize` + `totalIndexSize` of its collections after an `fsync`;
-  that is already allocated storage, so `disk_allocated` equals it.
-- `build_memory` is measured 3 times per process, so it has 6 samples; `term_count` is exact.
-- **Memory in each language.** `build_memory` and `index_memory` are the memory retained, measured outside
-  every timed run:
-  - Java: heap in use (`MemoryMXBean`) after three `System.gc()` calls.
-  - Python: memory traced by `tracemalloc` after `gc.collect()`. Tracing slows Python down several times,
-    so it is started right before these measurements and stopped after them. Like the Java heap, it leaves
-    out what native libraries allocate on their own.
-  - C++: bytes in use by the allocator, with no collection needed: `malloc_zone_statistics(nullptr, &s)`'s
-    `size_in_use` on macOS, `mallinfo2().uordblks` on Linux.
-
-  `memory_allocated` is every byte allocated during the build, garbage included:
-  - Java: `ThreadMXBean.getTotalThreadAllocatedBytes()`, every thread.
-  - C++: a counter of the sizes requested from a replaced global `operator new`, read before and after.
-  - Python has no counter of total allocations (`tracemalloc` gives current and peak memory and
-    `sys.getallocatedblocks()` counts live blocks), so it writes no `memory_allocated` rows and the report
-    has no Python row for that metric.
-
-## 12. Known limitations
-
-- Terms are used as file names by `folders`. On Windows the reserved names (`con`, `nul`, `aux`, `prn`…)
-  cannot be created, so benchmarks for that structure run on macOS or Linux.
-- Python 3.13 implements Unicode 15.1, older than the 16.0 of Java 25 and ICU 76: a letter added in 16.0
-  is part of a term in Java and C++ and a separator in Python 3.13. No book of the benchmark cache has one
-  (§7).
-- Python intersects hash sets and sorts the result once (§10), which is cheaper than the sorted trees of
-  Java and C++: the algorithm is the same, the standard library is not.
-- Python writes no `memory_allocated`, and its memory metrics count only what `tracemalloc` traces (§11).
-- For non-ASCII authors, the books found by author differ between SQLite, whose `LIKE` folds ASCII letters
-  only, and MongoDB, whose `i` option folds every letter; each backend finds the same books in every
-  language.
-- `disk_allocated` is an estimate: it leaves out directories and file system metadata, and file systems
-  that compress data or store very small files inside their metadata take less than it reports.
-- The datalake is not synced to disk after each write, so `write_throughput` measures writes to the
-  operating system cache.
-- Durability differs between metadata backends: SQLite commits every save to disk before it returns,
-  while MongoDB with its default write concern acknowledges a save before flushing its journal (within
-  100 ms). `bulk_insertion_time` favours MongoDB on that account.
-- MongoDB compresses collections and indexes on disk (WiredTiger), so its `disk_usage` is compressed while
-  that of `json` and `folders` is not.
-- Memory metrics count the memory of the measured process (§11): for `mongo` the index lives in the
-  MongoDB server, whose memory (its 1 GB cache) is not counted.
-
-## 13. Conformance cases
-
-`TARANTINO_WORKLOAD/conformance/` holds language-neutral cases of the rules above, as JSON files with a
-`spec` description, an optional `stopwords` list and a `cases` array. Every implementation runs them in its
-tests, so it can show it is conformant without comparing datalakes or datamarts by hand. The datalake paths
-are checked on both sides: the crawler stores each book at them and the indexer finds it there.
-
-| File                  | Rule | Each case                                                                  |
-|-----------------------|------|----------------------------------------------------------------------------|
-| `split.json`          | §5   | `raw` text and the expected `header` and `body`, or the expected `failure` |
-| `datalake_paths.json` | §6   | `layout`, `id` and `saved_at` instant, and the `header` and `body` paths relative to the root |
-| `header_fields.json`  | §7   | `header` and the expected `title`, `author` and `language` (`null` if missing) |
-| `terms.json`          | §7   | `text` and its expected term frequencies, with the file's `stopwords`      |
-| `folders_names.json`  | §8.1 | `term` and the path of its `folders` file relative to the index root       |
-| `query_terms.json`    | §10  | `query` and its expected terms in order, with the file's `stopwords`       |
-| `search.json`         | §10  | `query` and the expected ids over the file's `books` and `stopwords`       |
-
-The expected values follow this document, not any implementation. When a rule changes, its cases change
-with it, and an implementation that fails a case is not conformant.
-
-## 14. Language equivalents
-
-Java is the reference implementation (see the introduction). Each row gives what Python and C++ use for what Java does; an
-implementation uses the listed equivalent unless it shows, with the cases of §13 and the same work per
-measured operation, that another one is equivalent.
-
-| Concept                    | Java (reference)                                  | Python                                                   | C++                                                       |
-|----------------------------|---------------------------------------------------|----------------------------------------------------------|-----------------------------------------------------------|
-| Text                       | `String` (UTF-16)                                 | `str`                                                    | `std::string` in UTF-8; ICU `icu::UnicodeString` for Unicode rules |
-| Strip (§1)                 | `String.strip`                                    | `s.strip(JAVA_WHITESPACE)` with the characters of §1, never bare `strip()` | loop over code points with the characters of §1 |
-| Lowercase (§7)             | `toLowerCase(Locale.ROOT)`                        | `str.lower`                                              | `icu::UnicodeString::toLower(icu::Locale::getRoot())`; not `std::tolower` or `towlower`, which map one character at a time |
-| Letter (§7)                | `Character.isLetter`                              | `regex` package `\p{L}+`, or `unicodedata.category(c)[0] == "L"` | ICU `u_isalpha`                              |
-| Markers and header fields  | `java.util.regex` (`UNIX_LINES` for fields)       | `re`                                                     | literal search (§5) and line scan (§7)                    |
-| Term frequencies           | `HashMap<String, Integer>`                        | `dict` or `collections.Counter`                          | `std::unordered_map<std::string, int>`                    |
-| Sorted map and set         | `TreeMap`, `TreeSet`                              | `dict` and `set`, sorted with `sorted()` when written    | `std::map`, `std::set`                                    |
-| Hash map and set           | `HashMap`, `HashSet`                              | `dict`, `set`                                            | `std::unordered_map`, `std::unordered_set`                |
-| Atomic replace (§6)        | `Files.move` with `ATOMIC_MOVE`                   | `os.replace`                                             | `std::filesystem::rename`                                 |
-| Directory walk (§6)        | `Files.find`, `Files.walk`, `Files.list`          | `os.scandir`                                             | `std::filesystem::directory_iterator`, `recursive_directory_iterator` |
-| Modification time (§6, §11) | `Files.getLastModifiedTime`, `setLastModifiedTime` | `os.stat(p).st_mtime_ns`, `os.utime(p, ns=…)`         | `stat`'s `st_mtimespec` (macOS) or `st_mtim` (Linux), `utimensat` |
-| Block size (§11)           | `FileStore.getBlockSize()`                        | `os.statvfs(p).f_frsize`                                 | `statvfs(p, &s)`, `s.f_frsize`                            |
-| JSON (§8.1)                | Jackson `ObjectMapper`                            | `json` (standard library)                                | nlohmann/json                                             |
-| SQLite (§8.2)              | `sqlite-jdbc`, autocommit, one `PreparedStatement` per query | `sqlite3.connect(path, autocommit=True)` (Python 3.12+; `isolation_level=None` before) | C API: `sqlite3_prepare_v2` once, then `bind`, `step`, `reset` per call |
-| MongoDB (§8)               | `mongodb-driver-sync`                             | `pymongo`                                                | `mongocxx`, with one `mongocxx::instance` per process     |
-| Regular expression escape (§8.2) | `Pattern.quote`                             | `re.escape`                                              | a backslash before each of `\^$.\|?*+()[]{}`             |
-| HTTP (§4)                  | `java.net.http.HttpClient`, redirects followed by hand | `urllib.request` with a redirect handler that refuses other hosts | libcurl, `CURLOPT_FOLLOWLOCATION` off, redirects followed by hand |
-| Parallel downloads (§9)    | a virtual thread per download                     | `concurrent.futures.ThreadPoolExecutor(max_workers=D)`   | a pool of D `std::thread`s                                |
-| Clock (§11)                | `System.nanoTime`                                 | `time.perf_counter_ns`                                   | `std::chrono::steady_clock`                               |
-| Random choice (§11)        | `ThreadLocalRandom`                               | `random.randrange`                                       | `std::mt19937_64` and `std::uniform_int_distribution`     |
-| Benchmark harness (§11)    | JMH                                               | own runner                                               | own runner (or Google Benchmark, one process per configuration) |
-| Retained memory (§11)      | `MemoryMXBean` after `System.gc()`                | `tracemalloc` after `gc.collect()`                       | `malloc_zone_statistics` (macOS), `mallinfo2` (Linux)     |
-| Allocated memory (§11)     | `ThreadMXBean.getTotalThreadAllocatedBytes()`     | none                                                     | counter in a replaced `operator new`                      |
-| Tests (§17)                | JUnit 5, Testcontainers                           | `unittest` or `pytest`, `testcontainers`                 | GoogleTest                                                |
-| Build                      | Maven                                             | `pyproject.toml` (pip or uv)                             | CMake                                                     |
-
-## 15. Command-line interface
-
-Every service is a program run from the project root, configured by §2, that writes UTF-8 lines to
-standard output. An argument that is not what the service expects (a book id that is not an integer) or an
-invalid configuration (§2) stops it before any work, with a message on standard error and exit status 1.
-Otherwise the exit status is 0, even when some books fail: their lines say so.
-
-| Service   | Arguments                                         | What it does                                                    |
-|-----------|---------------------------------------------------|-----------------------------------------------------------------|
-| `crawler` | book ids                                          | removes incomplete writes (§6), then ingests each id in order, one at a time (§9, ingestion), from the mirror or `TARANTINO_MIRROR` (§4) |
-| `indexer` | book ids                                          | indexes them as one batch with one flush (§9), reading the datalake |
-| `query`   | the words of the query                            | joins them with single spaces and searches (§10)                |
-| `control` | optionally, a candidates file in `TARANTINO_WORKLOAD` | runs the control layer (§9) until it is idle                |
-
-Only `control` reads or writes the control files.
-
-Output, where `<dir>` is the directory of the body file, as built from the datalake root (§1), and
-`<REASON>` a failure reason of §5:
-
-| Service   | Lines                                                                                       |
-|-----------|---------------------------------------------------------------------------------------------|
-| `crawler` | one per id: `[CRAWLER] <id>: stored in <dir>` or `[CRAWLER] <id>: skipped, <REASON>`        |
-| `indexer` | one per id: `[INDEXER] <id>: <n> unique terms indexed` or `[INDEXER] <id>: skipped, not found in the datalake` |
-| `query`   | `<n> result(s) for "<query>"`, then one per book: two spaces and `[<id>] <title> — <author> (<language>) <path>`, a missing field written `null` |
-| `control` | one per step, `[CONTROL] <ACTION> <books>: <detail>`, and finally `[CONTROL] Nothing left to do` |
-
-In `control` lines, `<ACTION>` is `DOWNLOAD` or `INDEX` and `<books>` is the book id, or
-`<n> books (<first>…<last>)` for a batch of more than one. `<detail>` is that of the crawler or indexer
-line for one book; for a batch, `<n> indexed` or `<k> indexed, <m> skipped`. `—` is U+2014 and `…` U+2026.
-
-## 16. Project structure
-
-Every implementation has the same top level: `../Query_Tarantino-Java/services` with one directory per service (`crawler`,
-`indexer`, `query`, `control`); `scripts/` and `workload/`, copied unchanged from the Java repository; and
-the runtime directories `datalake/`, `datamarts/`, `control/` and `benchmarks/`, which are not versioned.
-
-Each service has the same layers, with the class names of Java:
-
-| Layer       | Content                                                                                     |
-|-------------|---------------------------------------------------------------------------------------------|
-| `model/`    | records and pure domain logic, grouped by concept (`model/book`, `model/terms`, `model/failure`) |
-| `ports/`    | interfaces the service depends on                                                           |
-| `adapters/` | implementations of the ports, one subpackage per functionality and one per compared structure: `datalake/time`, `datalake/book`, `datalake/batch`, `index/json`, `index/folders`, `index/mongo`, `metadata`, `mongo`, `stopwords`, `gutenberg` |
-| `commands/` | use cases: `IngestBookCommand`, `IndexBookCommand`, `SearchCommand`, `ControlPipeline`      |
-| top level   | `Main`, `<Service>Config` (reads §2) and `<Service>Factory` (builds the adapters from it)   |
-
-Packages hold about three classes each, as a guideline. A helper used by a single structure stays private
-to its package; only helpers shared by several structures are public. Tests mirror the packages of what
-they test, and benchmarks live in the test tree under `benchmarking/`, by comparison, with their shared
-code in `benchmarking/support/`.
-
-| Concept            | Java                                                  | Python                                      | C++                                              |
-|--------------------|-------------------------------------------------------|---------------------------------------------|--------------------------------------------------|
-| Service sources    | `services/<s>/src/main/java/org/ulpgc/tarantino/<s>/` | `services/<s>/src/tarantino_<s>/`           | `services/<s>/src/` and `services/<s>/include/tarantino/<s>/` |
-| Tests              | `services/<s>/src/test/java/…`                        | `services/<s>/tests/`                       | `services/<s>/tests/`                            |
-| Package            | package                                               | package (directory with `__init__.py`)      | directory and namespace `tarantino::<s>::<layer>` |
-| Port               | `interface`                                           | `typing.Protocol`                           | abstract class with pure virtual functions       |
-| Record             | `record`                                              | `@dataclass(frozen=True)`                   | `struct`                                         |
-| Entry point        | `Main.main`                                           | `__main__.py`, run as `python -m tarantino_<s>` | `main.cpp`, one executable per service       |
-| File names         | `IngestBookCommand.java`                              | `ingest_book_command.py`                    | `IngestBookCommand.hpp` and `.cpp`               |
-| Control uses the crawler and indexer | their jars                          | their packages                              | their libraries, linked into its executable      |
-
-## 17. Tests
-
-Every implementation has:
-
-- **Conformance tests** that run every case of §13, each reported by name.
-- **Unit tests** for each class with logic, in the test tree, in the package of the class they test.
-- **An end-to-end test** that runs the control layer over a temporary local mirror (§4) of three small
-  books, with no candidates file, D = 3 and K = 2, once per datalake layout and once per index structure:
-  every book reaches the datalake, and a search finds each one with its title and author.
-- **MongoDB tests** (the adapters, and the end-to-end run on `mongo`) that use the server at
-  `TARANTINO_MONGO_URI` when it answers, in a temporary database of their own dropped after each test;
-  otherwise a disposable `mongo:7.0` container when Docker runs (Testcontainers in Java and Python; C++ has
-  none and skips); otherwise they are skipped, never failed.
-
-The tests of the comparison report, in `../Query_Tarantino-Java/scripts/tests`, are shared by every implementation.
+# Query Tarantino · Stage 2 · SPEC
+
+Version 1.0 · October 21, 2026
+
+Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
+
+- It replaces the Stage 1 `SPEC.md`, which was the cross-language contract and does not move to `stage_2`.
+- The reasons behind each decision are in the Stage 2 plan. If the plan and this file disagree, this file wins and the plan gets fixed.
+- A contract change goes in a separate PR reviewed by all four members. That PR bumps the version of this file and updates `common`, `api/openapi.yaml` and, when affected, the `CLAUDE.md` files and the plan, all at once. Nobody changes a contract inside the PR for their own service.
+
+## 1. Scope and assumptions
+
+`crawler` downloads books from Project Gutenberg, `indexer` indexes them in batches, `query` searches with TF-IDF and `control` seeds and reconciles. The services never call each other: they coordinate through Hazelcast, keep the texts in the datalake and the source of truth in MongoDB.
+
+Everything runs on one machine with Docker Compose. The design depends on these assumptions, which Stage 3 will have to lift:
+
+- Addresses are Compose service names on a single network, and nginx is the only entry point from the host.
+- The datalake is a local volume, mounted at the same path in `crawler`, `indexer` and `control`.
+- There is a single Hazelcast member: if it goes down, the queues are lost and `control` rebuilds them from Mongo.
+- MongoDB is a single server without replicas. Every state change is a single-document write, with no transactions.
+- All containers share the host clock. Expirations are compared with Mongo's time (`$$NOW`); the host clock is only used in logs and in the `mtime` of `.tmp` files.
+
+## 2. Architecture
+
+### 2.1 Diagram
+
+```mermaid
+flowchart TB
+  FE["Front-end"] -->|":8080"| NG["nginx"]
+  ADM["Scripts and admin"] -->|":8081"| NG
+  NG -->|"/control/*"| CT["control ×1 :7004"]
+  NG -->|"/ingest/*"| CR["crawler ×N :7001"]
+  NG -->|"/index/*"| IX["indexer ×N :7002"]
+  NG -->|"/search, /books, /search/filters"| Q["query ×N :7003"]
+  subgraph HZ["Hazelcast :5701"]
+    QD[["books-to-download"]]
+    QI[["books-to-index"]]
+    TP(("published-batches"))
+  end
+  CT -->|"seeding and rescues"| QD
+  QD --> CR
+  CR -->|"POST /ingest and retries"| QD
+  CR -->|"download complete"| QI
+  CT -->|"rescues and reindexing"| QI
+  QI --> IX
+  IX -->|"POST /index/update"| QI
+  IX -->|"BatchPublished"| TP
+  TP --> Q
+  CR -->|"header and body"| DL[("datalake batch")]
+  DL --> IX
+  CT -->|"deletes old .tmp"| DL
+  CR & IX & CT & Q <--> M[("MongoDB :27017")]
+```
+
+The life of a book: `control` seeds it, `crawler` downloads and enqueues it, `indexer` publishes it in a batch and `query` shows it.
+
+### 2.2 Modules
+
+| Module | Responsibility | Deployment |
+| --- | --- | --- |
+| `common` | Shared contracts: names, enums, records, JSON, configuration, tokenizer, stopwords, datalake paths, languages, Problem Details, `/health`, transition logs and crash points; in Mongo, the client, the indexes, “Create the pointer”, “Create the state” and reading a book's state (§6.2) | Dependency of the others |
+| `crawler` | Ingestion: consumes `books-to-download`, claims each book, downloads it from Gutenberg or the local mirror, writes header and body and enqueues it in `books-to-index` | N replicas |
+| `indexer` | Indexing: groups `books-to-index` into batches, writes metadata and postings into the write generation, publishes the batch and notifies | N replicas |
+| `query` | Search: keeps a snapshot of the published batches of the current generation and serves `/search`, `/books/{book_id}` and `/search/filters` | N replicas behind nginx |
+| `control` | Seeds the candidates, reconciles expired leases and lost messages, drives rebuilds and cleans the datalake and old generations | One replica |
+| `bench` | Load generator, result processing and XChart charts for the integration benchmarks | Not deployed |
+| `checks` | Functional API checks (F4) against the running stack and against `api/openapi.yaml` | Not deployed |
+
+### 2.3 Repository and owners
+
+```text
+stage_2/
+├── SPEC.md, CLAUDE.md, README.md
+├── pom.xml                  parent: modules and every version
+├── docker-compose.yml, Dockerfile, .gitignore
+├── common/                  with its CLAUDE.md
+├── services/
+│   ├── crawler/             with its CLAUDE.md
+│   ├── indexer/             with its CLAUDE.md
+│   ├── query/               with its CLAUDE.md
+│   └── control/             with its CLAUDE.md
+├── bench/
+├── checks/
+├── api/openapi.yaml
+├── nginx/nginx.conf
+├── scripts/
+│   ├── fill_cache.sh        from Stage 1
+│   ├── bench/<experiment>.sh
+│   └── recovery/<nn>-<row>.sh
+├── workload/                sample_ids.txt, book_ids.txt, queries.txt, stopwords.txt, corpus.sha256
+└── benchmarks/runs/<run_id>/
+```
+
+| Path | Owner |
+| --- | --- |
+| `../../Downloads/stage_2-en/services/crawler`, `docker-compose.yml`, `Dockerfile` | A |
+| `../../Downloads/stage_2-en/services/indexer` | B |
+| `../../Downloads/stage_2-en/services/query`, `nginx/`, `api/openapi.yaml`, `checks/` | C |
+| `../../Downloads/stage_2-en/services/control`, `scripts/recovery/` | D |
+| `bench/` | C, the load generator; D, the shared part and result processing |
+| `scripts/bench/<experiment>.sh` | Whoever owns the experiment in the plan's split |
+| `common`, `SPEC.md`, root `CLAUDE.md`, parent `pom.xml`, `workload/` | All four, in a separate PR |
+
+- Dependency and plugin versions live only in the parent `pom.xml` (`dependencyManagement` and `pluginManagement`). The Hazelcast client uses the same version as the member image.
+- `benchmarks/runs/` is versioned; `benchmarks/cache/`, `benchmarks/mirror/`, `benchmarks/tmp.noindex/`, `datalake/`, `target/` and `CLAUDE.local.md` stay out of git.
+
+### 2.4 Docker Compose
+
+- Services: `mongo`, `hazelcast`, `crawler`, `indexer`, `query`, `control` and `nginx`. None uses `container_name`, so that `docker compose up -d --scale crawler=3 --scale indexer=3 --scale query=2` works. `control` always has one replica.
+- Only nginx publishes ports on the host: 8080 and 8081. For debugging, use `docker compose exec`.
+- Pinned image versions, never `latest`: `mongo:7.0`, as in Stage 1; `hazelcast/hazelcast` with `HZ_CLUSTERNAME=tarantino`; `nginx`; and for the four services one shared `Dockerfile` on `eclipse-temurin:25-jre`, which copies the service jar and adds `curl` for the healthcheck, because the image does not ship it.
+- Addresses: `TARANTINO_MONGO_URI=mongodb://mongo:27017/tarantino` and `TARANTINO_HAZELCAST=hazelcast:5701`.
+- Volumes: the `datalake` volume at `/data/datalake` in `crawler`, `indexer` and `control`, with `TARANTINO_DATALAKE=/data/datalake`; `./workload`, read-only, at `/app/workload` in `indexer`, `query` and `control`, with `TARANTINO_WORKLOAD=/app/workload`. When the local mirror is used, `benchmarks/mirror/` is mounted read-only in `crawler` and `control`, and `TARANTINO_MIRROR` points to that path.
+- The timing variables (§4.7) are defined once in a shared block and reach every service with the same values.
+- Healthchecks: each service, `curl -fsS http://localhost:<port>/health`; `mongo`, `mongosh --quiet --eval "db.adminCommand('ping')"`.
+- Startup: each service opens its HTTP port first and retries the connection to Mongo and Hazelcast without limit. Until it connects, `/health` answers `503` and it consumes no queues, so startup order does not matter.
+- Services do not restart on their own (`restart: "no"`): the recovery tests decide when each one comes back.
+
+## 3. Code
+
+- Hexagonal architecture as in Stage 1: `model`, `ports`, `adapters` and `commands`, with each service's `Main` and factory wiring the pieces through constructors, without injection frameworks.
+- `model` and `commands` do not import Javalin, the Mongo driver, `org.bson`, Hazelcast or HTTP clients.
+- Each service defines its ports in its `ports` package, like `InvertedIndexStorage`, `MetadataStorage` or `DatalakeReader` in the Stage 1 `indexer`. `common` defines no ports.
+- Mongo filters and pipelines live only in `adapters`. The writes used by several services are in `common` (§5.1); the rest, in the Mongo adapter of the service that performs them.
+- Immutable records for messages, responses and the `query` snapshot; no `synchronized` and no locks on the `query` read path.
+- Javalin handlers only validate, write state and enqueue: they never download or index.
+- SOLID and KISS: no transactions, no brokers besides Hazelcast and no layers that a second use does not call for.
+
+## 4. Shared contracts
+
+### 4.1 Formats
+
+- snake_case JSON in the API, in Mongo and in Hazelcast.
+- ISO-8601 UTC dates with `Z`, like `2026-10-21T10:05:00Z`; they may carry a fraction of a second. In Mongo they are `Date`.
+- `book_id` is a positive integer (`Int32` in Mongo). `batch_id` is an `ObjectId`, which travels in JSON as its 24 hexadecimal characters.
+- There is a single `ObjectMapper`, the one in `TarantinoJson` in `common`: Jackson with `JavaTimeModule`, snake_case, dates as text and unknown fields ignored.
+
+### 4.2 Hazelcast
+
+Hazelcast runs as one member in its own container (cluster `tarantino`, port 5701) and the services connect as clients, which reconnect on their own if it goes down. Queues are `IQueue<String>` and the topic is an `ITopic<String>`, carrying `TarantinoJson` JSON, so the member does not need the classes. The names are in `HazelcastContracts` and the records in `common`.
+
+| Name | Type | Message | Produced by | Consumed by |
+| --- | --- | --- | --- | --- |
+| `books-to-download` | Queue | `BookTask` | `control` (seeding, lost messages and expired downloads), `POST /ingest/{book_id}` and `crawler` when retrying a failed download | `crawler` workers |
+| `books-to-index` | Queue | `BookTask` | `crawler` after a complete download, `POST /index/update/{book_id}` and `control` (lost messages, released books and reindexing) | `indexer`, in batches with `drainTo` |
+| `published-batches` | Topic | `BatchPublished` | `indexer`, when publishing a batch | `query` replicas |
+
+| Record | JSON |
+| --- | --- |
+| `BookTask(int bookId, Instant enqueuedAt)` | `{"book_id": 1342, "enqueued_at": "2026-10-21T10:05:00Z"}` |
+| `BatchPublished(String batchId, int generation, int bookCount, Instant publishedAt)` | `{"batch_id": "6716f0c2a1b2c3d4e5f60718", "generation": 1, "book_count": 100, "published_at": "2026-10-21T10:06:00Z"}` |
+
+- Hazelcast is not the source of truth: a message can be lost or repeated, and no ordering is assumed.
+- A message is acknowledged by the claim in Mongo. If the conditional write does not match, the message is a duplicate or stale and is simply dropped.
+- `BookTask.enqueued_at` is the producer's time (`Instant.now()`) and is only used to measure queue wait (§4.8). Rescuing lost messages uses `book_states.enqueued_at`, which is written with `$$NOW` (§5.3).
+- If enqueuing fails after writing to Mongo, the book stays in its state and `control` enqueues it again (§5.3).
+- A lost `BatchPublished` does not matter: `query` re-reads the batches every `TARANTINO_SNAPSHOT_SECONDS`. Generation switches are not announced.
+
+### 4.3 Mongo collections
+
+The database is the one in the path of `TARANTINO_MONGO_URI`, or `tarantino`, as in Stage 1. `book_states` and `index_state` are single collections; the other three carry their generation suffix, `_g<n>` (`postings_g1`), and their names always come from `common`. The state collection is not called `books` because in Stage 1 that collection held the metadata.
+
+**`book_states`**: one document per book.
+
+| Field | Type | Content |
+| --- | --- | --- |
+| `_id` | Int32 | `book_id` |
+| `status` | String | Book state (§4.5) |
+| `attempts` | Int32 | Downloads started |
+| `claim_id` | String | Lease UUID; only in `DOWNLOADING` |
+| `lease_until` | Date | Lease end; only in `DOWNLOADING` |
+| `batch_id` | ObjectId | Batch that claimed it; only in `INDEXING` and `PUBLISHED` |
+| `generation` | Int32 | Generation of the last batch that claimed it; absent until then |
+| `last_error` | String or null | Last error (§4.5), also while the book is retried; `null` after a successful download and when a `FAILED` book is retried |
+| `enqueued_at` | Date | Last time it was put on a queue, with `$$NOW` |
+| `downloaded_at`, `published_at` | Date | When it last reached that state; absent until then |
+| `updated_at` | Date | Last write |
+
+**`metadata_g<n>`**: one document per book.
+
+| Field | Type | Content |
+| --- | --- | --- |
+| `_id` | Int32 | `book_id` |
+| `title` | String or null | `Title:` from the header |
+| `author` | String or null | `Author:` as it comes |
+| `author_terms` | [String] | Author words through the tokenizer, without repeats |
+| `languages` | [String] | ISO 639-1 codes, in header order; a name without a code does not appear here |
+| `language_names` | [String] | Names as they come (`English`), including those without a code |
+| `year` | Int32 or null | Year from `Release date:`, never confused with the number in `[eBook #1342]` |
+| `original_year` | Int32 or null | Year from `Original publication:` |
+
+**`postings_g<n>`**: one document per term and batch. The field is called `term`, as in Stage 1, never `word`.
+
+| Field | Type | Content |
+| --- | --- | --- |
+| `_id` | ObjectId | Automatic |
+| `term` | String | Tokenizer term |
+| `batch_id` | ObjectId | Batch that wrote it |
+| `book_ids` | [Int32] | Books of the batch that contain the term, ascending |
+| `tfs` | [Int32] | Term frequency in each book, at the same position as in `book_ids` |
+
+**`batches_g<n>`**: one document per batch.
+
+| Field | Type | Content |
+| --- | --- | --- |
+| `_id` | ObjectId | `batch_id`, created by the indexer |
+| `status` | String | Batch state (§4.5) |
+| `claim_id` | String | UUID of the indexer's lease |
+| `owner` | String | Hostname of the replica writing it, for the logs |
+| `lease_until` | Date | Lease end; only in `WRITING` |
+| `book_ids` | [Int32] | Empty in `WRITING`; the final books, ascending, once published |
+| `opened_at`, `published_at`, `abandoned_at` | Date | When it reached that state; absent until then |
+
+**`index_state`**: two documents.
+
+| `_id` | Fields | Content |
+| --- | --- | --- |
+| `"current"` | `generation` Int32, `switched_at` Date | Generation served by `query`. It starts at 1, and any service creates it at startup with “Create the pointer” |
+| `"rebuild"` | `target_generation` Int32, `status` String, `requested_at` Date, `switched_at` Date or null | Rebuild in progress, or the last one finished; `switched_at` is `null` while `RUNNING` |
+
+### 4.4 Indexes
+
+Each service ensures at startup the indexes of the collections it uses, and the indexer ensures those of a generation before its first write to it. The definitions are in `common` and `createIndex` is idempotent.
+
+| Collection | Index | Purpose |
+| --- | --- | --- |
+| `book_states` | `{status: 1, enqueued_at: 1}` | Lost messages and `GET /ingest/list` |
+| `book_states` | `{status: 1, lease_until: 1}` | Downloads with an expired lease |
+| `book_states` | `{batch_id: 1}` | Books of a batch when publishing or releasing it |
+| `book_states` | `{generation: 1, status: 1}` | Reindexing and books pending in a rebuild |
+| `metadata_g<n>` | `{author_terms: 1}`, multikey | `author` filter |
+| `metadata_g<n>` | `{languages: 1, year: 1}`, multikey | `language` filter, alone or with `year` |
+| `metadata_g<n>` | `{year: 1}` | `year` filter alone |
+| `postings_g<n>` | `{term: 1, batch_id: 1}`, unique | `query` reads and indexer upserts |
+| `postings_g<n>` | `{batch_id: 1}` | Deleting the postings of an abandoned batch |
+| `batches_g<n>` | `{status: 1, lease_until: 1}` | Published batches and expired batches |
+| `index_state` | `_id` only | |
+
+### 4.5 States and codes
+
+They are written in uppercase and only these. In Java they are `common` enums, and in Mongo and JSON they travel as their name.
+
+| Book (`book_states.status`) | Meaning | Written by |
+| --- | --- | --- |
+| `QUEUED` | Waiting in `books-to-download` | `control` when seeding and when releasing an expired download; `POST /ingest`; `crawler` when retrying a failed download |
+| `DOWNLOADING` | Claimed by a `crawler` worker | `crawler` |
+| `DOWNLOADED` | In the datalake, waiting for a batch | `crawler`; `control` when releasing a batch's books or reindexing |
+| `INDEXING` | Claimed by a `WRITING` batch | `indexer` |
+| `PUBLISHED` | Searchable in its batch's generation | `indexer`; `control` when completing a publication |
+| `FAILED` | No more retries; the reason is in `last_error` | `crawler`, `indexer` or `control` |
+
+| Batch (`batches_g<n>.status`) | Meaning | Written by |
+| --- | --- | --- |
+| `WRITING` | The indexer is writing its metadata and postings | `indexer`, when opening it |
+| `PUBLISHED` | Visible to `query`; never changes again | `indexer`, with its lease alive |
+| `ABANDONED` | Its lease expired; it will never be seen | `control` |
+
+The rebuild (`index_state.rebuild.status`) only has `RUNNING`, written by `POST /index/rebuild`, and `DONE`, written by `control`.
+
+| `last_error` (`BookErrorCode`) | Written by | What happens |
+| --- | --- | --- |
+| `NOT_FOUND` | `crawler` | Gutenberg or the mirror does not have the book: `FAILED` without retries |
+| `MISSING_MARKERS` | `crawler` | The text lacks the start and end markers: `FAILED` without retries |
+| `NETWORK_ERROR` | `crawler` | The network or the mirror read failed: `QUEUED` up to `TARANTINO_MAX_ATTEMPTS` |
+| `STORAGE_ERROR` | `crawler` | Writing to the datalake failed: `QUEUED` up to `TARANTINO_MAX_ATTEMPTS` |
+| `LEASE_EXPIRED` | `control` | A download lease expired: `QUEUED`, or `FAILED` if `TARANTINO_MAX_ATTEMPTS` were already used |
+| `NOT_IN_DATALAKE` | `indexer` | The claimed book is missing its header or body: `FAILED`; `POST /ingest` retries it |
+
+| Error `code` (`ProblemCode`) | HTTP | When |
+| --- | --- | --- |
+| `MISSING_PARAMETER` | 400 | `q` is missing or blank |
+| `INVALID_PARAMETER` | 400 | A malformed or out-of-range parameter or id |
+| `BOOK_NOT_FOUND` | 404 | The book is not in `book_states` or, in `query`, not in the snapshot |
+| `NOT_DOWNLOADED` | 409 | `POST /index/update` for a book that is not downloaded |
+| `DEPENDENCY_UNAVAILABLE` | 503 | Mongo or Hazelcast do not answer, or `query` has no snapshot yet |
+
+### 4.6 Datalake
+
+- Stage 1 `batch` layout: `<TARANTINO_DATALAKE>/<book_id / 1000>/<book_id>.header.txt` and `<book_id>.body.txt`, with integer division. Book 1342 goes in `datalake/1/` and book 84 in `datalake/0/`. The paths come from `DatalakePaths`, in `common`.
+- Each file is written to `<final name>.<uuid>.tmp`, in the same directory, and renamed with `Files.move(tmp, final, ATOMIC_MOVE)`, which on Linux replaces any existing file. For example, `datalake/1/1342.body.txt.3f2b8c1e-9a4d-4c2e-8f1a-6b7d5e9c0a12.tmp`. Header first and body second, as in Stage 1.
+- A book is in the datalake when its final header and body exist; since the body is written last, checking the body is enough. A header without a body does not count and is overwritten on retry.
+- A `.tmp` only exists while it is being written, because the whole book is downloaded into memory before saving. That is why a `.tmp` whose `mtime` is older than `TARANTINO_TMP_MAX_AGE_SECONDS` is an orphan.
+- Only `control` deletes, every `TARANTINO_CLEANUP_SECONDS`, and only those `.tmp` files. `crawler` never deletes anything, and `indexer` only reads.
+- No datalake path is ever exposed through the API.
+
+### 4.7 Configuration
+
+Every variable has a default that works locally, and `docker-compose.yml` sets the container addresses. `TarantinoConfig`, in `common`, reads and validates every variable at startup, in every service. An invalid configuration stops the service with a message that names the variable, as in Stage 1.
+
+| Variable | Default | Used by | Purpose |
+| --- | --- | --- | --- |
+| `TARANTINO_PORT` | 7001, 7002, 7003 and 7004 | All | HTTP port of `crawler`, `indexer`, `query` and `control` |
+| `TARANTINO_HTTP_THREADS` | Javalin's | All | Maximum request threads (8 to 250 in Javalin 6) |
+| `TARANTINO_MONGO_URI` | `mongodb://localhost:27017` | All | MongoDB, as in Stage 1 |
+| `TARANTINO_HAZELCAST` | `localhost:5701` | All | Hazelcast members, comma-separated |
+| `TARANTINO_HAZELCAST_CLUSTER` | `tarantino` | All | Cluster name |
+| `TARANTINO_DATALAKE` | `datalake` | `crawler`, `indexer`, `control` | Datalake root, the same path in every container |
+| `TARANTINO_WORKLOAD` | `workload` | `indexer`, `query`, `control` | `workload/` directory: `stopwords.txt` and the id lists |
+| `TARANTINO_MIRROR` | None | `crawler`, `control` | Path of a local Gutenberg mirror (`<id>/pg<id>.txt`), as in Stage 1; without it, `crawler` downloads over HTTP |
+| `TARANTINO_CANDIDATES` | `sample_ids.txt` | `control` | Books seeded by `control`: a file in `TARANTINO_WORKLOAD` with one id per line, or `mirror` for every book in the local mirror |
+| `TARANTINO_PARALLEL_DOWNLOADS` | 8 | `crawler` | Download workers per replica, as in Stage 1 |
+| `TARANTINO_MAX_ATTEMPTS` | 3 | `crawler`, `control` | Downloads of a book before `FAILED` |
+| `TARANTINO_INDEX_BATCH` | 100 | `indexer` | Books per batch, as in Stage 1 (1 = book by book) |
+| `TARANTINO_BATCH_TIMEOUT_SECONDS` | 30 | `indexer` | Maximum wait, from the first book, to close a batch |
+| `TARANTINO_LEASE_SECONDS` | 60 | `crawler`, `indexer`, `control` | Duration of a book or batch lease |
+| `TARANTINO_HEARTBEAT_SECONDS` | 20 | `crawler`, `indexer` | How often a lease is renewed |
+| `TARANTINO_RECONCILE_SECONDS` | 30 | `control` | How often it reconciles |
+| `TARANTINO_REQUEUE_SECONDS` | 120 | `control` | Age of `enqueued_at` to requeue when the queue is empty |
+| `TARANTINO_GC_SECONDS` | 600 | `control` | Wait before deleting an `ABANDONED` batch or an old generation |
+| `TARANTINO_TMP_MAX_AGE_SECONDS` | 600 | `control` | Age after which a `.tmp` is an orphan |
+| `TARANTINO_CLEANUP_SECONDS` | 3600 | `control` | How often it cleans the datalake |
+| `TARANTINO_SNAPSHOT_SECONDS` | 5 | `query` | Periodic snapshot refresh |
+| `TARANTINO_CORS_ORIGIN` | `*` | `query` | Origin `query` allows through CORS |
+| `TARANTINO_CRASH_AT` | None | `crawler`, `indexer` | Recovery tests only: point from §8 where the service stops |
+
+Besides every number being a positive integer, these are required:
+
+- `TARANTINO_HEARTBEAT_SECONDS ≤ TARANTINO_LEASE_SECONDS / 3`.
+- `TARANTINO_GC_SECONDS ≥ 10 × TARANTINO_LEASE_SECONDS` and `TARANTINO_TMP_MAX_AGE_SECONDS ≥ 10 × TARANTINO_LEASE_SECONDS`.
+- `TARANTINO_REQUEUE_SECONDS > TARANTINO_BATCH_TIMEOUT_SECONDS`.
+- `TARANTINO_CRASH_AT`, if set, is a §8 point of the service being started.
+- `TARANTINO_CANDIDATES=mirror` requires `TARANTINO_MIRROR`.
+
+`TARANTINO_DATALAKE_LAYOUT`, `TARANTINO_INDEX`, `TARANTINO_METADATA`, `TARANTINO_DATAMARTS` and `TARANTINO_CONTROL` are gone: there are no alternative structures or state files anymore.
+
+### 4.8 Transition logs
+
+Each service writes one line for every book or batch state change it achieves (§5.1), and `control` also writes one for every message it requeues, with equal `from` and `to`. The line is written by `TransitionLog`, in `common`, at INFO level and with these keys in this order; `-` marks what does not apply:
+
+```text
+transition entity=book id=1342 from=QUEUED to=DOWNLOADING batch_id=- generation=- enqueued_at=2026-10-21T10:05:00Z at=2026-10-21T10:05:02.481Z replica=3f2b8c1e9a4d
+```
+
+- `entity` is `book` or `batch`, and `id` is the `book_id` or the `batch_id`. In a batch line, `batch_id` is `-`.
+- `from` and `to` are states from §4.5; `from` is `-` when the document is created.
+- `enqueued_at` is the one from the `BookTask` when the transition comes from a message (claiming a download or a book for a batch); otherwise, `-`.
+- `at` is `Instant.now()` when the write finishes, and `replica` is the container hostname.
+- It is only written when the conditional write matches. `bench` derives `coordination.csv` (§9) from these lines, searching from `transition`, because `slf4j-simple` puts its prefix in front.
+
+## 5. Conditional writes and reconciliation
+
+### 5.1 Conditional writes
+
+Dates compared across processes use the Mongo server's time (`$$NOW`), never the process's, so changes are update pipelines. In the table, `L` is `TARANTINO_LEASE_SECONDS` in milliseconds, `R` is `TARANTINO_REQUEUE_SECONDS` in milliseconds, `M` is `TARANTINO_MAX_ATTEMPTS`, `C` is the lease UUID (a new one when claiming; in `control`, the `claim_id` it read), `B` is the `batch_id`, `w` is the write generation, `g` is `current.generation` and `t` is `rebuild.target_generation`.
+
+- Whoever fails its write does not retry: it leaves the work to whoever succeeded or to `control`.
+- When the next step depends on how the document ended up, use `findOneAndUpdate` with `ReturnDocument.AFTER`, never a separate `find`.
+- The ones marked *(common)* live in `common`; the rest, in the Mongo adapter of the service that performs them.
+- Each one has a test with two claimants at once, on Testcontainers MongoDB.
+
+| Operation | Who | Filter | Change | If it does not match |
+| --- | --- | --- | --- | --- |
+| Create the pointer *(common)* | All, at startup | `{_id: "current"}`, with upsert | `[{$set: {generation: {$ifNull: ["$generation", 1]}, switched_at: {$ifNull: ["$switched_at", "$$NOW"]}}}]` | It existed: no change |
+| Create the state *(common)* | `control` when seeding; `POST /ingest` | `{_id: id}`, with upsert | `[{$set: {status: {$ifNull: ["$status", "QUEUED"]}, attempts: {$ifNull: ["$attempts", 0]}, enqueued_at: {$ifNull: ["$enqueued_at", "$$NOW"]}, updated_at: {$ifNull: ["$updated_at", "$$NOW"]}}}]`; if `upsertedId` is not null, `BookTask` to `books-to-download` | It existed: not enqueued |
+| Retry a `FAILED` book | `POST /ingest` | `{_id: id, status: "FAILED"}` | `[{$set: {status: "QUEUED", attempts: 0, last_error: null, enqueued_at: "$$NOW", updated_at: "$$NOW"}}]`; then `BookTask` to `books-to-download` | No longer `FAILED`: its state is returned |
+| Claim a book | `crawler` | `{_id: id, status: "QUEUED"}` | `[{$set: {status: "DOWNLOADING", claim_id: C, lease_until: {$add: ["$$NOW", L]}, attempts: {$add: ["$attempts", 1]}, updated_at: "$$NOW"}}]` | Duplicate or stale message: dropped |
+| Renew a book | `crawler`, every `HEARTBEAT` | `{_id: id, status: "DOWNLOADING", claim_id: C}` | `[{$set: {lease_until: {$add: ["$$NOW", L]}}}]` | Lease lost: leaves the book without marking anything |
+| Finish a download | `crawler` | `{_id: id, status: "DOWNLOADING", claim_id: C}` | `[{$set: {status: "DOWNLOADED", downloaded_at: "$$NOW", enqueued_at: "$$NOW", updated_at: "$$NOW", last_error: null}}, {$unset: ["claim_id", "lease_until"]}]`; then `BookTask` to `books-to-index` | Does not enqueue: whoever claims it next will find it in the datalake |
+| Fail a download | `crawler` | `{_id: id, status: "DOWNLOADING", claim_id: C}`, with `findOneAndUpdate` | `[{$set: {status: {$cond: [{$and: [E, {$lt: ["$attempts", M]}]}, "QUEUED", "FAILED"]}, last_error: code, updated_at: "$$NOW"}}, {$set: {enqueued_at: {$cond: [{$eq: ["$status", "QUEUED"]}, "$$NOW", "$enqueued_at"]}}}, {$unset: ["claim_id", "lease_until"]}]`, with `E` = `true` for `NETWORK_ERROR` and `STORAGE_ERROR` and `false` for `NOT_FOUND` and `MISSING_MARKERS`; if it ends `QUEUED`, `BookTask` to `books-to-download` | Lease lost: nothing |
+| Release an expired download | `control` | `{_id: id, status: "DOWNLOADING", claim_id: C, $expr: {$lte: ["$lease_until", "$$NOW"]}}`, with `findOneAndUpdate` | `[{$set: {status: {$cond: [{$lt: ["$attempts", M]}, "QUEUED", "FAILED"]}, last_error: "LEASE_EXPIRED", updated_at: "$$NOW"}}, {$set: {enqueued_at: {$cond: [{$eq: ["$status", "QUEUED"]}, "$$NOW", "$enqueued_at"]}}}, {$unset: ["claim_id", "lease_until"]}]`; if it ends `QUEUED`, `BookTask` to `books-to-download` | The worker renewed or finished: nothing |
+| Requeue a lost message | `control`, with the queue empty | `{_id: id, status: S, $expr: {$lte: ["$enqueued_at", {$subtract: ["$$NOW", R]}]}}`, with `S` = `QUEUED` for `books-to-download` and `DOWNLOADED` for `books-to-index` | `[{$set: {enqueued_at: "$$NOW", updated_at: "$$NOW"}}]`; then `BookTask` to that queue | Someone moved or enqueued it: nothing |
+| Open a batch | `indexer` | `{_id: B}` in `batches_g<w>`, with upsert | `[{$set: {status: "WRITING", claim_id: C, owner: host, lease_until: {$add: ["$$NOW", L]}, book_ids: [], opened_at: "$$NOW"}}]` | Cannot happen: `B` is new |
+| Claim its books | `indexer` | `updateMany` with `{_id: {$in: ids}, status: "DOWNLOADED"}` | `[{$set: {status: "INDEXING", batch_id: B, generation: w, updated_at: "$$NOW"}}]`; then `find({batch_id: B, status: "INDEXING"})` gives the batch's books | The others are ignored; if none is left, it stops renewing the batch and `control` abandons it when it expires |
+| Renew a batch | `indexer`, every `HEARTBEAT` | `{_id: B, status: "WRITING", claim_id: C}` | `[{$set: {lease_until: {$add: ["$$NOW", L]}}}]` | Lease lost: stops writing |
+| Fail at indexing | `indexer` | `{_id: id, status: "INDEXING", batch_id: B}` | `[{$set: {status: "FAILED", last_error: "NOT_IN_DATALAKE", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; the book leaves the batch | No longer in this batch: nothing |
+| Publish a batch | `indexer` | `{_id: B, status: "WRITING", claim_id: C, $expr: {$gt: ["$lease_until", "$$NOW"]}}` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", book_ids: books}}, {$unset: "lease_until"}]`; then `updateMany({batch_id: B, status: "INDEXING"}, [{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}])` and `BatchPublished` | Lease lost: neither marks books nor notifies |
+| Abandon a batch | `control` | `{_id: B, status: "WRITING", $expr: {$lte: ["$lease_until", "$$NOW"]}}` | `[{$set: {status: "ABANDONED", abandoned_at: "$$NOW"}}, {$unset: "lease_until"}]` | It was published or renewed: untouched |
+| Release its books | `control` | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `ABANDONED` or without a document | `[{$set: {status: "DOWNLOADED", enqueued_at: "$$NOW", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; then `BookTask` to `books-to-index` | Someone changed it first: nothing |
+| Complete a publication | `control` | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `PUBLISHED` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}]` | Already done |
+| Reindex into another generation | `control` | `{_id: id, status: "PUBLISHED", generation: {$lt: w}}` | `[{$set: {status: "DOWNLOADED", enqueued_at: "$$NOW", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; then `BookTask` to `books-to-index` | Already reindexed: nothing |
+| Open a rebuild | `POST /index/rebuild` | `{_id: "rebuild", status: {$ne: "RUNNING"}}`, with upsert | `[{$set: {target_generation: g + 1, status: "RUNNING", requested_at: "$$NOW", switched_at: null}}]` | One is already running: the upsert fails with code 11000 and the existing one is returned (§5.4) |
+| Switch generation | `control` | `{_id: "current", generation: t - 1}` | `[{$set: {generation: t, switched_at: "$$NOW"}}]` | Someone already switched it |
+| Finish the rebuild | `control` | `{_id: "rebuild", status: "RUNNING", target_generation: t}` | `[{$set: {status: "DONE", switched_at: "$$NOW"}}]` | Already finished |
+
+### 5.2 Why a book never ends up in two published batches
+
+Only a `DOWNLOADED` book can be claimed. An `INDEXING` book only goes back to `DOWNLOADED` once `control` has abandoned its batch, and an `ABANDONED` batch cannot be published, because publishing requires `WRITING`. So each book is in at most one live batch and, therefore, in a single published batch per generation. Even so, `query` deduplicates by `book_id` when reading postings and logs an error if it finds a repeat.
+
+### 5.3 What `control` does
+
+**At startup**, after “Create the pointer” and ensuring its indexes, it seeds: it reads the candidates from `TARANTINO_CANDIDATES`, applies “Create the state” to each one and enqueues only the ones it created, without calling `crawler` or `indexer`. Then it reconciles for the first time.
+
+**Reconciliation**, every `TARANTINO_RECONCILE_SECONDS` and in this order. Each step is idempotent, so a `control` crash halfway leaves nothing half-done.
+
+1. Expired downloads: find `{status: "DOWNLOADING", $expr: {$lte: ["$lease_until", "$$NOW"]}}` and apply “Release an expired download” to each.
+2. Expired batches: in every `batches_g<k>` that exists, find the `WRITING` ones whose `lease_until` has passed and apply “Abandon a batch” to each. All generations are checked so that an old batch does not wait for its generation's `drop`.
+3. `INDEXING` books: look up each one's batch in `batches_g<book's generation>`. If it is `WRITING`, leave it; if it is `ABANDONED` or missing, “Release its books”; if it is `PUBLISHED`, “Complete a publication”.
+4. Lost messages: if `books-to-download` is empty, apply “Requeue a lost message” to the `QUEUED` books whose `enqueued_at` is older than `$$NOW − R`; if `books-to-index` is empty, do the same with the `DOWNLOADED` books. This also rebuilds the queues if Hazelcast restarts. That is why `REQUEUE > BATCH_TIMEOUT`: an indexer holds the messages of its batch for up to `BATCH_TIMEOUT` before claiming them.
+5. Abandoned batches: for each `ABANDONED` batch whose `abandoned_at` is older than `$$NOW − TARANTINO_GC_SECONDS`, delete its postings (`deleteMany({batch_id: B})` in `postings_g<k>`) and then the batch. Metadata is not deleted: it is per book, it is overwritten when the book is published in another batch and `query` only reads the metadata of its snapshot.
+6. Generations:
+   1. Apply “Reindex into another generation” to every `PUBLISHED` book with `generation < w`, where `w` is the target if a rebuild is `RUNNING` and `current.generation` otherwise. Outside a rebuild, it only finds books from an indexer that read the generation right before a switch.
+   2. With a `RUNNING` rebuild targeting `t`: if `current.generation` is `t − 1` and the condition in step 4 of §5.4 holds, apply “Switch generation” and then “Finish the rebuild”. If `current.generation` is already `t` because `control` crashed between the two, only “Finish the rebuild”.
+   3. If `current.switched_at` is older than `$$NOW − TARANTINO_GC_SECONDS`, `drop` the collections `metadata_g<k>`, `postings_g<k>` and `batches_g<k>` of every generation `k < current.generation`.
+
+**Datalake cleanup**, every `TARANTINO_CLEANUP_SECONDS`: delete the `.tmp` files whose `mtime` is older than `TARANTINO_TMP_MAX_AGE_SECONDS`, compared with the container clock, which is the host's. Never delete headers or bodies.
+
+### 5.4 Rebuild
+
+A generation pointer is used, not `renameCollection`: renaming three collections is not atomic, and between one rename and the next `query` would see postings from one generation with batches from another. Switching the pointer is a single write.
+
+1. `POST /index/rebuild` reads `g = current.generation` and applies “Open a rebuild”. If one is already running, the filter `{_id: "rebuild", status: {$ne: "RUNNING"}}` does not match and MongoDB tries to insert another document with the same `_id`, which fails with code 11000 (Duplicate Key). The driver throws a `MongoWriteException` with `updateOne` and a `MongoCommandException` with `findOneAndUpdate`, and both extend `MongoServerException`. The service catches `MongoServerException` and, if `getCode() == 11000`, reads the existing document in `index_state` and answers `202` with its current state instead of failing; with any other code, the exception propagates.
+2. The write generation is `target_generation` while a rebuild is `RUNNING`, and `current.generation` otherwise. Each indexer reads it before opening each batch and ensures that generation's indexes before its first write to it.
+3. On every reconciliation, `control` sends back to `DOWNLOADED`, and enqueues, every `PUBLISHED` book with `generation < target_generation`, including those that an old batch that was already open publishes late.
+4. When no book is left with `generation < target_generation` except the `FAILED` ones, and no book with `generation == target_generation` is in state `DOWNLOADED` or `INDEXING`, `control` switches the pointer with “Switch generation” and marks the rebuild with “Finish the rebuild”. Books without `generation` (never indexed) do not count.
+5. `query` sees the new generation on its next refresh and swaps its whole snapshot. While the rebuild runs it keeps serving the old generation, and new books are not visible until the switch.
+6. Once `TARANTINO_GC_SECONDS` have passed since `current.switched_at`, `control` `drop`s the collections of the old generations.
+
+## 6. HTTP API
+
+`api/openapi.yaml` is derived from this section and its `info.version` follows this file's version. If the two disagree, the OpenAPI gets fixed.
+
+### 6.1 Entry ports and endpoints
+
+nginx has two entry ports. 8080 is only for the front-end and routes `/search`, `/search/filters` and `/books/` to the `query` replicas; any other path gives `404`. 8081 is for operations and routes `/ingest/` to `crawler`, `/index/` to `indexer` and `/control/` to `control`, without rewriting paths. nginx must spread requests across all replicas even when their number changes: with `resolver 127.0.0.11 valid=5s` and the address in a variable, or by restarting it after each `--scale`.
+
+There are no internal endpoints between services: that coordination goes through Hazelcast (§4.2), which is documented separately.
+
+| Inventory | Service (port) | nginx port | Method and path | Consumer | Responses |
+| --- | --- | --- | --- | --- | --- |
+| Front-end | `query` (7003) | 8080 | `GET /search` | Front-end | `200`, `400`, `503` |
+| Front-end | `query` (7003) | 8080 | `GET /books/{book_id}` | Front-end | `200`, `400`, `404`, `503` |
+| Front-end | `query` (7003) | 8080 | `GET /search/filters` | Front-end | `200`, `503` |
+| Operational | `crawler` (7001) | 8081 | `POST /ingest/{book_id}` | Load and admin scripts | `202`, `200`, `400`, `503` |
+| Operational | `crawler` (7001) | 8081 | `GET /ingest/status/{book_id}` | Whoever got a `202`; checks | `200`, `400`, `404`, `503` |
+| Operational | `crawler` (7001) | 8081 | `GET /ingest/list` | Checks | `200`, `503` |
+| Operational | `indexer` (7002) | 8081 | `POST /index/update/{book_id}` | Admin | `202`, `200`, `400`, `404`, `409`, `503` |
+| Operational | `indexer` (7002) | 8081 | `GET /index/status/{book_id}` | Whoever got a `202` | `200`, `400`, `404`, `503` |
+| Operational | `indexer` (7002) | 8081 | `POST /index/rebuild` | Admin | `202`, `503` |
+| Operational | `indexer` (7002) | 8081 | `GET /index/status` | Admin and benchmarks | `200`, `503` |
+| Operational | `control` (7004) | 8081 | `GET /control/status` | Admin and benchmarks | `200`, `503` |
+| Health | All, on their own port | None | `GET /health` | Compose healthchecks | `200`, `503` |
+
+### 6.2 Book state
+
+`GET /ingest/status/{book_id}` and `GET /index/status/{book_id}` return the same thing, read from `book_states`, and it is also the body of every `200` and every `202` from `POST /ingest/{book_id}` and `POST /index/update/{book_id}`:
+
+```json
+{"book_id": 1342, "status": "INDEXING", "attempts": 1, "last_error": null, "updated_at": "2026-10-21T10:05:00Z"}
+```
+
+An id that is not a positive integer gives `400` (`INVALID_PARAMETER`, `parameter: "book_id"`), and on the `GET`s a book without a document gives `404`. Every `202` carries a `Location` pointing to the book's state: `/ingest/status/{book_id}` from `/ingest` and `/index/status/{book_id}` from `/index/update`. `200` responses carry no `Location`.
+
+| Request and book state | Response |
+| --- | --- |
+| `POST /ingest`, no document | “Create the state” and enqueue: `202` with the state (`QUEUED`) |
+| `POST /ingest`, in `FAILED` | “Retry a `FAILED` book”: `202` with the state (`QUEUED`, `attempts` back to 0) |
+| `POST /ingest`, in `QUEUED` or `DOWNLOADING` | `202` with its state, without enqueuing it again |
+| `POST /ingest`, in `DOWNLOADED`, `INDEXING` or `PUBLISHED` | `200` with its state |
+| `POST /index/update`, no document | `404` (`BOOK_NOT_FOUND`) |
+| `POST /index/update`, in `QUEUED`, `DOWNLOADING` or `FAILED` | `409` (`NOT_DOWNLOADED`); for a `FAILED` book, the way forward is `POST /ingest` |
+| `POST /index/update`, in `DOWNLOADED` | `202` with its state, and a `BookTask` to `books-to-index`: a duplicate does no harm |
+| `POST /index/update`, in `INDEXING` | `202` with its state, without enqueuing |
+| `POST /index/update`, in `PUBLISHED` | `200` with its state |
+
+`POST /ingest/{book_id}` follows this order: “Create the state”; if it already existed, “Retry a `FAILED` book”; if that does not match either, it reads the state and answers according to the table. If Hazelcast fails after writing to Mongo, it answers `503`: the book stays `QUEUED` and `control` enqueues it (§5.3).
+
+### 6.3 `GET /search`
+
+`GET /search?q={terms}&author={name}&language={code}&year={YYYY}&offset={n}&limit={n}`. With filters, the ids come from the `metadata_g<n>` indexes and are intersected with the postings; without filters, only the metadata of the page is read.
+
+| Parameter | Rule |
+| --- | --- |
+| `q` | Required. It is tokenized with the `common` tokenizer, the same one used for indexing, and books must contain every word. If missing or blank, `400` (`MISSING_PARAMETER`); if it only has stopwords or no words, `200` with no results. |
+| `author` | Every author word, with the same tokenizer, must be in `author_terms`: `austen` finds “Jane Austen”. If no word is left, `400`. |
+| `language` | Two-letter lowercase ISO 639-1 code (`^[a-z]{2}$`); a book with several languages matches any of them. Malformed, `400`; no books, empty `200`. |
+| `year` | Four digits (`^[0-9]{4}$`), equal to the Gutenberg publication year (`year`). Malformed, `400`. |
+| `offset`, `limit` | Integers; `0` and `20` by default, `offset ≥ 0` and `limit` from 1 to 100. Out of range or non-numeric, `400`. |
+| Order | Descending TF-IDF, summing `(1 + ln tf) × ln(N / df)` per word; ties broken by ascending `book_id` (§7). |
+| `total` | Matches with the filters applied, not just those on the page. |
+
+An empty or blank optional parameter (`author=`) counts as absent. Every `400` names the parameter in `parameter`.
+
+```json
+{
+  "query": "pride prejudice",
+  "filters": {"author": "austen", "language": "en"},
+  "total": 1,
+  "offset": 0,
+  "limit": 20,
+  "results": [
+    {"book_id": 1342, "title": "Pride and Prejudice", "author": "Jane Austen", "language": "en", "year": 1998}
+  ]
+}
+```
+
+- `query` is `q` as received, and `filters` the filters present as received, with `year` as a number; without filters, `{}`.
+- `offset` and `limit` are the ones applied, including when they are the defaults.
+- Each result carries `book_id`, `title`, `author`, `language` and `year`, never the datalake path. `language` is the first code in `languages`, or `null`.
+
+### 6.4 Books and filters
+
+**`GET /books/{book_id}`.** `200` if the book is in a published batch of the snapshot, `404` (`BOOK_NOT_FOUND`) otherwise, `400` if the id is not a positive integer and `503` without a snapshot. It carries the fields of a search result plus `languages` and `original_year`.
+
+```json
+{"book_id": 1342, "title": "Pride and Prejudice", "author": "Jane Austen", "language": "en", "languages": ["en"], "year": 1998, "original_year": null}
+```
+
+**`GET /search/filters`.** It takes no parameters, so it answers `200` or `503`. It is computed once per snapshot and only with the snapshot's books. `languages` goes from most to fewest books, with the name from the `common` language table; `total_books` is `N`. With no books, `languages` is `[]` and `min` and `max` are `null`.
+
+```json
+{"languages": [{"code": "en", "name": "English", "books": 2380}, {"code": "fr", "name": "French", "books": 95}], "years": {"min": 1971, "max": 2026}, "total_books": 2800}
+```
+
+### 6.5 Operational endpoints
+
+| Request | Response |
+| --- | --- |
+| `GET /ingest/list` | `{"count": 3, "books": [5, 17, 1342]}`: books in `DOWNLOADED`, `INDEXING` or `PUBLISHED`, ascending |
+| `POST /index/rebuild` | `202` with `{"generation": 1, "target_generation": 2, "status": "RUNNING"}` and `Location: /index/status`; if one is already running, `202` with the existing one |
+| `GET /index/status` | `{"generation": 1, "books_indexed": 2800, "batches_published": 28, "last_update": "2026-10-21T10:06:00Z", "index_size_mb": 512.4, "rebuild": null}` |
+| `GET /control/status` | `{"generation": 1, "books": {"QUEUED": 10, "DOWNLOADING": 8, "DOWNLOADED": 0, "INDEXING": 100, "PUBLISHED": 2680, "FAILED": 2}, "queues": {"books-to-download": 10, "books-to-index": 0}, "last_reconciliation": "2026-10-21T10:06:30Z"}` |
+| `GET /health` | `200` with `{"status": "UP"}`; `503` with `Retry-After: 5` and `{"status": "DOWN", "down": ["mongo"]}` |
+
+`GET /index/status` fields, all for the current generation:
+
+- `books_indexed`: books in its `PUBLISHED` batches, the sum of their `book_ids`; it is what `query` can find.
+- `batches_published`: its `PUBLISHED` batches.
+- `last_update`: `published_at` of its last published batch, or `null`.
+- `index_size_mb`: `storageSize` plus `totalIndexSize` of its three collections, from `$collStats`, in MiB with one decimal.
+- `rebuild`: `null` if no rebuild is `RUNNING`; if one is, `{"target_generation": 2, "status": "RUNNING", "books_pending": 1200}`, where `books_pending` counts the books still blocking the switch (step 4 of §5.4).
+
+In `GET /control/status`, `books` always carries all six states, `queues` the size of both queues and `last_reconciliation` when the last reconciliation finished, or `null`.
+
+In `GET /health`, `down` can hold `mongo`, `hazelcast` and, in `query`, `snapshot` while there is no snapshot. It is not an API error: it is sent as `application/json`, not as Problem Details.
+
+### 6.6 Errors
+
+Problem Details (RFC 9457), with `Content-Type: application/problem+json`, in all four services and through the `common` handler. `code` is one of those in §4.5; `parameter` only appears in `400` responses, and every `503` carries `Retry-After: 5`. An unexpected exception gives `500` in the same format, without `code`.
+
+```json
+{"type": "about:blank", "title": "Bad Request", "status": 400, "code": "INVALID_PARAMETER", "parameter": "limit", "detail": "limit must be between 1 and 100"}
+```
+
+### 6.7 Asynchrony, retries and CORS
+
+- Whatever changes state answers `202` and is checked later at its `Location`, or `200` if it was already done. An accepted book has finished when its state is `PUBLISHED`, and has failed when it is `FAILED`, with the reason in `last_error`.
+- Handlers never wait for long jobs: they answer in milliseconds. A client can use a 5 s timeout and, on a `503`, retry after `Retry-After`.
+- Repeating a `POST` duplicates nothing: state lives in Mongo and every transition is conditional.
+- `query` allows CORS from `TARANTINO_CORS_ORIGIN`; nginx adds no headers.
+
+## 7. Search in `query`
+
+**The snapshot.** It is immutable and refreshed by a single thread, at startup, on each `BatchPublished` and every `TARANTINO_SNAPSHOT_SECONDS`; requests only read the reference held in an `AtomicReference`. The topic listener does not refresh: it asks that thread for a refresh.
+
+1. Read `current.generation`. If it changed, load every `PUBLISHED` batch of `batches_g<n>` for the new generation.
+2. If it did not change, ask for the `_id` of the `PUBLISHED` batches and load `book_ids` only for the ones it did not have. Compare by `_id`, never by `published_at`: two simultaneous publications can write their dates out of order.
+3. Build a new snapshot with `generation`, `batch_ids`, the set of `book_ids`, `N = book_ids.size()` and the `GET /search/filters` summary. When adding batches it is enough to read the languages and year of the new books; when the generation changes, it is recomputed in full.
+4. Until it has its first snapshot, `query` answers `503` on its three routes.
+
+**A `GET /search` request.**
+
+1. Read the snapshot once and use it for the whole request. `N` comes from it, never from `countDocuments`.
+2. Get the terms of `q` with the `common` tokenizer, without repeats. If none is left, or `N` is 0, answer `200` with `total: 0`.
+3. With filters, ask `metadata_g<n>` for the `_id`s matching `{author_terms: {$all: words}, languages: code, year: year}`, with only the filters present, and keep those in the snapshot. If none is left, `total: 0`.
+4. Read `postings_g<n>` with `{term: {$in: terms}, batch_id: {$in: snapshot.batch_ids}}`.
+5. Group in Java a `Map<String, Map<Integer, Integer>>` from term to book and `tf`. A book repeated within a term counts once and an error is logged, so `df(t)` is always the number of distinct books.
+6. If any term has no books, `total: 0`. Otherwise, intersect starting with the term with the fewest books and, with filters, also with the `_id`s from step 3.
+7. Score each book with the sum of `(1 + ln tf) × ln(N / df)` and sort by descending score and ascending `book_id`. `total` is the size of the intersection.
+8. Cut the page `[offset, offset + limit)` and read its metadata with a single query `{_id: {$in: page}}`, answering in page order.
+
+In Java, step 7 is `score += (1 + Math.log(tf)) * Math.log((double) N / df)` for each term.
+
+## 8. Failure matrix
+
+Each row is an F3 test with its script in `scripts/recovery/<nn>-<row>.sh`. The script brings the stack up, causes the crash as the last column says, restarts what went down without `TARANTINO_CRASH_AT` and checks that the book ends `PUBLISHED`, that `/search` finds it exactly once and that no book is in two published batches of the current generation. It leaves its run in `benchmarks/runs/<run_id>/`, with the recovery time.
+
+| What goes down | What is left | Who notices | How it recovers | How to cause it |
+| --- | --- | --- | --- | --- |
+| `crawler` while downloading | `DOWNLOADING` book with a lease | `control`, when it expires | Back to `QUEUED` and to the queue | `after-claim` in `crawler` |
+| `crawler` after writing to the datalake and before `DOWNLOADED` | The book in the datalake, still `DOWNLOADING` | `control`, when it expires | Back to `QUEUED`; whoever claims it finds it in the datalake and does not download it | `after-datalake-write` in `crawler` |
+| `crawler` after `DOWNLOADED` and before enqueuing | `DOWNLOADED` book without a message | `control`: empty queue and old `enqueued_at` | Enqueued again | `after-downloaded` in `crawler` |
+| `crawler` or `indexer` after taking messages from the queue and before claiming them | `QUEUED` or `DOWNLOADED` books without a message: an `IQueue` has no acknowledgements | `control`: empty queue and old `enqueued_at` | Enqueued again; that is why `REQUEUE` is greater than `BATCH_TIMEOUT` | `after-dequeue` in `crawler` or in `indexer` |
+| `indexer` while writing a batch | `WRITING` batch, `INDEXING` books, half-written postings | `control`, when the batch expires | `ABANDONED`; its books go back to `DOWNLOADED` and to the queue, and its postings are deleted after `GC` | `during-batch-write` in `indexer` |
+| `indexer` after publishing and before marking the books | `PUBLISHED` batch, `INDEXING` books | `control` | Completes the publication | `after-publish` in `indexer` |
+| `indexer` after marking the books and before notifying | `PUBLISHED` batch without `BatchPublished` | `query`, on its refresh | Sees it within `TARANTINO_SNAPSHOT_SECONDS` | `after-mark` in `indexer` |
+| `indexer` stopped longer than its lease | A zombie indexer that keeps writing | Its renewal fails | It stops writing; its conditional publish fails and `control` deletes its postings | `docker pause` for more than `TARANTINO_LEASE_SECONDS` and `docker unpause` |
+| `control` | Nothing half-done: it only reconciles | Nobody needs it right away | When it comes back, it reconciles from Mongo | `docker kill` and `docker start` |
+| Hazelcast | Empty queues | `control`: empty queue and old `enqueued_at` | Requeues the `QUEUED` and `DOWNLOADED` books | `docker restart` |
+| MongoDB | No half-done transition: each one is a single write | Healthchecks; services answer `503` | When it comes back, everything continues from the last state | `docker stop` and `docker start` |
+| A `query` replica | Nothing: it does not write | nginx stops sending it requests | The others serve; at startup, it rebuilds its snapshot | `docker kill` of that replica |
+
+**`TARANTINO_CRASH_AT`.** The first time the service reaches the named point, it stops with `Runtime.getRuntime().halt(1)`, without hooks or `finally`. The points are in `CrashPoints`, in `common`.
+
+| Point | Service | Where it stops |
+| --- | --- | --- |
+| `after-dequeue` | `crawler` | After taking a message from `books-to-download` and before “Claim a book” |
+| `after-claim` | `crawler` | After “Claim a book” and before downloading |
+| `after-datalake-write` | `crawler` | After renaming the header and the body and before “Finish a download” |
+| `after-downloaded` | `crawler` | After “Finish a download” and before enqueuing in `books-to-index` |
+| `after-dequeue` | `indexer` | After taking the batch's messages and before “Open a batch” |
+| `during-batch-write` | `indexer` | After the first postings `bulkWrite` and before “Publish a batch” |
+| `after-publish` | `indexer` | After “Publish a batch” and before marking its books |
+| `after-mark` | `indexer` | After marking its books `PUBLISHED` and before sending `BatchPublished` |
+
+If Mongo or Hazelcast fail halfway through a job outside these tests, the service does the same as after a crash: it drops the job without marking anything, the leases expire and `control` redoes it.
+
+## 9. Tests, benchmarks and runs
+
+**Tests.** Each conditional write has a test with two claimants at once, with Testcontainers MongoDB and embedded Hazelcast, in the module that owns it. The functional API checks (F4) live in `checks`, run against the running stack and validate every response against `api/openapi.yaml`.
+
+**JMH.** In each service's `src/test/java`, with at least 5 warmup and 10 measurement iterations, a fixed `-Xmx` and JSON output (`-rf json`) in the `jmh/` folder of its run; `bench` converts it to CSV.
+
+**Runs.** Every figure in the report can be traced to a run: the footer of each table and chart carries its `run_id`, and the run keeps the command, the configuration and the raw data.
+
+- `run_id` is `<YYYYMMDD-HHMMSS>-<experiment>-<short commit>`, for example `20261110-153000-search-latency-3f2a9c1`.
+- Each experiment has its script, `scripts/bench/<experiment>.sh`, and each §8 row has its own, `scripts/recovery/<nn>-<row>.sh`. All of them write `benchmarks/runs/<run_id>/`, which is versioned.
+- Scripts only start containers and launch jars. The load generator and result processing (`coordination.csv`, `summary.csv` and the charts, with XChart) are Java, in the `bench` module.
+- Before measuring, the script checks the corpus against `workload/corpus.sha256` (id and SHA-256 of each text) and stops if it does not match: Gutenberg updates its texts, so two caches filled on different days may differ.
+- Books come from the local mirror, as in Stage 1, so the network is not measured. One factor changes at a time, with the hypothesis written before measuring.
+- Each complexity bound in the report states which assumptions it depends on and is checked with at least three sizes. In Mongo, the plan of each measured query is saved too.
+
+| Run file | Content |
+| --- | --- |
+| `manifest.json` | `run_id`, commit and whether the tree was clean, exact command, start and end, host (CPU, cores, RAM, disk and OS), Docker version and resources, JVM and its flags, every `TARANTINO_*` variable, replicas and threads per service and client concurrency |
+| `corpus.json` | Corpus ids in order, their combined SHA-256 and the number of books and terms |
+| `jmh/` | Raw JMH output in JSON and its CSV, with forks, iterations and `-Xmx` |
+| `load/` | One row per load-generator request: instant, path, status and latency in µs |
+| `stats.csv` | `docker stats` every second: container, CPU and memory |
+| `coordination.csv` | Queue wait and time to publication for each book, derived from the transition logs (§4.8) |
+| `explain/` | `explain("executionStats")` of each measured Mongo query |
+| `summary.csv` | The figures the report cites: metric, configuration, mean, standard deviation, 95 % CI, p50, p95, p99 and unit |
+| `log.txt` | Full command output |
+
+## 10. Stage 1
+
+Stage 1 is legacy: its repositories are not modified and its report is not redone. `stage_2` only keeps what it reuses from `stage_1-Java`.
+
+- Reused: `IngestBookCommand`, `GutenbergHttpDownloader` and `LocalMirrorDownloader`, the `batch` datalake, `IndexBookCommand`, `Tokenizer`, `HeaderParser`, `SearchCommand` and the Mongo readers, the candidate list and configuration validation, the hexagonal architecture, the Testcontainers tests, `workload/` and `scripts/fill_cache.sh`.
+- Not moved to `stage_2`: the `time` and `book` datalakes, the `json` and `folders` indexes, the `sqlite` metadata, `QueryTerms`, `ControlPipeline`, `LocalCrawler`, `LocalIndexer`, the state files, the `crawler`'s startup cleanup of `.tmp` files and headers, `SPEC.md`, `ANALYSIS.md`, `BENCHMARKS.md` and the rest of `scripts/`, nor their tests and benchmarks.
+- `MongoDatabases`, `FileStopwordsLoader`, `Tokenizer` and the datalake paths move to `common`, and their copies leave the services.
+- If an inherited test contradicts this file, this file wins. The `workload/conformance/` cases that still apply stay as inherited tests; new cases go in the service's JUnit tests.
