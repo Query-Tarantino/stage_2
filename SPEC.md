@@ -72,7 +72,7 @@ The life of a book: `control` seeds it, `crawler` downloads and enqueues it, `in
 stage_2/
 ├── SPEC.md, README.md
 ├── pom.xml                  parent: modules and every version
-├── docker-compose.yml, Dockerfile, .gitignore
+├── docker-compose.yml, docker-compose.mirror.yml, Dockerfile, .dockerignore, .gitignore
 ├── common/
 ├── services/
 │   ├── crawler/
@@ -93,7 +93,7 @@ stage_2/
 
 | Path | Owner |
 | --- | --- |
-| `services/crawler`, `docker-compose.yml`, `Dockerfile` | A |
+| `services/crawler`, `docker-compose.yml`, `docker-compose.mirror.yml`, `Dockerfile` | A |
 | `services/indexer` | B |
 | `services/query`, `nginx/`, `api/openapi.yaml`, `checks/` | C |
 | `services/control`, `scripts/recovery/` | D |
@@ -110,7 +110,7 @@ stage_2/
 - Only nginx publishes ports on the host: 8080 and 8081. For debugging, use `docker compose exec`.
 - Pinned image versions, never `latest`: `mongo:7.0`, as in Stage 1; `hazelcast/hazelcast` with `HZ_CLUSTERNAME=tarantino`; `nginx`; and for the four services one shared `Dockerfile` on `eclipse-temurin:25-jre`, which copies the service jar and adds `curl` for the healthcheck, because the image does not ship it.
 - Addresses: `TARANTINO_MONGO_URI=mongodb://mongo:27017/tarantino` and `TARANTINO_HAZELCAST=hazelcast:5701`.
-- Volumes: the `datalake` volume at `/data/datalake` in `crawler`, `indexer` and `control`, with `TARANTINO_DATALAKE=/data/datalake`; `./workload`, read-only, at `/app/workload` in `indexer`, `query` and `control`, with `TARANTINO_WORKLOAD=/app/workload`. When the local mirror is used, `benchmarks/mirror/` is mounted read-only in `crawler` and `control`, and `TARANTINO_MIRROR` points to that path.
+- Volumes: the `datalake` volume at `/data/datalake` in `crawler`, `indexer` and `control`, with `TARANTINO_DATALAKE=/data/datalake`; `./workload`, read-only, at `/app/workload` in `indexer`, `query` and `control`, with `TARANTINO_WORKLOAD=/app/workload`. When the local mirror is used, `docker-compose.mirror.yml` mounts `benchmarks/mirror/` read-only in `crawler` and `control` and points `TARANTINO_MIRROR` to that path; without it, `crawler` downloads over HTTP.
 - The timing variables (§4.7) are defined once in a shared block and reach every service with the same values.
 - Healthchecks: each service, `curl -fsS http://localhost:<port>/health`; `mongo`, `mongosh --quiet --eval "db.adminCommand('ping')"`.
 - Startup: each service opens its HTTP port first and retries the connection to Mongo and Hazelcast without limit. Until it connects, `/health` answers `503` and it consumes no queues, so startup order does not matter.

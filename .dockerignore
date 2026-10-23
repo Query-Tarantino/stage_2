@@ -1,0 +1,7 @@
+*
+!services
+services/*/*
+!services/*/target
+services/*/target/*
+!services/*/target/*-1.0-SNAPSHOT.jar
+services/*/target/original-*

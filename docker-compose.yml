@@ -1,3 +1,23 @@
+x-tarantino-environment: &tarantino-environment
+  TARANTINO_MONGO_URI: mongodb://mongo:27017/tarantino
+  TARANTINO_HAZELCAST: hazelcast:5701
+  TARANTINO_HTTP_THREADS: ${TARANTINO_HTTP_THREADS:-}
+  TARANTINO_LEASE_SECONDS: ${TARANTINO_LEASE_SECONDS:-60}
+  TARANTINO_HEARTBEAT_SECONDS: ${TARANTINO_HEARTBEAT_SECONDS:-20}
+  TARANTINO_RECONCILE_SECONDS: ${TARANTINO_RECONCILE_SECONDS:-30}
+  TARANTINO_REQUEUE_SECONDS: ${TARANTINO_REQUEUE_SECONDS:-120}
+  TARANTINO_BATCH_TIMEOUT_SECONDS: ${TARANTINO_BATCH_TIMEOUT_SECONDS:-30}
+  TARANTINO_GC_SECONDS: ${TARANTINO_GC_SECONDS:-600}
+  TARANTINO_TMP_MAX_AGE_SECONDS: ${TARANTINO_TMP_MAX_AGE_SECONDS:-600}
+  TARANTINO_CLEANUP_SECONDS: ${TARANTINO_CLEANUP_SECONDS:-3600}
+  TARANTINO_SNAPSHOT_SECONDS: ${TARANTINO_SNAPSHOT_SECONDS:-5}
+
+x-healthcheck-timing: &healthcheck-timing
+  interval: 5s
+  timeout: 5s
+  retries: 12
+  start_period: 10s
+
 services:
   mongo:
     image: mongo:7.0
@@ -5,15 +25,93 @@ services:
       - mongo-data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
+      <<: *healthcheck-timing
+    restart: "no"
 
   hazelcast:
     image: hazelcast/hazelcast:5.7.0
     environment:
       HZ_CLUSTERNAME: tarantino
+    restart: "no"
+
+  crawler:
+    build:
+      context: .
+      args:
+        SERVICE: crawler
+    environment:
+      <<: *tarantino-environment
+      TARANTINO_DATALAKE: /data/datalake
+      TARANTINO_PARALLEL_DOWNLOADS: ${TARANTINO_PARALLEL_DOWNLOADS:-8}
+      TARANTINO_MAX_ATTEMPTS: ${TARANTINO_MAX_ATTEMPTS:-3}
+    volumes:
+      - datalake:/data/datalake
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7001/health"]
+      <<: *healthcheck-timing
+    restart: "no"
+
+  indexer:
+    build:
+      context: .
+      args:
+        SERVICE: indexer
+    environment:
+      <<: *tarantino-environment
+      TARANTINO_DATALAKE: /data/datalake
+      TARANTINO_WORKLOAD: /app/workload
+      TARANTINO_INDEX_BATCH: ${TARANTINO_INDEX_BATCH:-100}
+    volumes:
+      - datalake:/data/datalake
+      - ./workload:/app/workload:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7002/health"]
+      <<: *healthcheck-timing
+    restart: "no"
+
+  query:
+    build:
+      context: .
+      args:
+        SERVICE: query
+    environment:
+      <<: *tarantino-environment
+      TARANTINO_WORKLOAD: /app/workload
+    volumes:
+      - ./workload:/app/workload:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7003/health"]
+      <<: *healthcheck-timing
+    restart: "no"
+
+  control:
+    build:
+      context: .
+      args:
+        SERVICE: control
+    environment:
+      <<: *tarantino-environment
+      TARANTINO_DATALAKE: /data/datalake
+      TARANTINO_WORKLOAD: /app/workload
+      TARANTINO_CANDIDATES: ${TARANTINO_CANDIDATES:-sample_ids.txt}
+      TARANTINO_MAX_ATTEMPTS: ${TARANTINO_MAX_ATTEMPTS:-3}
+    volumes:
+      - datalake:/data/datalake
+      - ./workload:/app/workload:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7004/health"]
+      <<: *healthcheck-timing
+    restart: "no"
+
+  nginx:
+    image: nginx:1.27.5-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    restart: "no"
 
 volumes:
   mongo-data:
+  datalake:

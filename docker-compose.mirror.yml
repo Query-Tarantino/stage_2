@@ -1,0 +1,12 @@
+services:
+  crawler:
+    environment:
+      TARANTINO_MIRROR: /data/mirror
+    volumes:
+      - ./benchmarks/mirror:/data/mirror:ro
+
+  control:
+    environment:
+      TARANTINO_MIRROR: /data/mirror
+    volumes:
+      - ./benchmarks/mirror:/data/mirror:ro
