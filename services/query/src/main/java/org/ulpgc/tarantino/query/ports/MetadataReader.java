@@ -1,13 +1,12 @@
 package org.ulpgc.tarantino.query.ports;
 
-import org.ulpgc.tarantino.query.model.BookMetadata;
+import org.ulpgc.tarantino.query.model.SearchResult;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public interface MetadataReader {
 
-    Optional<BookMetadata> book(int bookId);
-
-    List<BookMetadata> booksBy(String author);
+    /** The results of the given books, read with a single {@code {_id: {$in: page}}} query, in any order. */
+    List<SearchResult> results(int generation, Collection<Integer> bookIds);
 }

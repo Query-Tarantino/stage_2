@@ -5,17 +5,17 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.query.commands.SearchCommand;
-import org.ulpgc.tarantino.query.model.BookMetadata;
-import org.ulpgc.tarantino.query.ports.MetadataReader;
+import org.ulpgc.tarantino.query.model.SearchQuery;
+import org.ulpgc.tarantino.query.model.SearchResult;
+import org.ulpgc.tarantino.query.model.Snapshot;
+import org.ulpgc.tarantino.query.model.TermPostings;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,35 +25,34 @@ import static org.ulpgc.tarantino.common.conformance.ConformanceCases.stopwords;
 
 class QueryConformanceTest {
 
-    private static final MetadataReader EVERY_BOOK = new MetadataReader() {
-        @Override
-        public Optional<BookMetadata> book(int bookId) {
-            return Optional.of(new BookMetadata(bookId, null, null, null, Path.of(bookId + ".body.txt")));
-        }
-
-        @Override
-        public List<BookMetadata> booksBy(String author) {
-            return List.of();
-        }
-    };
+    private static final String BATCH = "batch";
 
     @TestFactory
     Stream<DynamicTest> findsTheBooksContainingEveryTerm() {
         JsonNode search = file("search.json");
         Tokenizer tokenizer = new Tokenizer(stopwords(search));
-        Map<String, Set<Integer>> postings = postings(search.get("books"), tokenizer);
-        SearchCommand command = new SearchCommand(term -> postings.getOrDefault(term, Set.of()), EVERY_BOOK, tokenizer);
+        Map<Integer, Map<String, Integer>> frequencies = new TreeMap<>();
+        search.get("books").properties().forEach(book -> frequencies.put(Integer.valueOf(book.getKey()), tokenizer.frequencies(book.getValue().asText())));
+        List<TermPostings> postings = postings(frequencies);
+        SearchCommand command = new SearchCommand(
+                (generation, terms, batchIds) -> postings.stream().filter(posting -> terms.contains(posting.term())).toList(),
+                (generation, bookIds) -> bookIds.stream().map(bookId -> new SearchResult(bookId, null, null, null, null)).toList(),
+                tokenizer);
+        Snapshot snapshot = new Snapshot(1, Set.of(BATCH), frequencies.keySet());
         return cases(search).stream().map(testCase -> DynamicTest.dynamicTest(testCase.get("query").asText(), () -> {
-            List<BookMetadata> found = command.execute(testCase.get("query").asText()).books();
-            assertEquals(ids(testCase.get("ids")), found.stream().map(BookMetadata::bookId).toList());
+            List<SearchResult> found = command.execute(snapshot, new SearchQuery(testCase.get("query").asText(), 0, 20)).results();
+            assertEquals(ids(testCase.get("ids")), found.stream().map(SearchResult::bookId).toList());
         }));
     }
 
-    private static Map<String, Set<Integer>> postings(JsonNode books, Tokenizer tokenizer) {
-        Map<String, Set<Integer>> postings = new HashMap<>();
-        books.properties().forEach(book -> tokenizer.distinctTerms(book.getValue().asText())
-                .forEach(term -> postings.computeIfAbsent(term, key -> new TreeSet<>()).add(Integer.valueOf(book.getKey()))));
-        return postings;
+    private static List<TermPostings> postings(Map<Integer, Map<String, Integer>> frequencies) {
+        Map<String, Map<Integer, Integer>> booksByTerm = frequencies.entrySet().stream()
+                .flatMap(book -> book.getValue().entrySet().stream().map(term -> Map.entry(term.getKey(), Map.entry(book.getKey(), term.getValue()))))
+                .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.toMap(entry -> entry.getValue().getKey(),
+                        entry -> entry.getValue().getValue(), Integer::sum, TreeMap::new)));
+        return booksByTerm.entrySet().stream()
+                .map(term -> new TermPostings(term.getKey(), List.copyOf(term.getValue().keySet()), List.copyOf(term.getValue().values())))
+                .toList();
     }
 
     private static List<Integer> ids(JsonNode array) {
