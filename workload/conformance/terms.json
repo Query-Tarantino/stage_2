@@ -1,0 +1,47 @@
+{
+  "spec": "§7 tokenizer: term frequencies of a body with the given stopwords",
+  "stopwords": [
+    "the",
+    "and",
+    "an",
+    "at"
+  ],
+  "cases": [
+    {
+      "name": "lowercase, punctuation and stopwords",
+      "text": "The island, the ISLAND and the whale!",
+      "terms": {
+        "island": 2,
+        "whale": 1
+      }
+    },
+    {
+      "name": "apostrophes, digits and one-letter terms split or drop",
+      "text": "Don't stop: 1984year x",
+      "terms": {
+        "don": 1,
+        "stop": 1,
+        "year": 1
+      }
+    },
+    {
+      "name": "hyphens split terms",
+      "text": "rock-and-roll e-mail",
+      "terms": {
+        "rock": 1,
+        "roll": 1,
+        "mail": 1
+      }
+    },
+    {
+      "name": "unicode letters, no normalization",
+      "text": "Écume façade Cæsar ſhape",
+      "terms": {
+        "écume": 1,
+        "façade": 1,
+        "cæsar": 1,
+        "ſhape": 1
+      }
+    }
+  ]
+}

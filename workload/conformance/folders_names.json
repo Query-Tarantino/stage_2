@@ -1,0 +1,35 @@
+{
+  "spec": "\u00a78.1 folders: term file path relative to the index root",
+  "cases": [
+    {
+      "name": "ascii",
+      "term": "island",
+      "path": "i/island.txt"
+    },
+    {
+      "name": "accented letter",
+      "term": "\u00e9cume",
+      "path": "%C3%A9/%C3%A9cume.txt"
+    },
+    {
+      "name": "long s, merged with shape by APFS otherwise",
+      "term": "\u017fhape",
+      "path": "%C5%BF/%C5%BFhape.txt"
+    },
+    {
+      "name": "NFC caf\u00e9",
+      "term": "caf\u00e9",
+      "path": "c/caf%C3%A9.txt"
+    },
+    {
+      "name": "NFD caf\u00e9",
+      "term": "cafe\u0301",
+      "path": "c/cafe%CC%81.txt"
+    },
+    {
+      "name": "name over 200 characters",
+      "term": "\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22\u6f22",
+      "path": "%E6%BC%A2/#1ba4c06e4c0345f9bc48eed7d09f0c877798ff0dc8d3d0a0fad31cfcba7ca564.txt"
+    }
+  ]
+}

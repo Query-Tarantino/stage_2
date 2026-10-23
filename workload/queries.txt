@@ -1,0 +1,30 @@
+frequent: love
+frequent: night
+frequent: old
+frequent: time
+frequent: man
+rare: pyromaniac
+rare: liliput
+rare: boardinghouses
+rare: phytography
+rare: bepowdered
+mixed: love pyromaniac
+mixed: old liliput
+mixed: night boardinghouses
+mixed: time phytography
+mixed: man bepowdered
+long: ship captain sea voyage
+long: king queen ancient castle
+long: dark night murder mystery
+long: young woman love letter
+long: old man sea fish
+empty: pyromaniac liliput
+empty: phytography boardinghouses
+empty: bepowdered pyromaniac
+empty: liliput phytography
+empty: boardinghouses bepowdered
+nonascii: cæsar
+nonascii: tête
+nonascii: père
+nonascii: façade
+nonascii: manœuvre

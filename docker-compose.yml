@@ -1,0 +1,13 @@
+# For development. Benchmarks need MongoDB outside any virtual machine with a 1 GB cache (SPEC §11):
+# on Linux, the README's docker run with host networking; on macOS, a native install.
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: tarantino-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

@@ -1,0 +1,47 @@
+{
+  "spec": "§6 datalake: header and body paths relative to the root; time uses the UTC instant of the save",
+  "cases": [
+    {
+      "layout": "time",
+      "id": 1342,
+      "saved_at": "2025-09-25T14:03:00Z",
+      "header": "20250925/14/1342.header.txt",
+      "body": "20250925/14/1342.body.txt"
+    },
+    {
+      "layout": "time",
+      "id": 84,
+      "saved_at": "2025-01-05T03:59:59Z",
+      "header": "20250105/03/84.header.txt",
+      "body": "20250105/03/84.body.txt"
+    },
+    {
+      "layout": "book",
+      "id": 1342,
+      "saved_at": "2025-09-25T14:03:00Z",
+      "header": "1342/header.txt",
+      "body": "1342/body.txt"
+    },
+    {
+      "layout": "batch",
+      "id": 999,
+      "saved_at": "2025-09-25T14:03:00Z",
+      "header": "0/999.header.txt",
+      "body": "0/999.body.txt"
+    },
+    {
+      "layout": "batch",
+      "id": 1342,
+      "saved_at": "2025-09-25T14:03:00Z",
+      "header": "1/1342.header.txt",
+      "body": "1/1342.body.txt"
+    },
+    {
+      "layout": "batch",
+      "id": 64317,
+      "saved_at": "2025-09-25T14:03:00Z",
+      "header": "64/64317.header.txt",
+      "body": "64/64317.body.txt"
+    }
+  ]
+}

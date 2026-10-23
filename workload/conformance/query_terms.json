@@ -1,0 +1,29 @@
+{
+  "spec": "§10 step 1: query terms, distinct, in order of first appearance",
+  "stopwords": [
+    "the",
+    "and",
+    "an",
+    "at"
+  ],
+  "cases": [
+    {
+      "name": "duplicates and case",
+      "query": "Island island THE whale",
+      "terms": [
+        "island",
+        "whale"
+      ]
+    },
+    {
+      "name": "only stopwords",
+      "query": "the and",
+      "terms": []
+    },
+    {
+      "name": "only one-letter terms",
+      "query": "a b",
+      "terms": []
+    }
+  ]
+}

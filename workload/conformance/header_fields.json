@@ -1,0 +1,47 @@
+{
+  "spec": "§7 header fields: first match per field, stripped, null when missing",
+  "cases": [
+    {
+      "name": "all fields",
+      "header": "Title: Pride and Prejudice\nAuthor: Jane Austen\nLanguage: English",
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "language": "English"
+    },
+    {
+      "name": "missing field and surrounding blanks",
+      "header": "Title:\t  Moby Dick  \nLanguage: English",
+      "title": "Moby Dick",
+      "author": null,
+      "language": "English"
+    },
+    {
+      "name": "first match wins",
+      "header": "Title: First\nTitle: Second\nAuthor: Someone",
+      "title": "First",
+      "author": "Someone",
+      "language": null
+    },
+    {
+      "name": "only at the start of a line",
+      "header": "Release Title: Not this\nTitle: Real title",
+      "title": "Real title",
+      "author": null,
+      "language": null
+    },
+    {
+      "name": "only \\n ends a line",
+      "header": "Title: Alpha\rOmega\u2028Beta\u0085Gamma\nAuthor: Someone",
+      "title": "Alpha\rOmega\u2028Beta\u0085Gamma",
+      "author": "Someone",
+      "language": null
+    },
+    {
+      "name": "a field needs a character after the colon",
+      "header": "Title:\nTitle: Second\nAuthor:   \nLanguage: English",
+      "title": "Second",
+      "author": "",
+      "language": "English"
+    }
+  ]
+}
