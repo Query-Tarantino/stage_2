@@ -11,9 +11,9 @@ of truth in MongoDB, and everything runs on one machine with Docker Compose.
 
 ## Status
 
-So far the repository has the shared `common` module, `SPEC.md` 1.1 and the OpenAPI v0. Each service builds its
-executable jar, but it still runs its Stage 1 command; the Javalin services, their Hazelcast workers, nginx,
-`bench` and `checks` come in the next phases. Docker Compose brings up only MongoDB and Hazelcast for now.
+The walking skeleton runs end to end: `control` seeds the candidates, `crawler` downloads them, `indexer` publishes
+them in batches and `query` answers `GET /search` behind nginx. Still to come: lease renewals, failed downloads,
+reconciliation, the operational endpoints, the search filters, `/books` and `/search/filters`, `bench` and `checks`.
 
 ## Requirements
 
@@ -40,9 +40,27 @@ Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` a
 ## Running
 
 ```bash
-docker compose up -d      # MongoDB 7.0 and Hazelcast, cluster tarantino
-docker compose down       # stop them; -v also deletes the MongoDB data
+mvn -DskipTests package
+docker compose -f docker-compose.yml -f docker-compose.mirror.yml up -d --build   # books from benchmarks/mirror
+curl 'http://localhost:8080/search?q=pride%20prejudice'
+docker compose down -v                                                             # stop and delete the data
 ```
+
+Without `docker-compose.mirror.yml`, `crawler` downloads over HTTP from Gutenberg's official mirror. `control` seeds
+`workload/sample_ids.txt`, and a book shows up in `/search` once its batch is published: at most
+`TARANTINO_BATCH_TIMEOUT_SECONDS` (30 s) after the first download of the batch.
+
+| Setting | How |
+| --- | --- |
+| Entry ports | Only nginx publishes ports: 8080 sends `/search`, `/search/filters` and `/books/` to `query`, and 8081 sends `/ingest/`, `/index/` and `/control/` to their service; any other path gives `404` |
+| Service ports | `TARANTINO_PORT`: 7001 `crawler`, 7002 `indexer`, 7003 `query` and 7004 `control`, inside the Compose network, each with its `/health`: `docker compose exec query curl -s localhost:7003/health` |
+| Addresses | `TARANTINO_MONGO_URI` and `TARANTINO_HAZELCAST`, which `docker-compose.yml` points to `mongo` and `hazelcast` |
+| Replicas | `docker compose up -d --scale crawler=3 --scale indexer=3 --scale query=2`; `control` always has one. Downloads at once: `crawler` replicas × `TARANTINO_PARALLEL_DOWNLOADS` (8) |
+| HTTP threads | `TARANTINO_HTTP_THREADS`; without it, Javalin's own pool, from 8 to 250 threads |
+| Timing | The `TARANTINO_*_SECONDS` variables of `SPEC.md` §4.7, read from the shell by `docker-compose.yml` and the same for every service |
+
+Colima's default VM has 2 GiB, which fits one replica of each service; give it more before scaling, for example
+`colima start --memory 6`.
 
 ## Corpus
 
@@ -66,6 +84,9 @@ services/
   query/                Search
   control/              seeding and reconciliation
 api/openapi.yaml        HTTP API
+nginx/nginx.conf        entry ports 8080 and 8081
+docker-compose.yml      the stack; docker-compose.mirror.yml adds the local mirror
+Dockerfile              the image of the four services
 scripts/fill_cache.sh   benchmark corpus
 workload/
   book_ids.txt          corpus candidates, in order
