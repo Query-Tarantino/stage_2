@@ -1,17 +1,30 @@
 package org.ulpgc.tarantino.control;
 
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
+import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
+import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.mongo.BookStates;
+import org.ulpgc.tarantino.common.operations.TransitionLog;
+import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
+import org.ulpgc.tarantino.control.commands.SeedCommand;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 
 public final class ControlFactory {
 
     private ControlFactory() {
+    }
+
+    public static SeedCommand seedCommand(Connections connections) {
+        return new SeedCommand(new BookStates(connections.database())::create,
+                new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD)::offer,
+                new TransitionLog(), Clock.systemUTC());
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
