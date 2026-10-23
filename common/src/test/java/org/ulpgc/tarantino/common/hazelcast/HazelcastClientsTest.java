@@ -15,8 +15,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HazelcastClientsTest {
@@ -44,11 +46,14 @@ class HazelcastClientsTest {
     @Test
     void startsBeforeTheMemberAndConnectsWhenItComesUp() throws IOException, InterruptedException {
         int port = freePort();
-        HazelcastInstance client = started(HazelcastClients.connect(List.of("127.0.0.1:" + port), CLUSTER));
+        HazelcastConnection connection = HazelcastClients.connect(List.of("127.0.0.1:" + port), CLUSTER);
+        started(connection.client());
+        assertFalse(connection.connected());
         HazelcastInstance member = started(Hazelcast.newHazelcastInstance(member(port)));
 
-        offerWhenConnected(client, "{\"book_id\":1342}");
+        offerWhenConnected(connection.client(), "{\"book_id\":1342}");
 
+        assertTrue(becomesTrue(connection::connected));
         assertEquals("{\"book_id\":1342}", member.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).poll());
     }
 
@@ -77,6 +82,14 @@ class HazelcastClientsTest {
                 Thread.sleep(100);
             }
         }
+    }
+
+    private static boolean becomesTrue(BooleanSupplier condition) throws InterruptedException {
+        Instant deadline = Instant.now().plusSeconds(10);
+        while (!condition.getAsBoolean() && Instant.now().isBefore(deadline)) {
+            Thread.sleep(100);
+        }
+        return condition.getAsBoolean();
     }
 
     private static int freePort() throws IOException {
