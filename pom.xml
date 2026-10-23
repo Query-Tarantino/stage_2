@@ -72,7 +72,7 @@
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-nop</artifactId>
+                <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
             <dependency>
@@ -117,12 +117,42 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>3.5.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.6.2</version>
                     <executions>
                         <execution>
-                            <id>test-support</id>
+                            <id>executable-jar</id>
+                            <phase>package</phase>
                             <goals>
-                                <goal>test-jar</goal>
+                                <goal>shade</goal>
                             </goals>
+                            <configuration>
+                                <createDependencyReducedPom>false</createDependencyReducedPom>
+                                <filters>
+                                    <filter>
+                                        <artifact>*:*</artifact>
+                                        <excludes>
+                                            <exclude>META-INF/*.SF</exclude>
+                                            <exclude>META-INF/*.DSA</exclude>
+                                            <exclude>META-INF/*.RSA</exclude>
+                                            <exclude>module-info.class</exclude>
+                                            <exclude>META-INF/versions/*/module-info.class</exclude>
+                                        </excludes>
+                                    </filter>
+                                </filters>
+                                <transformers>
+                                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                        <mainClass>${exec.mainClass}</mainClass>
+                                        <manifestEntries>
+                                            <Multi-Release>true</Multi-Release>
+                                        </manifestEntries>
+                                    </transformer>
+                                </transformers>
+                            </configuration>
                         </execution>
                     </executions>
                 </plugin>
