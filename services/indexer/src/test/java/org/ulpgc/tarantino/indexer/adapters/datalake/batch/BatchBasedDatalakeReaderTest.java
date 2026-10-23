@@ -23,7 +23,7 @@ class BatchBasedDatalakeReaderTest {
         Files.writeString(root.resolve("64/64317.header.txt"), "header");
         Files.writeString(root.resolve("64/64317.body.txt"), "body");
 
-        assertEquals(Optional.of(new BookText(64317, "header", "body", root.resolve("64/64317.body.txt"))),
+        assertEquals(Optional.of(new BookText(64317, "header", "body")),
                 new BatchBasedDatalakeReader(root).bookText(64317));
     }
 

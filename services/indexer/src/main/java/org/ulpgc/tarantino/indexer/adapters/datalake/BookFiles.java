@@ -14,7 +14,7 @@ public final class BookFiles {
     }
 
     public static Optional<BookText> bookText(int bookId, Path header, Path body) {
-        return Files.exists(body) ? Optional.of(new BookText(bookId, content(header), content(body), body)) : Optional.empty();
+        return Files.exists(body) ? Optional.of(new BookText(bookId, content(header), content(body))) : Optional.empty();
     }
 
     private static String content(Path file) {

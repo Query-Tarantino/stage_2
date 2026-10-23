@@ -7,7 +7,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.indexer.IndexerFactory;
-import org.ulpgc.tarantino.indexer.model.book.Book;
+import org.ulpgc.tarantino.common.terms.Tokenizer;
+import org.ulpgc.tarantino.indexer.model.book.BookMetadata;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
 import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,21 +36,21 @@ class IndexerConformanceTest {
             int bookId = testCase.get("id").asInt();
             Path bookRoot = root.resolve(String.valueOf(bookId));
             store(bookRoot.resolve(testCase.get("header").asText()), "header of " + bookId);
-            Path body = store(bookRoot.resolve(testCase.get("body").asText()), "body of " + bookId);
+            store(bookRoot.resolve(testCase.get("body").asText()), "body of " + bookId);
 
-            assertEquals(Optional.of(new BookText(bookId, "header of " + bookId, "body of " + bookId, body)),
+            assertEquals(Optional.of(new BookText(bookId, "header of " + bookId, "body of " + bookId)),
                     IndexerFactory.datalakeReader(config(bookRoot)).bookText(bookId));
         }));
     }
 
     @TestFactory
     Stream<DynamicTest> extractsHeaderFields() {
-        HeaderParser parser = new HeaderParser();
+        HeaderParser parser = new HeaderParser(new Tokenizer(Set.of()));
         return cases(file("header_fields.json")).stream().map(testCase -> DynamicTest.dynamicTest(testCase.get("name").asText(), () -> {
-            Book book = parser.book(new BookText(1, testCase.get("header").asText(), "", Path.of("1.body.txt")));
-            assertEquals(textOrNull(testCase.get("title")), book.title());
-            assertEquals(textOrNull(testCase.get("author")), book.author());
-            assertEquals(textOrNull(testCase.get("language")), book.language());
+            BookMetadata metadata = parser.metadata(new BookText(1, testCase.get("header").asText(), ""));
+            assertEquals(textOrNull(testCase.get("title")), metadata.title());
+            assertEquals(textOrNull(testCase.get("author")), metadata.author());
+            assertEquals(Optional.ofNullable(textOrNull(testCase.get("language"))).stream().toList(), metadata.languageNames());
         }));
     }
 

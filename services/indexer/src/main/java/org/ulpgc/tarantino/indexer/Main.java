@@ -2,20 +2,19 @@ package org.ulpgc.tarantino.indexer;
 
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.TarantinoService;
-import org.ulpgc.tarantino.indexer.commands.IndexBookCommand;
-import org.ulpgc.tarantino.indexer.commands.IndexResult;
+import org.ulpgc.tarantino.common.mongo.MongoIndexes;
+import org.ulpgc.tarantino.common.startup.Connections;
+import org.ulpgc.tarantino.common.startup.Startup;
 
-import java.util.Arrays;
+import java.util.List;
 
 public class Main {
 
     public static void main(String[] args) {
-        IndexBookCommand index = IndexerFactory.indexCommand(TarantinoConfig.fromEnvironment(TarantinoService.INDEXER));
-        index.execute(Arrays.stream(args).map(Integer::valueOf).toList()).stream().map(Main::line).forEach(System.out::println);
-    }
-
-    private static String line(IndexResult result) {
-        return "[INDEXER] " + result.bookId() + ": "
-                + (result.indexed() ? result.uniqueTerms() + " unique terms indexed" : "skipped, not found in the datalake");
+        TarantinoConfig config = TarantinoConfig.fromEnvironment(TarantinoService.INDEXER);
+        Connections connections = Connections.open(config);
+        Startup.start(config, connections, List.of(), routes -> {
+        });
+        Startup.retry("create the book state indexes", () -> MongoIndexes.ensureStateIndexes(connections.database()));
     }
 }
