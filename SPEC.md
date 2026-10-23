@@ -468,7 +468,7 @@ An id that is not a positive integer gives `400` (`INVALID_PARAMETER`, `paramete
 | Order | Descending TF-IDF, summing `(1 + ln tf) × ln(N / df)` per word; ties broken by ascending `book_id` (§7). |
 | `total` | Matches with the filters applied, not just those on the page. |
 
-An empty or blank optional parameter (`author=`) counts as absent. Every `400` names the parameter in `parameter`.
+An optional parameter that is empty or only whitespace (`author=`) counts as absent; any other value must follow its rule exactly as received, without trimming. The parameters are checked in the table's order, `q`, `author`, `language`, `year`, `offset` and `limit`: the first one that fails gives the `400`, naming it in `parameter`, and the search only runs once all of them are valid. So `q` with only stopwords and an `author` with no words gives `400`, not an empty `200`.
 
 ```json
 {
@@ -547,7 +547,7 @@ Problem Details (RFC 9457), with `Content-Type: application/problem+json`, in al
 3. Build a new snapshot with `generation`, `batch_ids`, the set of `book_ids`, `N = book_ids.size()` and the `GET /search/filters` summary. When adding batches it is enough to read the languages and year of the new books; when the generation changes, it is recomputed in full.
 4. Until it has its first snapshot, `query` answers `503` on its three routes.
 
-**A `GET /search` request.**
+**A `GET /search` request.** It starts by validating the parameters in the order of §6.3.
 
 1. Read the snapshot once and use it for the whole request. `N` comes from it, never from `countDocuments`.
 2. Get the terms of `q` with the `common` tokenizer, without repeats. If none is left, or `N` is 0, answer `200` with `total: 0`.

@@ -34,7 +34,12 @@ paths:
       tags: [front-end]
       operationId: search
       summary: Search books by TF-IDF with optional filters
-      description: "Consumer: front-end. Service: `query` (7003). nginx port: 8080."
+      description: |
+        Consumer: front-end. Service: `query` (7003). nginx port: 8080.
+
+        An empty or blank optional parameter counts as absent; any other value must follow its rule as received.
+        The parameters are checked in the order `q`, `author`, `language`, `year`, `offset` and `limit`: the first
+        one that fails gives the `400`, and the search only runs once all of them are valid.
       parameters:
         - name: q
           in: query
@@ -45,38 +50,43 @@ paths:
             pattern: \S
         - name: author
           in: query
-          description: Every word must be in the book's `author_terms`. Empty counts as absent; no word left gives `400`.
+          description: Every word must be in the book's `author_terms`; no word left gives `400`.
           schema:
             type: string
         - name: language
           in: query
-          description: ISO 639-1 code; a book with several languages matches any of them. Empty counts as absent.
+          description: ISO 639-1 code; a book with several languages matches any of them.
           schema:
-            type: string
-            pattern: ^[a-z]{2}$
+            anyOf:
+              - $ref: "#/components/schemas/LanguageCode"
+              - $ref: "#/components/schemas/Blank"
         - name: year
           in: query
-          description: Gutenberg publication year (`year`). Empty counts as absent.
+          description: Gutenberg publication year (`year`).
           schema:
-            type: string
-            pattern: ^[0-9]{4}$
+            anyOf:
+              - type: string
+                pattern: ^[0-9]{4}$
+              - $ref: "#/components/schemas/Blank"
         - name: offset
           in: query
-          description: Empty counts as absent.
           schema:
-            type: integer
-            format: int32
-            minimum: 0
             default: 0
+            anyOf:
+              - type: integer
+                format: int32
+                minimum: 0
+              - $ref: "#/components/schemas/Blank"
         - name: limit
           in: query
-          description: Empty counts as absent.
           schema:
-            type: integer
-            format: int32
-            minimum: 1
-            maximum: 100
             default: 20
+            anyOf:
+              - type: integer
+                format: int32
+                minimum: 1
+                maximum: 100
+              - $ref: "#/components/schemas/Blank"
       responses:
         "200":
           description: The page of results, by descending score and ascending `book_id`.
@@ -433,6 +443,10 @@ components:
     LanguageCode:
       type: string
       pattern: ^[a-z]{2}$
+    Blank:
+      description: An empty or blank optional parameter, which counts as absent.
+      type: string
+      pattern: ^\s*$
     Year:
       type: integer
       format: int32
