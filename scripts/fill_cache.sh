@@ -7,6 +7,8 @@ readonly RSYNC_SOURCE="${TARANTINO_RSYNC_SOURCE:-rsync.ibiblio.org::gutenberg-ep
 readonly MIRROR_URL_TEMPLATE="https://mirror.cs.odu.edu/gutenberg-epub/%d/pg%d.txt"
 readonly START_MARKER='\*\*\* ?START OF (THE|THIS) PROJECT GUTENBERG EBOOK'
 readonly END_MARKER='\*\*\* ?END OF (THE|THIS) PROJECT GUTENBERG EBOOK'
+readonly MISSING_BOOK='link_stat .* failed: No such file or directory'
+readonly PARTIAL_TRANSFER='some files/attrs were not transferred'
 
 readonly source="${TARANTINO_CACHE_SOURCE:-rsync}"
 readonly workload_dir="${TARANTINO_WORKLOAD:-workload}"
@@ -54,16 +56,20 @@ store_or_skip() {
 # Rounds of one rsync transfer each, asking for twice the books still needed since some are skipped
 fill_with_rsync() {
     while (( $(cached_count) < target_books )); do
-        local batch list status=0 known_before
+        local batch list errors missing status=0 known_before
         batch=$(pending_ids $(( 2 * (target_books - $(cached_count)) )))
         [[ -n $batch ]] || fail "$workload_dir/book_ids.txt has fewer than $target_books downloadable books"
         known_before=$(known_count)
         list=$(mktemp)
+        errors=$(mktemp)
         echo "$batch" | sed 's|.*|&/pg&.txt|' > "$list"
         echo "Copying $(wc -l < "$list" | tr -d ' ') candidate books from $RSYNC_SOURCE in one transfer"
         # 23 and 24: some files did not exist or vanished; those books are skipped below
-        rsync -a --files-from="$list" "$RSYNC_SOURCE/" "$mirror_dir/" || status=$?
-        rm -f "$list"
+        rsync -a --files-from="$list" "$RSYNC_SOURCE/" "$mirror_dir/" 2> "$errors" || status=$?
+        missing=$(grep -c "$MISSING_BOOK" "$errors" || true)
+        grep -Ev "$MISSING_BOOK|$PARTIAL_TRANSFER" "$errors" >&2 || true
+        (( missing == 0 )) || echo "$missing candidate books are not in the collection; they will be skipped"
+        rm -f "$list" "$errors"
         (( status == 0 || status == 23 || status == 24 )) \
             || fail "rsync failed with status $status; where port 873 is blocked run with TARANTINO_CACHE_SOURCE=http"
         for id in $batch; do
