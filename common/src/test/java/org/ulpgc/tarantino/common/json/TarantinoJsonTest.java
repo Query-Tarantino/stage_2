@@ -2,6 +2,8 @@ package org.ulpgc.tarantino.common.json;
 
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.common.model.BatchPublished;
+import org.ulpgc.tarantino.common.model.BookState;
+import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 
 import java.time.Instant;
@@ -23,6 +25,14 @@ class TarantinoJsonTest {
     void writesPublishedBatchesInSnakeCaseWithTextDates() {
         assertEquals("{\"batch_id\":\"6716f0c2a1b2c3d4e5f60718\",\"generation\":1,\"book_count\":100,"
                 + "\"published_at\":\"2026-10-21T10:06:00Z\"}", TarantinoJson.write(BATCH));
+    }
+
+    @Test
+    void writesABookStateWithItsNullError() {
+        BookState state = new BookState(1342, BookStatus.INDEXING, 1, null, Instant.parse("2026-10-21T10:05:00Z"));
+
+        assertEquals("{\"book_id\":1342,\"status\":\"INDEXING\",\"attempts\":1,\"last_error\":null,"
+                + "\"updated_at\":\"2026-10-21T10:05:00Z\"}", TarantinoJson.write(state));
     }
 
     @Test
