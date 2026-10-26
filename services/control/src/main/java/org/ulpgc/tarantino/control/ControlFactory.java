@@ -7,7 +7,11 @@ import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoDownloadLeases;
+import org.ulpgc.tarantino.control.commands.ReconcileCommand;
+import org.ulpgc.tarantino.control.commands.ReleaseExpiredDownloadsCommand;
 import org.ulpgc.tarantino.control.commands.SeedCommand;
+import org.ulpgc.tarantino.control.ports.DownloadQueue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -22,9 +26,13 @@ public final class ControlFactory {
     }
 
     public static SeedCommand seedCommand(Connections connections) {
-        return new SeedCommand(new BookStates(connections.database())::create,
-                new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD)::offer,
+        return new SeedCommand(new BookStates(connections.database())::create, downloadQueue(connections),
                 new TransitionLog(), Clock.systemUTC());
+    }
+
+    /** The steps of the reconciliation in the order of SPEC §5.3. */
+    public static ReconcileCommand reconcileCommand(TarantinoConfig config, Connections connections) {
+        return new ReconcileCommand(List.of(releaseExpiredDownloads(config, connections)::execute), Clock.systemUTC());
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
@@ -33,6 +41,15 @@ public final class ControlFactory {
             return new LocalMirror(config.mirror().orElseThrow()).bookIds();
         }
         return ids(config.workload().resolve(config.candidates()));
+    }
+
+    private static ReleaseExpiredDownloadsCommand releaseExpiredDownloads(TarantinoConfig config, Connections connections) {
+        return new ReleaseExpiredDownloadsCommand(new MongoDownloadLeases(connections.database(), config.maxAttempts()),
+                downloadQueue(connections), new TransitionLog(), Clock.systemUTC());
+    }
+
+    private static DownloadQueue downloadQueue(Connections connections) {
+        return new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD)::offer;
     }
 
     private static List<Integer> ids(Path file) {
