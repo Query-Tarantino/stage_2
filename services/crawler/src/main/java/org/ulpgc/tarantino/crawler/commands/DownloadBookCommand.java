@@ -61,6 +61,7 @@ public class DownloadBookCommand {
             return;
         }
         log.write(Transition.book(bookId, BookStatus.DOWNLOADING, BookStatus.DOWNLOADED));
+        crashPoints.accept(CrashPoint.AFTER_DOWNLOADED);
         indexQueue.enqueue(new BookTask(bookId, clock.instant()));
     }
 }

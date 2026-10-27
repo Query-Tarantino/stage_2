@@ -86,6 +86,15 @@ class DownloadBookCommandTest {
     }
 
     @Test
+    void passesTheCrashPointsOfAFinishedDownloadInOrder() {
+        claims.queued.add(1342);
+
+        command(bookId -> RAW).execute(TASK);
+
+        assertEquals(List.of(CrashPoint.AFTER_CLAIM, CrashPoint.AFTER_DATALAKE_WRITE, CrashPoint.AFTER_DOWNLOADED), reachedPoints);
+    }
+
+    @Test
     void stopsAfterTheClaimBeforeWritingTheDatalake() {
         claims.queued.add(1342);
 
@@ -103,6 +112,16 @@ class DownloadBookCommandTest {
 
         assertTrue(Files.exists(datalake.resolve("1/1342.body.txt")));
         assertEquals(Set.of(), claims.finished);
+    }
+
+    @Test
+    void stopsAfterTheFinishedDownloadBeforeEnqueuingItForIndexing() {
+        claims.queued.add(1342);
+
+        assertThrows(Halted.class, () -> command(bookId -> RAW, haltAt(CrashPoint.AFTER_DOWNLOADED)).execute(TASK));
+
+        assertEquals(Set.of(1342), claims.finished);
+        assertEquals(List.of(), indexQueue);
     }
 
     private DownloadBookCommand command(BookDownloader downloader) {
