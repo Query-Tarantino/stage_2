@@ -4,6 +4,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.ulpgc.tarantino.common.config.CrashPoint;
+import org.ulpgc.tarantino.common.model.BookErrorCode;
+import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
@@ -58,6 +60,7 @@ class DownloadWorkerTest {
     private DownloadWorker worker(Consumer<CrashPoint> crashPoints) {
         DownloadBookCommand download = new DownloadBookCommand(new RecordingClaims(),
                 new IngestBookCommand(bookId -> "", new BatchBasedDatalakeAdapter(datalake)), task -> {
+        }, task -> {
         }, new TransitionLog(), Clock.systemUTC(), crashPoints);
         return new DownloadWorker(oneMessageThenStop(), download, crashPoints);
     }
@@ -84,6 +87,11 @@ class DownloadWorkerTest {
         @Override
         public boolean finish(int bookId, String claimId) {
             return false;
+        }
+
+        @Override
+        public Optional<BookStatus> fail(int bookId, String claimId, BookErrorCode reason) {
+            return Optional.empty();
         }
     }
 

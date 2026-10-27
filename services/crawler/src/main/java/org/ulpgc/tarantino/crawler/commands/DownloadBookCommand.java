@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.crawler.commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.config.CrashPoint;
+import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.Transition;
@@ -16,7 +17,8 @@ import java.util.function.Consumer;
 
 /**
  * One message of {@code books-to-download} (SPEC §5.1): it claims the book, ingests it and, once the download is
- * finished, enqueues it in {@code books-to-index}. A message whose claim fails is a duplicate or stale and is dropped.
+ * finished, enqueues it in {@code books-to-index}. A failed download goes back to {@code books-to-download} only if
+ * “Fail a download” leaves it {@code QUEUED}. A message whose claim fails is a duplicate or stale and is dropped.
  * It passes the crawler's crash points of SPEC §8 on the way.
  */
 public class DownloadBookCommand {
@@ -25,15 +27,17 @@ public class DownloadBookCommand {
 
     private final BookClaims claims;
     private final IngestBookCommand ingest;
+    private final TaskQueue downloadQueue;
     private final TaskQueue indexQueue;
     private final TransitionLog log;
     private final Clock clock;
     private final Consumer<CrashPoint> crashPoints;
 
-    public DownloadBookCommand(BookClaims claims, IngestBookCommand ingest, TaskQueue indexQueue, TransitionLog log, Clock clock,
-                               Consumer<CrashPoint> crashPoints) {
+    public DownloadBookCommand(BookClaims claims, IngestBookCommand ingest, TaskQueue downloadQueue, TaskQueue indexQueue,
+                               TransitionLog log, Clock clock, Consumer<CrashPoint> crashPoints) {
         this.claims = claims;
         this.ingest = ingest;
+        this.downloadQueue = downloadQueue;
         this.indexQueue = indexQueue;
         this.log = log;
         this.clock = clock;
@@ -49,7 +53,7 @@ public class DownloadBookCommand {
         crashPoints.accept(CrashPoint.AFTER_CLAIM);
         IngestResult result = ingest.execute(task.bookId());
         if (!result.succeeded()) {
-            LOGGER.warn("Book {} failed with {}; it stays DOWNLOADING until its lease expires", task.bookId(), result.failure());
+            fail(task.bookId(), claim.get(), result.failure());
             return;
         }
         crashPoints.accept(CrashPoint.AFTER_DATALAKE_WRITE);
@@ -63,5 +67,17 @@ public class DownloadBookCommand {
         log.write(Transition.book(bookId, BookStatus.DOWNLOADING, BookStatus.DOWNLOADED));
         crashPoints.accept(CrashPoint.AFTER_DOWNLOADED);
         indexQueue.enqueue(new BookTask(bookId, clock.instant()));
+    }
+
+    private void fail(int bookId, String claimId, BookErrorCode reason) {
+        Optional<BookStatus> outcome = claims.fail(bookId, claimId, reason);
+        if (outcome.isEmpty()) {
+            return;
+        }
+        log.write(Transition.book(bookId, BookStatus.DOWNLOADING, outcome.get()));
+        LOGGER.warn("Book {} failed with {} and is {}", bookId, reason, outcome.get());
+        if (outcome.get() == BookStatus.QUEUED) {
+            downloadQueue.enqueue(new BookTask(bookId, clock.instant()));
+        }
     }
 }

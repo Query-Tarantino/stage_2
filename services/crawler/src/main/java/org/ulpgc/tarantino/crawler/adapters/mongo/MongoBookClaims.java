@@ -75,6 +75,7 @@ public class MongoBookClaims implements BookClaims {
      * “Fail a download”: back to {@code QUEUED} for a retryable error while attempts are left, otherwise
      * {@code FAILED}; the status the book ended in, or empty if the lease was lost.
      */
+    @Override
     public Optional<BookStatus> fail(int bookId, String claimId, BookErrorCode reason) {
         Document outcome = new Document(STATUS, queuedOrFailed(reason))
                 .append(LAST_ERROR, reason.name())

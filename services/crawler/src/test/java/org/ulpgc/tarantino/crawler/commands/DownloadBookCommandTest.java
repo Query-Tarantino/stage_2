@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
+import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
@@ -39,6 +40,7 @@ class DownloadBookCommandTest {
     Path datalake;
 
     private final FakeClaims claims = new FakeClaims();
+    private final List<BookTask> downloadQueue = new ArrayList<>();
     private final List<BookTask> indexQueue = new ArrayList<>();
     private final List<CrashPoint> reachedPoints = new ArrayList<>();
 
@@ -63,16 +65,48 @@ class DownloadBookCommandTest {
     }
 
     @Test
-    void neitherFinishesNorEnqueuesAFailedDownload() {
+    void requeuesAFailedDownloadThatEndsQueued() {
         claims.queued.add(1342);
-        BookDownloader missing = bookId -> {
-            throw new DownloadException(BookErrorCode.NOT_FOUND, "missing");
-        };
 
-        command(missing).execute(TASK);
+        command(failingWith(BookErrorCode.NETWORK_ERROR)).execute(TASK);
 
-        assertEquals(Set.of(), claims.finished);
+        assertEquals(List.of(BookErrorCode.NETWORK_ERROR), claims.failures);
+        assertEquals(List.of(new BookTask(1342, NOW)), downloadQueue);
         assertEquals(List.of(), indexQueue);
+    }
+
+    @Test
+    void neitherFinishesNorEnqueuesAFailedDownloadThatEndsFailed() {
+        claims.queued.add(1342);
+        claims.failedDownloadsEnd = BookStatus.FAILED;
+
+        command(failingWith(BookErrorCode.NOT_FOUND)).execute(TASK);
+
+        assertEquals(List.of(BookErrorCode.NOT_FOUND), claims.failures);
+        assertEquals(Set.of(), claims.finished);
+        assertEquals(List.of(), downloadQueue);
+        assertEquals(List.of(), indexQueue);
+    }
+
+    @Test
+    void doesNotRequeueAFailedDownloadWhoseLeaseWasLost() {
+        claims.queued.add(1342);
+        claims.leaseLost = true;
+
+        command(failingWith(BookErrorCode.NETWORK_ERROR)).execute(TASK);
+
+        assertEquals(List.of(), downloadQueue);
+    }
+
+    @Test
+    void doesNotFailABookWhenMongoFailsWhileFinishingIt() {
+        claims.queued.add(1342);
+        claims.mongoDown = true;
+
+        assertThrows(IllegalStateException.class, () -> command(bookId -> RAW).execute(TASK));
+
+        assertEquals(List.of(), claims.failures);
+        assertEquals(List.of(), downloadQueue);
     }
 
     @Test
@@ -130,8 +164,14 @@ class DownloadBookCommandTest {
 
     private DownloadBookCommand command(BookDownloader downloader, Consumer<CrashPoint> crashPoints) {
         IngestBookCommand ingest = new IngestBookCommand(downloader, new BatchBasedDatalakeAdapter(datalake));
-        return new DownloadBookCommand(claims, ingest, indexQueue::add, new TransitionLog(), Clock.fixed(NOW, ZoneOffset.UTC),
-                crashPoints);
+        return new DownloadBookCommand(claims, ingest, downloadQueue::add, indexQueue::add, new TransitionLog(),
+                Clock.fixed(NOW, ZoneOffset.UTC), crashPoints);
+    }
+
+    private static BookDownloader failingWith(BookErrorCode reason) {
+        return bookId -> {
+            throw new DownloadException(reason, reason.name());
+        };
     }
 
     private static Consumer<CrashPoint> haltAt(CrashPoint configured) {
@@ -149,7 +189,10 @@ class DownloadBookCommandTest {
 
         private final Set<Integer> queued = new HashSet<>();
         private final Set<Integer> finished = new HashSet<>();
+        private final List<BookErrorCode> failures = new ArrayList<>();
+        private BookStatus failedDownloadsEnd = BookStatus.QUEUED;
         private boolean leaseLost;
+        private boolean mongoDown;
 
         @Override
         public Optional<String> claim(int bookId) {
@@ -158,7 +201,19 @@ class DownloadBookCommandTest {
 
         @Override
         public boolean finish(int bookId, String claimId) {
+            if (mongoDown) {
+                throw new IllegalStateException("Mongo does not answer");
+            }
             return !leaseLost && ("claim-" + bookId).equals(claimId) && finished.add(bookId);
+        }
+
+        @Override
+        public Optional<BookStatus> fail(int bookId, String claimId, BookErrorCode reason) {
+            if (leaseLost || !("claim-" + bookId).equals(claimId)) {
+                return Optional.empty();
+            }
+            failures.add(reason);
+            return Optional.of(failedDownloadsEnd);
         }
     }
 }
