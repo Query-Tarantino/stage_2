@@ -44,6 +44,7 @@ services:
       TARANTINO_DATALAKE: /data/datalake
       TARANTINO_PARALLEL_DOWNLOADS: ${TARANTINO_PARALLEL_DOWNLOADS:-8}
       TARANTINO_MAX_ATTEMPTS: ${TARANTINO_MAX_ATTEMPTS:-3}
+      TARANTINO_CRASH_AT: ${CRAWLER_CRASH_AT:-}
     volumes:
       - datalake:/data/datalake
     healthcheck:
