@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.crawler.commands;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
@@ -20,9 +21,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DownloadBookCommandTest {
@@ -37,6 +40,7 @@ class DownloadBookCommandTest {
 
     private final FakeClaims claims = new FakeClaims();
     private final List<BookTask> indexQueue = new ArrayList<>();
+    private final List<CrashPoint> reachedPoints = new ArrayList<>();
 
     @Test
     void storesAClaimedBookAndEnqueuesItForIndexing() {
@@ -55,6 +59,7 @@ class DownloadBookCommandTest {
 
         assertFalse(Files.exists(datalake.resolve("1/1342.body.txt")));
         assertEquals(List.of(), indexQueue);
+        assertEquals(List.of(), reachedPoints);
     }
 
     @Test
@@ -80,9 +85,35 @@ class DownloadBookCommandTest {
         assertEquals(List.of(), indexQueue);
     }
 
+    @Test
+    void stopsAfterTheClaimBeforeWritingTheDatalake() {
+        claims.queued.add(1342);
+
+        assertThrows(Halted.class, () -> command(bookId -> RAW, haltAt(CrashPoint.AFTER_CLAIM)).execute(TASK));
+
+        assertFalse(Files.exists(datalake.resolve("1/1342.header.txt")));
+        assertEquals(Set.of(), claims.finished);
+    }
+
     private DownloadBookCommand command(BookDownloader downloader) {
+        return command(downloader, reachedPoints::add);
+    }
+
+    private DownloadBookCommand command(BookDownloader downloader, Consumer<CrashPoint> crashPoints) {
         IngestBookCommand ingest = new IngestBookCommand(downloader, new BatchBasedDatalakeAdapter(datalake));
-        return new DownloadBookCommand(claims, ingest, indexQueue::add, new TransitionLog(), Clock.fixed(NOW, ZoneOffset.UTC));
+        return new DownloadBookCommand(claims, ingest, indexQueue::add, new TransitionLog(), Clock.fixed(NOW, ZoneOffset.UTC),
+                crashPoints);
+    }
+
+    private static Consumer<CrashPoint> haltAt(CrashPoint configured) {
+        return point -> {
+            if (point == configured) {
+                throw new Halted();
+            }
+        };
+    }
+
+    private static final class Halted extends RuntimeException {
     }
 
     private static final class FakeClaims implements BookClaims {
