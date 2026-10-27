@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -125,10 +126,9 @@ class OpenApiValidatorTest {
 
     @Test
     void failsOnMaxItemsViolation() {
-        List<String> items = new ArrayList<>();
-        for (int index = 0; index < 101; index++) {
-            items.add("{\"book_id\": 1, \"title\": null, \"author\": null, \"language\": null, \"year\": null}");
-        }
+        List<String> items = IntStream.range(0, 101)
+                .mapToObj(index -> "{\"book_id\": 1, \"title\": null, \"author\": null, \"language\": null, \"year\": null}")
+                .toList();
         String body = "{\"query\":\"q\",\"filters\":{},\"total\":101,\"offset\":0,\"limit\":100,\"results\":[" + String.join(",", items) + "]}";
         Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
         assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/search?q=q", 200, headers, body));

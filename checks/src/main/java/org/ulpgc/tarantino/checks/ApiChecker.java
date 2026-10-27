@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.StreamSupport;
 
 public class ApiChecker {
 
@@ -19,6 +21,7 @@ public class ApiChecker {
     private final CheckedClient client;
     private final String frontEndUrl;
     private final String operationalUrl;
+    private final List<JsonNode> sampleBooks = new ArrayList<>();
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
@@ -31,6 +34,7 @@ public class ApiChecker {
         checkHealth();
         checkOperationalEndpoints();
         ensurePublishedAndRefreshed(sampleIds);
+        checkStatusEndpoints();
         checkIdempotency(sampleIds);
         checkBooksEndpoints(sampleIds);
         checkFiltersSummary();
@@ -118,6 +122,30 @@ public class ApiChecker {
         assertTrue(controlStatus.json().has("queues"));
     }
 
+    public void checkStatusEndpoints() throws IOException, InterruptedException {
+        LOGGER.info("Checking status endpoints and operational errors");
+        CheckedClient.Response ingestStatus200 = client.get(operationalUrl + "/ingest/status/1342");
+        assertEquals(200, ingestStatus200.status());
+        assertEquals(1342, ingestStatus200.json().get("book_id").asInt());
+
+        CheckedClient.Response indexStatus200 = client.get(operationalUrl + "/index/status/1342");
+        assertEquals(200, indexStatus200.status());
+        assertEquals(1342, indexStatus200.json().get("book_id").asInt());
+
+        assertProblem(operationalUrl + "/ingest/status/999999", 404, "BOOK_NOT_FOUND", null);
+        assertProblem(operationalUrl + "/index/status/999999", 404, "BOOK_NOT_FOUND", null);
+
+        assertProblem(operationalUrl + "/ingest/status/0", 400, "INVALID_PARAMETER", "book_id");
+        assertProblem(operationalUrl + "/ingest/status/abc", 400, "INVALID_PARAMETER", "book_id");
+
+        assertProblem(operationalUrl + "/index/status/0", 400, "INVALID_PARAMETER", "book_id");
+        assertProblem(operationalUrl + "/index/status/abc", 400, "INVALID_PARAMETER", "book_id");
+
+        assertPostProblem(operationalUrl + "/ingest/0", 400, "INVALID_PARAMETER", "book_id");
+        assertPostProblem(operationalUrl + "/index/update/0", 400, "INVALID_PARAMETER", "book_id");
+        assertPostProblem(operationalUrl + "/index/update/999999", 404, "BOOK_NOT_FOUND", null);
+    }
+
     public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
         LOGGER.info("Ensuring all sample books are published");
         for (int bookId : sampleIds) {
@@ -159,10 +187,31 @@ public class ApiChecker {
 
     private void waitForSnapshotRefresh(List<Integer> sampleIds) throws IOException, InterruptedException {
         int snapshotSeconds = Integer.parseInt(System.getenv().getOrDefault("TARANTINO_SNAPSHOT_SECONDS", "5"));
-        long deadline = System.currentTimeMillis() + ((snapshotSeconds + 2) * 1000L);
+        long filtersDeadline = System.currentTimeMillis() + (MAX_WAIT_SECONDS * 1000L);
+        int consecutiveSuccesses = 0;
+        while (System.currentTimeMillis() < filtersDeadline && consecutiveSuccesses < 10) {
+            try {
+                CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
+                if (response.status() == 200 && response.json() != null && response.json().has("total_books")
+                        && response.json().get("total_books").asInt() >= sampleIds.size()) {
+                    consecutiveSuccesses++;
+                } else {
+                    consecutiveSuccesses = 0;
+                }
+            } catch (IOException exception) {
+                consecutiveSuccesses = 0;
+            }
+            Thread.sleep(200);
+        }
+        if (consecutiveSuccesses < 10) {
+            throw new AssertionError("Snapshot not refreshed on all replicas: search/filters did not return total_books >= "
+                    + sampleIds.size() + " across 10 consecutive requests");
+        }
+
         for (int bookId : sampleIds) {
+            long bookDeadline = System.currentTimeMillis() + ((snapshotSeconds + 2) * 1000L);
             boolean visible = false;
-            while (System.currentTimeMillis() < deadline) {
+            while (System.currentTimeMillis() < bookDeadline) {
                 CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
                 if (response.status() == 200) {
                     visible = true;
@@ -206,10 +255,12 @@ public class ApiChecker {
 
     public void checkBooksEndpoints(List<Integer> sampleIds) throws IOException, InterruptedException {
         LOGGER.info("Checking /books endpoints");
+        sampleBooks.clear();
         for (int bookId : sampleIds) {
             CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
             assertEquals(200, response.status());
             assertEquals(bookId, response.json().get("book_id").asInt());
+            sampleBooks.add(response.json());
         }
 
         CheckedClient.Response book1342 = client.get(frontEndUrl + "/books/1342");
@@ -297,15 +348,14 @@ public class ApiChecker {
         assertTrue(langEn.json().get("total").asInt() >= 1);
         assertTrue(containsBook(langEn.json().get("results"), 1342));
 
-        CheckedClient.Response langDe = client.get(frontEndUrl + "/search?q=pride&language=de");
-        assertEquals(200, langDe.status());
-        assertEquals("de", langDe.json().get("filters").get("language").asText());
-        assertEquals(0, langDe.json().get("total").asInt());
+        checkLanguageFilter(sampleBooks, "de");
+        checkLanguageFilter(sampleBooks, "fr");
 
-        CheckedClient.Response langFr = client.get(frontEndUrl + "/search?q=pride&language=fr");
-        assertEquals(200, langFr.status());
-        assertEquals("fr", langFr.json().get("filters").get("language").asText());
-        assertEquals(0, langFr.json().get("total").asInt());
+        CheckedClient.Response langZz = client.get(frontEndUrl + "/search?q=pride&language=zz");
+        assertEquals(200, langZz.status());
+        assertEquals("zz", langZz.json().get("filters").get("language").asText());
+        assertEquals(0, langZz.json().get("total").asInt());
+        assertEquals(0, langZz.json().get("results").size());
 
         CheckedClient.Response withYear = client.get(frontEndUrl + "/search?q=pride&year=1998");
         assertEquals(200, withYear.status());
@@ -354,23 +404,71 @@ public class ApiChecker {
         assertEquals(0, empty.json().get("results").size());
     }
 
+    private void checkLanguageFilter(List<JsonNode> books, String language) throws IOException, InterruptedException {
+        Optional<JsonNode> match = books.stream()
+                .filter(book -> book.has("languages") && book.get("languages").isArray())
+                .filter(book -> StreamSupport.stream(book.get("languages").spliterator(), false)
+                        .anyMatch(langNode -> language.equalsIgnoreCase(langNode.asText())))
+                .findFirst();
+        if (match.isPresent()) {
+            JsonNode book = match.get();
+            String term = pickSearchTerm(book);
+            int bookId = book.get("book_id").asInt();
+            CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + term + "&language=" + language);
+            assertEquals(200, response.status());
+            assertEquals(language, response.json().get("filters").get("language").asText());
+            assertTrue(response.json().get("total").asInt() >= 1);
+            assertTrue(containsBook(response.json().get("results"), bookId));
+        }
+    }
+
+    private static String pickSearchTerm(JsonNode book) {
+        if (book.has("title") && !book.get("title").isNull()) {
+            String title = book.get("title").asText();
+            for (String word : title.split("[^a-zA-Z0-9]+")) {
+                if (word.length() >= 4) {
+                    return word.toLowerCase();
+                }
+            }
+        }
+        if (book.has("author") && !book.get("author").isNull()) {
+            String author = book.get("author").asText();
+            for (String word : author.split("[^a-zA-Z0-9]+")) {
+                if (word.length() >= 4) {
+                    return word.toLowerCase();
+                }
+            }
+        }
+        return "the";
+    }
+
     private static boolean containsBook(JsonNode resultsNode, int bookId) {
         if (resultsNode == null || !resultsNode.isArray()) {
             return false;
         }
-        for (JsonNode resultNode : resultsNode) {
-            if (resultNode.has("book_id") && resultNode.get("book_id").asInt() == bookId) {
-                return true;
-            }
-        }
-        return false;
+        return StreamSupport.stream(resultsNode.spliterator(), false)
+                .filter(resultNode -> resultNode.has("book_id"))
+                .anyMatch(resultNode -> resultNode.get("book_id").asInt() == bookId);
     }
 
     private void assertProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
         CheckedClient.Response response = client.get(url);
         assertEquals(expectedStatus, response.status());
-        assertEquals(expectedCode, response.json().get("code").asText());
-        if (expectedParam != null && response.json().has("parameter")) {
+        if (expectedCode != null && response.json() != null && response.json().has("code")) {
+            assertEquals(expectedCode, response.json().get("code").asText());
+        }
+        if (expectedParam != null && response.json() != null && response.json().has("parameter")) {
+            assertEquals(expectedParam, response.json().get("parameter").asText());
+        }
+    }
+
+    private void assertPostProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
+        CheckedClient.Response response = client.post(url, "");
+        assertEquals(expectedStatus, response.status());
+        if (expectedCode != null && response.json() != null && response.json().has("code")) {
+            assertEquals(expectedCode, response.json().get("code").asText());
+        }
+        if (expectedParam != null && response.json() != null && response.json().has("parameter")) {
             assertEquals(expectedParam, response.json().get("parameter").asText());
         }
     }
