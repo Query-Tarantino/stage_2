@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 readonly WORKLOAD_DIR="${TARANTINO_WORKLOAD:-workload}"
@@ -24,12 +24,31 @@ verify_corpus() {
         exit 1
     fi
     echo "Verifying corpus against $CORPUS_SHA..."
-    while read -r expected_hash file_path; do
-        [[ -z "$expected_hash" || "$expected_hash" =~ ^# ]] && continue
+    while read -r col1 col2; do
+        [[ -z "$col1" || "$col1" =~ ^# ]] && continue
+        local expected_hash="" file_path=""
+        if [[ "$col1" =~ ^[a-fA-F0-9]{64}$ ]]; then
+            expected_hash="$col1"
+            file_path="$col2"
+        elif [[ "$col2" =~ ^[a-fA-F0-9]{64}$ ]]; then
+            expected_hash="$col2"
+            local id="$col1"
+            if [[ -f "benchmarks/mirror/${id}/pg${id}.txt" ]]; then
+                file_path="benchmarks/mirror/${id}/pg${id}.txt"
+            elif [[ -f "benchmarks/cache/${id}.txt" ]]; then
+                file_path="benchmarks/cache/${id}.txt"
+            else
+                file_path="benchmarks/mirror/${id}/pg${id}.txt"
+            fi
+        else
+            continue
+        fi
+
         if [[ ! -f "$file_path" ]]; then
             echo "Error: Missing corpus file $file_path" >&2
             exit 1
         fi
+        local actual_hash
         actual_hash=$(sha256sum "$file_path" | awk '{print $1}')
         if [[ "$actual_hash" != "$expected_hash" ]]; then
             echo "Error: SHA-256 mismatch for $file_path (expected $expected_hash, got $actual_hash)" >&2
@@ -51,7 +70,7 @@ init_run() {
     commit=$(git rev-parse --short HEAD 2>/dev/null || echo "0000000")
     run_id="${timestamp}-search-latency-${commit}"
     run_dir="${BENCHMARKS_DIR}/runs/${run_id}"
-    mkdir -p "${run_dir}/load" "${run_dir}/explain" "${run_dir}/jmh"
+    mkdir -p "${run_dir}/load" "${run_dir}/explain" "${run_dir}/jmh" "${run_dir}/logs"
     echo "$run_dir"
 }
 
@@ -97,15 +116,45 @@ EOF
 
 generate_corpus_json() {
     local run_dir=$1
-    local filters_json
-    filters_json=$(curl -sS "${FRONTEND_URL}/search/filters" 2>/dev/null || echo "{}")
+    local combined_hash books_count terms_count ids_json
+    combined_hash=$(sha256sum "${CORPUS_SHA}" 2>/dev/null | awk '{print $1}' || echo "unknown")
+
+    local ids_list
+    ids_list=$(awk '{ if ($1 ~ /^[0-9]+$/) print $1; else if ($2 ~ /^[0-9]+$/) print $2; }' "${CORPUS_SHA}" 2>/dev/null | sort -n)
+    if [[ -z "$ids_list" && -f "${WORKLOAD_DIR}/sample_ids.txt" ]]; then
+        ids_list=$(sort -n "${WORKLOAD_DIR}/sample_ids.txt" 2>/dev/null || true)
+    fi
+
+    books_count=$(echo "$ids_list" | grep -v '^$' | wc -l | tr -d ' ')
+    ids_json=$(echo "$ids_list" | grep -v '^$' | paste -sd, - | sed 's/,/, /g')
+
+    terms_count=0
+    if command -v docker >/dev/null 2>&1 && docker compose ps mongo 2>/dev/null | grep -q "mongo"; then
+        terms_count=$(docker compose exec -T mongo mongosh tarantino --quiet --eval 'db.postings_g1.countDocuments()' 2>/dev/null | tr -d '\r\n ' || echo 0)
+    fi
+    if [[ -z "$terms_count" || ! "$terms_count" =~ ^[0-9]+$ ]]; then
+        terms_count=0
+    fi
+
     cat <<EOF > "${run_dir}/corpus.json"
 {
-  "checksum_file": "${CORPUS_SHA}",
-  "sha256": "$(sha256sum "${CORPUS_SHA}" 2>/dev/null | cut -d' ' -f1 || echo "unknown")",
-  "filters": ${filters_json}
+  "ids": [ ${ids_json} ],
+  "sha256": "${combined_hash}",
+  "books": ${books_count},
+  "terms": ${terms_count}
 }
 EOF
+}
+
+save_service_logs() {
+    local run_dir=$1
+    echo "Saving service logs in ${run_dir}/logs..."
+    mkdir -p "${run_dir}/logs"
+    if command -v docker >/dev/null 2>&1; then
+        for service in crawler indexer query control nginx mongo hazelcast; do
+            docker compose logs --no-color --timestamps "$service" > "${run_dir}/logs/${service}.log" 2>/dev/null || true
+        done
+    fi
 }
 
 start_docker_stats() {
@@ -213,7 +262,7 @@ measure_latency() {
     echo "Hypothesis: Increasing Javalin HTTP worker threads improves concurrent request handling until CPU core saturation."
     for threads in $THREADS_CONFIG; do
         echo "Recreating query with TARANTINO_HTTP_THREADS=${threads}..."
-        TARANTINO_HTTP_THREADS="$threads" docker compose up -d query
+        TARANTINO_HTTP_THREADS="$threads" docker compose up -d --force-recreate --scale "query=${BASELINE_REPLICAS}" query
         wait_for_query_ready
         local config_name="threads_${threads}"
         local config="clients=${BASELINE_CLIENTS},threads=${threads},replicas=${BASELINE_REPLICAS}"
@@ -223,7 +272,7 @@ measure_latency() {
     done
 
     echo "Restoring baseline threads before series 3..."
-    TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d query
+    TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d --force-recreate --scale "query=${BASELINE_REPLICAS}" query
     wait_for_query_ready
 
     echo "=== Series 3: Varying query replicas (${REPLICAS_CONFIG}) with clients=${BASELINE_CLIENTS}, threads=${BASELINE_THREADS} ==="
@@ -262,6 +311,7 @@ main() {
     stop_docker_stats
 
     generate_corpus_json "$run_dir"
+    save_service_logs "$run_dir"
 
     finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     write_manifest "$run_dir" "$run_id" "$command_invoked" "$started_at" "$finished_at"
