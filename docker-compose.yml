@@ -80,6 +80,7 @@ services:
     environment:
       <<: *tarantino-environment
       TARANTINO_WORKLOAD: /app/workload
+      TARANTINO_CORS_ORIGIN: ${TARANTINO_CORS_ORIGIN:-*}
     volumes:
       - ./workload:/app/workload:ro
     healthcheck:
