@@ -9,6 +9,10 @@ import org.ulpgc.tarantino.bench.load.SearchLoadGenerator;
 import org.ulpgc.tarantino.bench.run.RunContext;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -23,10 +27,13 @@ class SearchLoadGeneratorTest {
     private static int port;
 
     @BeforeAll
-    static void startServer() {
+    static void startServer() throws Exception {
         app = Javalin.create().start(0);
         port = app.port();
         app.get("/search", ctx -> ctx.result("{\"total\": 1}"));
+        HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/search?q=warmup")).build(),
+                HttpResponse.BodyHandlers.discarding());
     }
 
     @AfterAll
@@ -45,12 +52,12 @@ class SearchLoadGeneratorTest {
 
         List<String> queries = List.of("love", "night", "pride prejudice");
         SearchLoadGenerator generator = new SearchLoadGenerator("http://localhost:" + port, queries, context);
-        generator.run(2, 6);
+        generator.run(2, Duration.ofMillis(20), Duration.ofMillis(150));
 
         Path csvPath = context.loadDirectory().resolve("requests.csv");
         assertTrue(Files.exists(csvPath));
         List<String> lines = Files.readAllLines(csvPath);
-        assertEquals(7, lines.size());
+        assertTrue(lines.size() > 1);
         assertEquals("instant,path,status,latency_us", lines.getFirst());
         assertTrue(lines.get(1).contains(",/search?q="));
         assertTrue(lines.get(1).contains(",200,"));
@@ -61,14 +68,14 @@ class SearchLoadGeneratorTest {
         RunContext context = RunContext.of("test-bench", "abcdef1", tempDir);
         List<String> queries = List.of("love", "night");
         SearchLoadGenerator generator = new SearchLoadGenerator("http://localhost:" + port, queries, context);
-        generator.run(2, 4, "clients_4");
+        generator.run(2, Duration.ofMillis(20), Duration.ofMillis(150), "clients_4");
 
         Path configCsv = context.loadDirectory().resolve("clients_4.csv");
         Path aggregateCsv = context.loadDirectory().resolve("requests.csv");
         assertTrue(Files.exists(configCsv));
         assertTrue(Files.exists(aggregateCsv));
-        assertEquals(5, Files.readAllLines(configCsv).size());
-        assertEquals(5, Files.readAllLines(aggregateCsv).size());
+        assertTrue(Files.readAllLines(configCsv).size() > 1);
+        assertTrue(Files.readAllLines(aggregateCsv).size() > 1);
     }
 
     @Test

@@ -54,6 +54,23 @@ public class ExplainPlanExporter {
         Files.writeString(explainDir.resolve("postings_search.json"), postingsExplain.toJson(PRETTY));
 
         MongoCollection<Document> metadata = database.getCollection(MongoCollections.metadata(generation));
+        Document authorFilterExplain = metadata.find(Filters.all(MongoFields.AUTHOR_TERMS, List.of("austen")))
+                .projection(Projections.include(MongoFields.ID))
+                .explain(ExplainVerbosity.EXECUTION_STATS);
+        Files.writeString(explainDir.resolve("metadata_filter_author.json"), authorFilterExplain.toJson(PRETTY));
+
+        Document langYearFilterExplain = metadata.find(Filters.and(
+                Filters.eq(MongoFields.LANGUAGES, "en"),
+                Filters.eq(MongoFields.YEAR, 1998)))
+                .projection(Projections.include(MongoFields.ID))
+                .explain(ExplainVerbosity.EXECUTION_STATS);
+        Files.writeString(explainDir.resolve("metadata_filter_language_year.json"), langYearFilterExplain.toJson(PRETTY));
+
+        Document yearFilterExplain = metadata.find(Filters.eq(MongoFields.YEAR, 1998))
+                .projection(Projections.include(MongoFields.ID))
+                .explain(ExplainVerbosity.EXECUTION_STATS);
+        Files.writeString(explainDir.resolve("metadata_filter_year.json"), yearFilterExplain.toJson(PRETTY));
+
         Document metadataFiltersExplain = metadata.find(Filters.and(
                 Filters.all(MongoFields.AUTHOR_TERMS, List.of("austen")),
                 Filters.eq(MongoFields.LANGUAGES, "en"),

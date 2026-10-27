@@ -68,14 +68,6 @@ public class SearchLoadGenerator {
         run(concurrency, warmupDuration, measurementDuration, null);
     }
 
-    public void run(int concurrency, int totalRequests) throws IOException, InterruptedException {
-        run(concurrency, totalRequests, null);
-    }
-
-    public void run(int concurrency, int totalRequests, String configName) throws IOException, InterruptedException {
-        runFixedRequests(concurrency, totalRequests, configName);
-    }
-
     public void run(int concurrency, Duration warmupDuration, Duration measurementDuration, String configName)
             throws IOException, InterruptedException {
         Path loadDir = runContext.loadDirectory();
@@ -116,8 +108,7 @@ public class SearchLoadGenerator {
                             while (!stop.get()) {
                                 int nextQuery = queryIndex.getAndIncrement();
                                 String query = queries.get(Math.floorMod(nextQuery, queries.size()));
-                                executeRequest(client, query, recording.get() ? aggregateWriter : null,
-                                        recording.get() ? configWriter : null, writeLock);
+                                executeRequest(client, query, aggregateWriter, configWriter, recording, writeLock);
                             }
                         } catch (Exception exception) {
                             LOGGER.error("Client error in closed loop: {}", exception.getMessage());
@@ -136,6 +127,7 @@ public class SearchLoadGenerator {
                 recording.set(true);
                 Thread.sleep(measurementDuration.toMillis());
 
+                recording.set(false);
                 stop.set(true);
                 latch.await();
             }
@@ -143,64 +135,12 @@ public class SearchLoadGenerator {
         LOGGER.info("Closed loop load generator completed successfully for {}", configName != null ? configName : "default");
     }
 
-    private void runFixedRequests(int concurrency, int totalRequests, String configName)
-            throws IOException, InterruptedException {
-        Path loadDir = runContext.loadDirectory();
-        Path aggregateFile = loadDir.resolve("requests.csv");
-        boolean aggregateExists = Files.exists(aggregateFile);
-        Path configFile = null;
-        if (configName != null && !configName.isBlank()) {
-            String sanitizedConfig = configName.replaceAll("[^a-zA-Z0-9_=-]", "_");
-            configFile = loadDir.resolve(sanitizedConfig + ".csv");
-        }
-
-        LOGGER.info("Starting fixed requests load generator: {} requests across {} virtual threads", totalRequests, concurrency);
-
-        HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
-        AtomicInteger remainingRequests = new AtomicInteger(totalRequests);
-        AtomicInteger queryIndex = new AtomicInteger(0);
-        CountDownLatch latch = new CountDownLatch(concurrency);
-        Object writeLock = new Object();
-
-        try (BufferedWriter aggregateWriter = Files.newBufferedWriter(
-                aggregateFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-             BufferedWriter configWriter = configFile != null ? Files.newBufferedWriter(
-                     configFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null) {
-
-            if (!aggregateExists) {
-                aggregateWriter.write("instant,path,status,latency_us\n");
-            }
-            if (configWriter != null) {
-                configWriter.write("instant,path,status,latency_us\n");
-            }
-
-            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                for (int clientIndex = 0; clientIndex < concurrency; clientIndex++) {
-                    executor.submit(() -> {
-                        try {
-                            while (remainingRequests.getAndDecrement() > 0) {
-                                int nextQuery = queryIndex.getAndIncrement();
-                                String query = queries.get(Math.floorMod(nextQuery, queries.size()));
-                                executeRequest(client, query, aggregateWriter, configWriter, writeLock);
-                            }
-                        } catch (Exception exception) {
-                            LOGGER.error("Client error: {}", exception.getMessage());
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
-                }
-                latch.await();
-            }
-        }
-        LOGGER.info("Fixed requests load generator completed: {} requests recorded", totalRequests);
-    }
-
     private void executeRequest(
             HttpClient client,
             String query,
             BufferedWriter aggregateWriter,
             BufferedWriter configWriter,
+            AtomicBoolean recording,
             Object writeLock) throws IOException, InterruptedException {
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
         String relativePath = "/search?q=" + encoded;
@@ -218,7 +158,7 @@ public class SearchLoadGenerator {
         }
         long latencyUs = (System.nanoTime() - startNanos) / 1000;
 
-        if (aggregateWriter != null || configWriter != null) {
+        if (recording.get() && (aggregateWriter != null || configWriter != null)) {
             String line = instant + "," + relativePath + "," + status + "," + latencyUs + "\n";
             synchronized (writeLock) {
                 if (aggregateWriter != null) {
