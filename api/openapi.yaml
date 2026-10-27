@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Query Tarantino API
-  version: "1.1"
+  version: "1.2"
   description: |
     HTTP API of Query Tarantino Stage 2, derived from SPEC.md §6; `info.version` follows the SPEC.md version.
 
@@ -580,17 +580,27 @@ components:
                 parameter: "limit"
                 detail: "limit must be between 1 and 100"
     NotFound:
-      description: "`BOOK_NOT_FOUND`."
+      description: "`BOOK_NOT_FOUND`, or nginx's own 404 for an unknown path without `code` (SPEC.md §6.6)."
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-          example:
-            type: "about:blank"
-            title: "Not Found"
-            status: 404
-            code: "BOOK_NOT_FOUND"
-            detail: "Book 9999 was not found"
+          examples:
+            bookNotFound:
+              summary: Book not found
+              value:
+                type: "about:blank"
+                title: "Not Found"
+                status: 404
+                code: "BOOK_NOT_FOUND"
+                detail: "Book 9999 was not found"
+            unknownPath:
+              summary: Unknown path returned by nginx without code
+              value:
+                type: "about:blank"
+                title: "Not Found"
+                status: 404
+                detail: "The requested path does not exist"
     Conflict:
       description: "`NOT_DOWNLOADED`: the book is `QUEUED`, `DOWNLOADING` or `FAILED`."
       content:
@@ -615,7 +625,7 @@ components:
             status: 500
             detail: "An unexpected exception occurred"
     ServiceUnavailable:
-      description: "`DEPENDENCY_UNAVAILABLE`: Mongo or Hazelcast do not answer, or `query` has no snapshot yet."
+      description: "`DEPENDENCY_UNAVAILABLE`: Mongo or Hazelcast do not answer, `query` has no snapshot yet, or nginx when no upstream replica answers (SPEC.md §6.6)."
       headers:
         Retry-After:
           $ref: "#/components/headers/RetryAfter"
@@ -623,12 +633,23 @@ components:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-          example:
-            type: "about:blank"
-            title: "Service Unavailable"
-            status: 503
-            code: "DEPENDENCY_UNAVAILABLE"
-            detail: "Snapshot is not available yet"
+          examples:
+            snapshotUnavailable:
+              summary: Snapshot not available yet
+              value:
+                type: "about:blank"
+                title: "Service Unavailable"
+                status: 503
+                code: "DEPENDENCY_UNAVAILABLE"
+                detail: "Snapshot is not available yet"
+            noUpstreamReplica:
+              summary: No upstream replica answers behind nginx
+              value:
+                type: "about:blank"
+                title: "Service Unavailable"
+                status: 503
+                code: "DEPENDENCY_UNAVAILABLE"
+                detail: "No upstream replica is available"
 
   schemas:
     BookStatus:
