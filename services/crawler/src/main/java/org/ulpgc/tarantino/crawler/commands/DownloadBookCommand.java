@@ -52,6 +52,7 @@ public class DownloadBookCommand {
             LOGGER.warn("Book {} failed with {}; it stays DOWNLOADING until its lease expires", task.bookId(), result.failure());
             return;
         }
+        crashPoints.accept(CrashPoint.AFTER_DATALAKE_WRITE);
         finish(task.bookId(), claim.get());
     }
 

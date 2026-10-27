@@ -95,6 +95,16 @@ class DownloadBookCommandTest {
         assertEquals(Set.of(), claims.finished);
     }
 
+    @Test
+    void stopsAfterTheDatalakeWriteBeforeFinishingTheDownload() {
+        claims.queued.add(1342);
+
+        assertThrows(Halted.class, () -> command(bookId -> RAW, haltAt(CrashPoint.AFTER_DATALAKE_WRITE)).execute(TASK));
+
+        assertTrue(Files.exists(datalake.resolve("1/1342.body.txt")));
+        assertEquals(Set.of(), claims.finished);
+    }
+
     private DownloadBookCommand command(BookDownloader downloader) {
         return command(downloader, reachedPoints::add);
     }
