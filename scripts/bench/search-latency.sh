@@ -120,9 +120,9 @@ generate_corpus_json() {
     combined_hash=$(sha256sum "${CORPUS_SHA}" 2>/dev/null | awk '{print $1}' || echo "unknown")
 
     local ids_list
-    ids_list=$(awk '{ if ($1 ~ /^[0-9]+$/) print $1; else if ($2 ~ /^[0-9]+$/) print $2; }' "${CORPUS_SHA}" 2>/dev/null | sort -n)
+    ids_list=$(awk '{ if ($1 ~ /^[0-9]+$/) print $1; else if ($2 ~ /^[0-9]+$/) print $2; }' "${CORPUS_SHA}" 2>/dev/null)
     if [[ -z "$ids_list" && -f "${WORKLOAD_DIR}/sample_ids.txt" ]]; then
-        ids_list=$(sort -n "${WORKLOAD_DIR}/sample_ids.txt" 2>/dev/null || true)
+        ids_list=$(cat "${WORKLOAD_DIR}/sample_ids.txt" 2>/dev/null || true)
     fi
 
     books_count=$(echo "$ids_list" | grep -v '^$' | wc -l | tr -d ' ')
@@ -130,7 +130,7 @@ generate_corpus_json() {
 
     terms_count=0
     if command -v docker >/dev/null 2>&1 && docker compose ps mongo 2>/dev/null | grep -q "mongo"; then
-        terms_count=$(docker compose exec -T mongo mongosh tarantino --quiet --eval 'db.postings_g1.countDocuments()' 2>/dev/null | tr -d '\r\n ' || echo 0)
+        terms_count=$(docker compose exec -T mongo mongosh tarantino --quiet --eval 'db.postings_g1.distinct("term").length' 2>/dev/null | tr -d '\r\n ' || echo 0)
     fi
     if [[ -z "$terms_count" || ! "$terms_count" =~ ^[0-9]+$ ]]; then
         terms_count=0
@@ -217,10 +217,10 @@ export_explain() {
     local run_dir=$1
     echo "Saving explain plans in ${run_dir}/explain..."
     if command -v docker >/dev/null 2>&1 && docker compose ps query 2>/dev/null | grep -q "query"; then
-        docker compose cp "$BENCH_JAR" query:/tmp/bench.jar
-        docker compose exec -T query java -cp "/tmp/bench.jar" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "/tmp/explain" "$MONGO_URI" 1
-        docker compose cp query:/tmp/explain/. "${run_dir}/explain/"
-        docker compose exec -T query rm -rf /tmp/bench.jar /tmp/explain
+        docker compose cp --index=1 "$BENCH_JAR" query:/tmp/bench.jar
+        docker compose exec -T --index=1 query java -cp "/tmp/bench.jar" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "/tmp/explain" "$MONGO_URI" 1
+        docker compose cp --index=1 query:/tmp/explain/. "${run_dir}/explain/"
+        docker compose exec -T --index=1 query rm -rf /tmp/bench.jar /tmp/explain
     else
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "${run_dir}/explain" "$MONGO_URI" 1
     fi
@@ -252,10 +252,10 @@ measure_latency() {
     echo "Hypothesis: As concurrent clients increase, throughput scales until concurrency saturation while mean and p95 latency increase due to queuing."
     for clients in $CLIENTS_CONFIG; do
         local config_name="clients_${clients}"
-        local config="clients=${clients},threads=${BASELINE_THREADS},replicas=${BASELINE_REPLICAS}"
+        local config="series=clients,clients=${clients},threads=${BASELINE_THREADS},replicas=${BASELINE_REPLICAS}"
         echo "Running load test: ${config}"
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$clients" "$config_name"
-        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv" "search_latency"
     done
 
     echo "=== Series 2: Varying TARANTINO_HTTP_THREADS (${THREADS_CONFIG}) with clients=${BASELINE_CLIENTS}, replicas=${BASELINE_REPLICAS} ==="
@@ -265,10 +265,10 @@ measure_latency() {
         TARANTINO_HTTP_THREADS="$threads" docker compose up -d --force-recreate --scale "query=${BASELINE_REPLICAS}" query
         wait_for_query_ready
         local config_name="threads_${threads}"
-        local config="clients=${BASELINE_CLIENTS},threads=${threads},replicas=${BASELINE_REPLICAS}"
+        local config="series=threads,clients=${BASELINE_CLIENTS},threads=${threads},replicas=${BASELINE_REPLICAS}"
         echo "Running load test: ${config}"
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$config_name"
-        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv" "search_latency"
     done
 
     echo "Restoring baseline threads before series 3..."
@@ -282,10 +282,10 @@ measure_latency() {
         TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d --scale "query=${replicas}" query
         wait_for_query_ready
         local config_name="replicas_${replicas}"
-        local config="clients=${BASELINE_CLIENTS},threads=${BASELINE_THREADS},replicas=${replicas}"
+        local config="series=replicas,clients=${BASELINE_CLIENTS},threads=${BASELINE_THREADS},replicas=${replicas}"
         echo "Running load test: ${config}"
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$config_name"
-        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv" "search_latency"
     done
 }
 
