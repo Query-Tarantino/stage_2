@@ -1,7 +1,10 @@
 package org.ulpgc.tarantino.query.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.query.model.SearchResult;
 import org.ulpgc.tarantino.query.model.Snapshot;
+import org.ulpgc.tarantino.query.model.Snapshot.BookFilter;
+import org.ulpgc.tarantino.query.ports.MetadataReader;
 import org.ulpgc.tarantino.query.ports.PublishedBatches;
 
 import java.util.ArrayList;
@@ -40,6 +43,35 @@ class SnapshotRefresherTest {
 
         assertEquals(new Snapshot(1, Set.of("a", "b"), Set.of(1342, 84, 11)), refresher.current().orElseThrow());
         assertEquals(List.of(List.of("b")), batches.requested);
+    }
+
+    @Test
+    void readsFilterMetadataForNewlyPublishedBatches() {
+        MetadataReader metadata = new MetadataReader() {
+            @Override
+            public List<SearchResult> results(int generation, Collection<Integer> bookIds) {
+                return List.of();
+            }
+
+            @Override
+            public Map<Integer, BookFilter> filters(int generation, Collection<Integer> bookIds) {
+                return Map.of(
+                        1342, new BookFilter(List.of("en"), 1998),
+                        84, new BookFilter(List.of("en", "de"), 1818));
+            }
+        };
+        SnapshotRefresher customRefresher = new SnapshotRefresher(batches, metadata);
+        batches.publish(1, "a", List.of(1342, 84));
+
+        customRefresher.refresh();
+
+        Snapshot snapshot = customRefresher.current().orElseThrow();
+        assertEquals(2, snapshot.bookCount());
+        assertEquals(2, snapshot.filtersSummary().totalBooks());
+        assertEquals(1818, snapshot.filtersSummary().years().min());
+        assertEquals(1998, snapshot.filtersSummary().years().max());
+        assertEquals(2, snapshot.filtersSummary().languages().getFirst().books());
+        assertEquals("en", snapshot.filtersSummary().languages().getFirst().code());
     }
 
     @Test
