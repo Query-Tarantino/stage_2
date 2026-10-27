@@ -97,6 +97,25 @@ class SnapshotRefresherTest {
         assertEquals(new Snapshot(1, Set.of("a"), Set.of(1342)), refresher.current().orElseThrow());
     }
 
+    @Test
+    void picksUpBatchesWhenNotificationIsLostOrPublishedOutOfOrder() {
+        batches.publish(1, "batch-2", List.of(84));
+        refresher.refresh();
+        assertEquals(Set.of("batch-2"), refresher.current().orElseThrow().batchIds());
+
+        batches.publish(1, "batch-1", List.of(1342));
+        batches.publish(1, "batch-3", List.of(11));
+        batches.requested.clear();
+
+        refresher.refresh();
+
+        Snapshot snapshot = refresher.current().orElseThrow();
+        assertEquals(Set.of("batch-1", "batch-2", "batch-3"), snapshot.batchIds());
+        assertEquals(Set.of(84, 1342, 11), snapshot.bookIds());
+        assertEquals(1, batches.requested.size());
+        assertEquals(Set.of("batch-1", "batch-3"), Set.copyOf(batches.requested.getFirst()));
+    }
+
     private static final class FakeBatches implements PublishedBatches {
 
         private final Map<Integer, Map<String, List<Integer>>> published = new HashMap<>();

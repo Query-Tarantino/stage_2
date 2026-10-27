@@ -5,8 +5,6 @@ import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
 import org.ulpgc.tarantino.common.http.Dependency;
 import org.ulpgc.tarantino.common.http.Health;
-import org.ulpgc.tarantino.common.mongo.IndexState;
-import org.ulpgc.tarantino.common.mongo.MongoIndexes;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.common.startup.Startup;
 import org.ulpgc.tarantino.query.commands.SnapshotRefresher;
@@ -24,10 +22,6 @@ public class Main {
         SnapshotRefresher snapshots = QueryFactory.snapshotRefresher(connections);
         Dependency snapshot = new Dependency(Health.SNAPSHOT, () -> snapshots.current().isPresent());
         Startup.start(config, connections, List.of(snapshot), QueryFactory.searchRoutes(config, connections, snapshots)::register);
-        Startup.retry("create the generation indexes", () -> {
-            int generation = new IndexState(connections.database()).currentGeneration();
-            MongoIndexes.ensureGenerationIndexes(connections.database(), generation);
-        });
         refreshOnOneThread(config, connections, snapshots);
     }
 

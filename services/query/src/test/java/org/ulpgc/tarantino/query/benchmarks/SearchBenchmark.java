@@ -10,6 +10,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.results.RunResult;
+import org.openjdk.jmh.results.format.ResultFormatFactory;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
@@ -27,7 +29,6 @@ import org.ulpgc.tarantino.query.ports.PostingsReader;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,32 +44,26 @@ import java.util.stream.IntStream;
 @Fork(value = 1, jvmArgs = {"-Xmx1g"})
 public class SearchBenchmark {
 
-    private static final Comparator<ScoredBook> RANKING = Comparator
-            .comparingDouble(ScoredBook::score).reversed()
-            .thenComparingInt(ScoredBook::bookId);
-
     private SearchCommand searchCommand;
     private Snapshot snapshot;
     private SearchQuery queryWithoutFilters;
     private SearchQuery queryWithFilters;
-    private List<String> rankingTerms;
-    private Map<String, Map<Integer, Integer>> rankingIndex;
-    private List<Integer> candidateBookIds;
-    private int totalBooks;
+    private SearchQuery rankingQuery;
 
     @Setup
     public void setup() {
-        totalBooks = 1000;
+        int totalBooks = 1000;
         Set<Integer> allBooks = IntStream.rangeClosed(1, totalBooks).boxed().collect(Collectors.toSet());
         Set<String> batchIds = Set.of("batch_1", "batch_2");
         snapshot = new Snapshot(1, batchIds, allBooks);
 
         Map<String, TermPostings> postingsByTerm = Map.of(
                 "love", createPostings("love", 1, 400),
-                "night", createPostings("night", 200, 600)
+                "night", createPostings("night", 200, 600),
+                "time", createPostings("time", 100, 500)
         );
 
-        PostingsReader postingsReader = (gen, terms, batches) -> terms.stream()
+        PostingsReader postingsReader = (generation, terms, batches) -> terms.stream()
                 .filter(postingsByTerm::containsKey)
                 .map(postingsByTerm::get)
                 .toList();
@@ -91,13 +86,7 @@ public class SearchBenchmark {
         searchCommand = new SearchCommand(postingsReader, metadataReader, new Tokenizer(Set.of()));
         queryWithoutFilters = new SearchQuery("love night", 0, 20);
         queryWithFilters = new SearchQuery("love night", "Austen", List.of("austen"), "en", 1998, 0, 20);
-
-        rankingTerms = List.of("love", "night");
-        rankingIndex = Map.of(
-                "love", createTfMap(1, 400),
-                "night", createTfMap(200, 600)
-        );
-        candidateBookIds = IntStream.rangeClosed(200, 400).boxed().toList();
+        rankingQuery = new SearchQuery("love night time", 0, 100);
     }
 
     @Benchmark
@@ -111,19 +100,8 @@ public class SearchBenchmark {
     }
 
     @Benchmark
-    public List<ScoredBook> tfidfRanking() {
-        return candidateBookIds.stream()
-                .map(candidateId -> new ScoredBook(candidateId, score(candidateId, rankingTerms, rankingIndex, totalBooks)))
-                .sorted(RANKING)
-                .toList();
-    }
-
-    private static double score(
-            int bookId, List<String> terms, Map<String, Map<Integer, Integer>> index, int totalBooks) {
-        return terms.stream()
-                .map(index::get)
-                .mapToDouble(termBooks -> (1 + Math.log(termBooks.get(bookId))) * Math.log((double) totalBooks / termBooks.size()))
-                .sum();
+    public SearchResponse tfidfRanking() {
+        return searchCommand.execute(snapshot, rankingQuery);
     }
 
     private static TermPostings createPostings(String term, int start, int end) {
@@ -135,20 +113,12 @@ public class SearchBenchmark {
         return new TermPostings(term, books, termFrequencies);
     }
 
-    private static Map<Integer, Integer> createTfMap(int start, int end) {
-        return IntStream.rangeClosed(start, end)
-                .boxed()
-                .collect(Collectors.toMap(
-                        bookId -> bookId,
-                        bookId -> (bookId % 10) + 1
-                ));
-    }
-
     public static void main(String[] args) throws Exception {
         String runDir = args.length > 0 ? args[0] : System.getProperty("jmh.run.dir", "benchmarks/runs/latest");
         File jmhDir = Paths.get(runDir, "jmh").toFile();
         jmhDir.mkdirs();
         File jsonResult = new File(jmhDir, "query.json");
+        File csvResult = new File(jmhDir, "query.csv");
 
         Options options = new OptionsBuilder()
                 .include(SearchBenchmark.class.getSimpleName())
@@ -160,9 +130,7 @@ public class SearchBenchmark {
                 .result(jsonResult.getAbsolutePath())
                 .build();
 
-        new Runner(options).run();
-    }
-
-    public record ScoredBook(int bookId, double score) {
+        Collection<RunResult> results = new Runner(options).run();
+        ResultFormatFactory.getInstance(ResultFormatType.CSV, csvResult.getAbsolutePath()).writeOut(results);
     }
 }

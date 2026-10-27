@@ -73,7 +73,7 @@ public record Snapshot(
         List<LanguageFilter> languages = languageCounts.entrySet().stream()
                 .sorted(Comparator.comparingInt(Map.Entry<String, Integer>::getValue).reversed()
                         .thenComparing(Map.Entry::getKey))
-                .map(entry -> new LanguageFilter(entry.getKey(), LanguageCodes.name(entry.getKey()).orElse(null), entry.getValue()))
+                .map(entry -> new LanguageFilter(entry.getKey(), LanguageCodes.name(entry.getKey()).orElse(entry.getKey()), entry.getValue()))
                 .toList();
         IntSummaryStatistics yearStats = filters.stream()
                 .map(BookFilter::year)
