@@ -31,8 +31,9 @@ public final class CrawlerFactory {
         BookTaskQueue downloads = new BookTaskQueue(client, HazelcastContracts.BOOKS_TO_DOWNLOAD);
         BookTaskQueue indexing = new BookTaskQueue(client, HazelcastContracts.BOOKS_TO_INDEX);
         Consumer<CrashPoint> crashPoints = new CrashPoints(config.crashAt())::hit;
-        DownloadBookCommand download = new DownloadBookCommand(new MongoBookClaims(connections.database(), config.lease()),
-                ingestCommand(config), indexing::offer, new TransitionLog(), Clock.systemUTC(), crashPoints);
+        MongoBookClaims claims = new MongoBookClaims(connections.database(), config.lease(), config.maxAttempts());
+        DownloadBookCommand download = new DownloadBookCommand(claims, ingestCommand(config), indexing::offer, new TransitionLog(),
+                Clock.systemUTC(), crashPoints);
         return new DownloadWorker(downloads::poll, download, crashPoints);
     }
 
