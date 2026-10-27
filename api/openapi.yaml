@@ -885,11 +885,33 @@ components:
         books:
           type: object
           description: All six states, always.
+          additionalProperties: false
           required: [QUEUED, DOWNLOADING, DOWNLOADED, INDEXING, PUBLISHED, FAILED]
-          additionalProperties:
-            type: integer
-            format: int32
-            minimum: 0
+          properties:
+            QUEUED:
+              type: integer
+              format: int32
+              minimum: 0
+            DOWNLOADING:
+              type: integer
+              format: int32
+              minimum: 0
+            DOWNLOADED:
+              type: integer
+              format: int32
+              minimum: 0
+            INDEXING:
+              type: integer
+              format: int32
+              minimum: 0
+            PUBLISHED:
+              type: integer
+              format: int32
+              minimum: 0
+            FAILED:
+              type: integer
+              format: int32
+              minimum: 0
         queues:
           type: object
           additionalProperties: false
