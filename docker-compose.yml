@@ -116,6 +116,18 @@ services:
       - "8081:8081"
     restart: "no"
 
+  bench:
+    image: eclipse-temurin:25-jre
+    profiles: ["tools"]
+    entrypoint: ["java", "-jar", "/app/bench/bench-1.0-SNAPSHOT.jar"]
+    environment:
+      <<: *tarantino-environment
+    volumes:
+      - ./bench/target:/app/bench:ro
+      - ./workload:/app/workload:ro
+      - ./benchmarks/runs:/app/benchmarks/runs
+    restart: "no"
+
 volumes:
   mongo-data:
   datalake:
