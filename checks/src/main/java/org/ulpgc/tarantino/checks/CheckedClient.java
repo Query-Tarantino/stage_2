@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.checks;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
 import java.net.URI;
@@ -14,7 +15,7 @@ import java.util.Map;
 
 public class CheckedClient {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = TarantinoJson.mapper();
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
     private final HttpClient client;
@@ -23,6 +24,10 @@ public class CheckedClient {
     public CheckedClient(OpenApiValidator validator) {
         this.client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
         this.validator = validator;
+    }
+
+    public OpenApiValidator validator() {
+        return validator;
     }
 
     public Response get(String url) throws IOException, InterruptedException {
@@ -45,20 +50,21 @@ public class CheckedClient {
         return validateAndWrap("POST", pathAndQuery(uri), response);
     }
 
-    private Response validateAndWrap(String method, String path, HttpResponse<String> response) throws IOException {
-        int status = response.statusCode();
-        Map<String, List<String>> headers = response.headers().map();
-        String body = response.body();
+    public Response validateAndWrap(String method, String path, int status, Map<String, List<String>> headers, String body) throws IOException {
         validator.validateResponse(method, path, status, headers, body);
         JsonNode json = (body != null && !body.isBlank() && isJson(headers)) ? MAPPER.readTree(body) : null;
         return new Response(status, headers, body, json);
     }
 
+    private Response validateAndWrap(String method, String path, HttpResponse<String> response) throws IOException {
+        return validateAndWrap(method, path, response.statusCode(), response.headers().map(), response.body());
+    }
+
     private static boolean isJson(Map<String, List<String>> headers) {
         return headers.entrySet().stream()
-                .filter(e -> e.getKey().equalsIgnoreCase("Content-Type"))
-                .flatMap(e -> e.getValue().stream())
-                .anyMatch(v -> v.contains("json"));
+                .filter(entry -> entry.getKey().equalsIgnoreCase("Content-Type"))
+                .flatMap(entry -> entry.getValue().stream())
+                .anyMatch(mediaType -> mediaType.contains("json"));
     }
 
     private static String pathAndQuery(URI uri) {
@@ -70,8 +76,8 @@ public class CheckedClient {
     public record Response(int status, Map<String, List<String>> headers, String body, JsonNode json) {
         public String header(String name) {
             return headers.entrySet().stream()
-                    .filter(e -> e.getKey().equalsIgnoreCase(name))
-                    .flatMap(e -> e.getValue().stream())
+                    .filter(entry -> entry.getKey().equalsIgnoreCase(name))
+                    .flatMap(entry -> entry.getValue().stream())
                     .findFirst()
                     .orElse(null);
         }

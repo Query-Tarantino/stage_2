@@ -30,8 +30,8 @@ public class Main {
             ApiChecker checker = new ApiChecker(client, frontEndUrl, operationalUrl);
             checker.checkAll(sampleIds);
             LOGGER.info("All checks completed successfully");
-        } catch (Exception e) {
-            LOGGER.error("Checks failed: {}", e.getMessage(), e);
+        } catch (Exception exception) {
+            LOGGER.error("Checks failed: {}", exception.getMessage(), exception);
             System.exit(1);
         }
     }
