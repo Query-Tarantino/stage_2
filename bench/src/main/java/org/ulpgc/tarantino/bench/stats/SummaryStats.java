@@ -32,17 +32,12 @@ public class SummaryStats {
         Collections.sort(sorted);
         int count = sorted.size();
 
-        double sum = 0.0;
-        for (long value : sorted) {
-            sum += value;
-        }
+        double sum = sorted.stream().mapToLong(Long::longValue).sum();
         double mean = sum / count;
 
-        double sumSq = 0.0;
-        for (long value : sorted) {
-            double difference = value - mean;
-            sumSq += difference * difference;
-        }
+        double sumSq = sorted.stream()
+                .mapToDouble(value -> (value - mean) * (value - mean))
+                .sum();
         double stdDev = count > 1 ? Math.sqrt(sumSq / (count - 1)) : 0.0;
         double ci95 = count > 1 ? 1.96 * (stdDev / Math.sqrt(count)) : 0.0;
 
