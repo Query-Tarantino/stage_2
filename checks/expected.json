@@ -1,0 +1,50 @@
+{
+  "total_books": 20,
+  "sample_ids": [
+    1342,
+    84,
+    11,
+    1661,
+    2701,
+    98,
+    74,
+    76,
+    345,
+    2229,
+    1080,
+    174,
+    2542,
+    844,
+    800,
+    1952,
+    43,
+    417,
+    1232,
+    2600
+  ],
+  "searches": {
+    "pride": {
+      "min_total": 1,
+      "contains_book_id": 1342
+    },
+    "pride prejudice": {
+      "min_total": 1,
+      "contains_book_id": 1342
+    },
+    "the and": {
+      "total": 0
+    },
+    "pyromaniac liliput": {
+      "total": 0
+    }
+  },
+  "books": {
+    "1342": {
+      "book_id": 1342,
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "language": "en",
+      "year": 1998
+    }
+  }
+}

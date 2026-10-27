@@ -1,12 +1,19 @@
 package org.ulpgc.tarantino.checks;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +23,7 @@ import java.util.stream.StreamSupport;
 public class ApiChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiChecker.class);
+    private static final ObjectMapper MAPPER = TarantinoJson.mapper();
     private static final int MAX_WAIT_SECONDS = 60;
 
     private final CheckedClient client;
@@ -30,6 +38,10 @@ public class ApiChecker {
     }
 
     public void checkAll(List<Integer> sampleIds) throws IOException, InterruptedException {
+        checkAll(sampleIds, null);
+    }
+
+    public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
         LOGGER.info("Starting API conformance checks");
         checkHealth();
         checkOperationalEndpoints();
@@ -40,6 +52,9 @@ public class ApiChecker {
         checkFiltersSummary();
         checkSearchParametersOrder();
         checkSearchEndpoints();
+        if (expectedPath != null && Files.exists(expectedPath)) {
+            checkAgainstExpected(expectedPath);
+        }
         LOGGER.info("All API conformance checks passed successfully");
     }
 
@@ -402,6 +417,86 @@ public class ApiChecker {
         assertEquals(200, empty.status());
         assertEquals(0, empty.json().get("total").asInt());
         assertEquals(0, empty.json().get("results").size());
+    }
+
+    public void checkAgainstExpected(Path expectedPath) throws IOException, InterruptedException {
+        LOGGER.info("Validating responses against expected.json: {}", expectedPath);
+        JsonNode expected = MAPPER.readTree(expectedPath.toFile());
+        if (expected.has("searches")) {
+            for (Iterator<Map.Entry<String, JsonNode>> entries = expected.get("searches").fields(); entries.hasNext(); ) {
+                Map.Entry<String, JsonNode> entry = entries.next();
+                String query = entry.getKey();
+                JsonNode searchExpected = entry.getValue();
+                CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + query.replace(" ", "%20"));
+                assertEquals(200, response.status());
+                if (searchExpected.has("total")) {
+                    assertEquals(searchExpected.get("total").asInt(), response.json().get("total").asInt());
+                }
+                if (searchExpected.has("min_total")) {
+                    assertTrue(response.json().get("total").asInt() >= searchExpected.get("min_total").asInt());
+                }
+                if (searchExpected.has("contains_book_id")) {
+                    assertTrue(containsBook(response.json().get("results"), searchExpected.get("contains_book_id").asInt()));
+                }
+            }
+        }
+        if (expected.has("books")) {
+            for (Iterator<Map.Entry<String, JsonNode>> entries = expected.get("books").fields(); entries.hasNext(); ) {
+                Map.Entry<String, JsonNode> entry = entries.next();
+                String bookIdStr = entry.getKey();
+                JsonNode bookExpected = entry.getValue();
+                CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookIdStr);
+                assertEquals(200, response.status());
+                if (bookExpected.has("title") && !bookExpected.get("title").isNull()) {
+                    assertEquals(bookExpected.get("title").asText(), response.json().get("title").asText());
+                }
+                if (bookExpected.has("author") && !bookExpected.get("author").isNull()) {
+                    assertEquals(bookExpected.get("author").asText(), response.json().get("author").asText());
+                }
+                if (bookExpected.has("language") && !bookExpected.get("language").isNull()) {
+                    assertEquals(bookExpected.get("language").asText(), response.json().get("language").asText());
+                }
+            }
+        }
+    }
+
+    public void generateExpected(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
+        LOGGER.info("Generating expected answers to {}", expectedPath);
+        ensurePublishedAndRefreshed(sampleIds);
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("total_books", sampleIds.size());
+        ArrayNode sampleIdsArray = root.putArray("sample_ids");
+        sampleIds.forEach(sampleIdsArray::add);
+
+        ObjectNode searchesNode = root.putObject("searches");
+        List<String> testQueries = List.of("pride", "pride prejudice", "the and", "pyromaniac liliput");
+        for (String query : testQueries) {
+            CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + query.replace(" ", "%20"));
+            ObjectNode queryNode = searchesNode.putObject(query);
+            queryNode.put("total", response.json().get("total").asInt());
+            if (response.json().has("results") && response.json().get("results").size() > 0) {
+                queryNode.put("contains_book_id", response.json().get("results").get(0).get("book_id").asInt());
+            }
+        }
+
+        ObjectNode booksNode = root.putObject("books");
+        for (int bookId : sampleIds) {
+            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
+            if (response.status() == 200 && response.json() != null) {
+                ObjectNode bookNode = booksNode.putObject(String.valueOf(bookId));
+                bookNode.put("book_id", bookId);
+                bookNode.set("title", response.json().get("title"));
+                bookNode.set("author", response.json().get("author"));
+                bookNode.set("language", response.json().get("language"));
+                bookNode.set("year", response.json().get("year"));
+            }
+        }
+
+        if (expectedPath.getParent() != null) {
+            Files.createDirectories(expectedPath.getParent());
+        }
+        MAPPER.writerWithDefaultPrettyPrinter().writeValue(expectedPath.toFile(), root);
+        LOGGER.info("Generated expected.json with {} books and {} queries", booksNode.size(), searchesNode.size());
     }
 
     private void checkLanguageFilter(List<JsonNode> books, String language) throws IOException, InterruptedException {

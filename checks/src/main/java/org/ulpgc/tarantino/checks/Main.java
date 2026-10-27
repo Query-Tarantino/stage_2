@@ -28,12 +28,33 @@ public class Main {
             OpenApiValidator validator = OpenApiValidator.load(openApiPath);
             CheckedClient client = new CheckedClient(validator);
             ApiChecker checker = new ApiChecker(client, frontEndUrl, operationalUrl);
-            checker.checkAll(sampleIds);
+
+            Path expectedPath = resolveExpectedPath();
+            boolean generateExpected = List.of(args).contains("--generate-expected");
+            if (generateExpected) {
+                checker.generateExpected(sampleIds, expectedPath);
+                LOGGER.info("Expected answers successfully generated at {}", expectedPath);
+                return;
+            }
+
+            checker.checkAll(sampleIds, expectedPath);
             LOGGER.info("All checks completed successfully");
         } catch (Exception exception) {
             LOGGER.error("Checks failed: {}", exception.getMessage(), exception);
             System.exit(1);
         }
+    }
+
+    private static Path resolveExpectedPath() {
+        List<Path> candidates = List.of(
+                Paths.get("checks/expected.json"),
+                Paths.get("expected.json"),
+                Paths.get("../checks/expected.json")
+        );
+        return candidates.stream()
+                .filter(Files::exists)
+                .findFirst()
+                .orElse(Paths.get("checks/expected.json"));
     }
 
     private static Path findFile(String relativePath) {
