@@ -96,6 +96,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchResponse"
+              example:
+                query: "pride prejudice"
+                filters:
+                  author: "austen"
+                  language: "en"
+                total: 1
+                offset: 0
+                limit: 20
+                results:
+                  - book_id: 1342
+                    title: "Pride and Prejudice"
+                    author: "Jane Austen"
+                    language: "en"
+                    year: 1998
         "400":
           $ref: "#/components/responses/BadRequest"
         "503":
@@ -122,6 +136,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Book"
+              example:
+                book_id: 1342
+                title: "Pride and Prejudice"
+                author: "Jane Austen"
+                language: "en"
+                languages:
+                  - "en"
+                year: 1998
+                original_year: null
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
@@ -148,6 +171,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchFilters"
+              example:
+                languages:
+                  - code: "en"
+                    name: "English"
+                    books: 2380
+                  - code: "fr"
+                    name: "French"
+                    books: 95
+                years:
+                  min: 1971
+                  max: 2026
+                total_books: 2800
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -181,12 +216,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "QUEUED"
+                attempts: 0
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "200":
           description: Already `DOWNLOADED`, `INDEXING` or `PUBLISHED`.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "PUBLISHED"
+                attempts: 1
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "400":
           $ref: "#/components/responses/BadRequest"
         "503":
@@ -235,6 +282,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/IngestList"
+              example:
+                count: 3
+                books:
+                  - 5
+                  - 17
+                  - 1342
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -263,12 +316,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "INDEXING"
+                attempts: 1
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "200":
           description: Already `PUBLISHED`.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "PUBLISHED"
+                attempts: 1
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
@@ -325,6 +390,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Rebuild"
+              example:
+                generation: 1
+                target_generation: 2
+                status: "RUNNING"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -347,6 +416,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/IndexStatus"
+              example:
+                generation: 1
+                books_indexed: 2800
+                batches_published: 28
+                last_update: "2026-10-21T10:06:00Z"
+                index_size_mb: 512.4
+                rebuild: null
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -369,6 +445,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ControlStatus"
+              example:
+                generation: 1
+                books:
+                  QUEUED: 10
+                  DOWNLOADING: 8
+                  DOWNLOADED: 0
+                  INDEXING: 100
+                  PUBLISHED: 2680
+                  FAILED: 2
+                queues:
+                  books-to-download: 10
+                  books-to-index: 0
+                last_reconciliation: "2026-10-21T10:06:30Z"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -400,6 +489,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+              example:
+                status: "UP"
         "503":
           description: Something does not answer; `application/json`, not Problem Details.
           headers:
@@ -409,6 +500,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+              example:
+                status: "DOWN"
+                down:
+                  - "mongo"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -575,6 +670,7 @@ components:
     BookState:
       description: A book's state (SPEC.md §6.2).
       type: object
+      additionalProperties: false
       required: [book_id, status, attempts, last_error, updated_at]
       properties:
         book_id:
@@ -595,6 +691,7 @@ components:
     SearchResponse:
       description: SPEC.md §6.3.
       type: object
+      additionalProperties: false
       required: [query, filters, total, offset, limit, results]
       properties:
         query:
@@ -602,6 +699,7 @@ components:
           description: "`q` as received."
         filters:
           type: object
+          additionalProperties: false
           description: The filters present, as received; without filters, `{}`.
           properties:
             author:
@@ -632,6 +730,7 @@ components:
 
     SearchResult:
       type: object
+      additionalProperties: false
       required: [book_id, title, author, language, year]
       properties:
         book_id:
@@ -655,6 +754,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/SearchResult"
         - type: object
+          additionalProperties: false
           required: [languages, original_year]
           properties:
             languages:
@@ -669,6 +769,7 @@ components:
     SearchFilters:
       description: SPEC.md §6.4, computed from the snapshot's books.
       type: object
+      additionalProperties: false
       required: [languages, years, total_books]
       properties:
         languages:
@@ -676,6 +777,7 @@ components:
           description: From most to fewest books.
           items:
             type: object
+            additionalProperties: false
             required: [code, name, books]
             properties:
               code:
@@ -688,6 +790,7 @@ components:
                 minimum: 1
         years:
           type: object
+          additionalProperties: false
           required: [min, max]
           properties:
             min:
@@ -706,6 +809,7 @@ components:
     IngestList:
       description: SPEC.md §6.5.
       type: object
+      additionalProperties: false
       required: [count, books]
       properties:
         count:
@@ -721,6 +825,7 @@ components:
     Rebuild:
       description: SPEC.md §6.5.
       type: object
+      additionalProperties: false
       required: [generation, target_generation, status]
       properties:
         generation:
@@ -733,6 +838,7 @@ components:
     IndexStatus:
       description: SPEC.md §6.5, all for the current generation.
       type: object
+      additionalProperties: false
       required: [generation, books_indexed, batches_published, last_update, index_size_mb, rebuild]
       properties:
         generation:
@@ -756,6 +862,7 @@ components:
           oneOf:
             - type: "null"
             - type: object
+              additionalProperties: false
               required: [target_generation, status, books_pending]
               properties:
                 target_generation:
@@ -770,6 +877,7 @@ components:
     ControlStatus:
       description: SPEC.md §6.5.
       type: object
+      additionalProperties: false
       required: [generation, books, queues, last_reconciliation]
       properties:
         generation:
@@ -784,6 +892,7 @@ components:
             minimum: 0
         queues:
           type: object
+          additionalProperties: false
           required: [books-to-download, books-to-index]
           properties:
             books-to-download:
@@ -802,6 +911,7 @@ components:
     Health:
       description: SPEC.md §6.5; `down` only when `DOWN`.
       type: object
+      additionalProperties: false
       required: [status]
       properties:
         status:
@@ -818,6 +928,7 @@ components:
     Problem:
       description: Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500`.
       type: object
+      additionalProperties: false
       required: [type, title, status]
       properties:
         type:
@@ -844,6 +955,7 @@ components:
     BookTask:
       description: "Hazelcast message (SPEC.md §4.2) on the `books-to-download` and `books-to-index` queues."
       type: object
+      additionalProperties: false
       required: [book_id, enqueued_at]
       properties:
         book_id:
@@ -854,6 +966,7 @@ components:
     BatchPublished:
       description: "Hazelcast message (SPEC.md §4.2) on the `published-batches` topic."
       type: object
+      additionalProperties: false
       required: [batch_id, generation, book_count, published_at]
       properties:
         batch_id:
