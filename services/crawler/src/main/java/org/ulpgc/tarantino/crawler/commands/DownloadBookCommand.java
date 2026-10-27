@@ -8,7 +8,7 @@ import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.crawler.ports.BookClaims;
-import org.ulpgc.tarantino.crawler.ports.IndexQueue;
+import org.ulpgc.tarantino.crawler.ports.TaskQueue;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -25,12 +25,12 @@ public class DownloadBookCommand {
 
     private final BookClaims claims;
     private final IngestBookCommand ingest;
-    private final IndexQueue indexQueue;
+    private final TaskQueue indexQueue;
     private final TransitionLog log;
     private final Clock clock;
     private final Consumer<CrashPoint> crashPoints;
 
-    public DownloadBookCommand(BookClaims claims, IngestBookCommand ingest, IndexQueue indexQueue, TransitionLog log, Clock clock,
+    public DownloadBookCommand(BookClaims claims, IngestBookCommand ingest, TaskQueue indexQueue, TransitionLog log, Clock clock,
                                Consumer<CrashPoint> crashPoints) {
         this.claims = claims;
         this.ingest = ingest;
