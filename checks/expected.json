@@ -23,19 +23,74 @@
     2600
   ],
   "searches": {
-    "pride": {
-      "min_total": 1,
-      "contains_book_id": 1342
+    "single_word": {
+      "path": "/search?q=pride",
+      "total": 1,
+      "book_ids": [
+        1342
+      ]
     },
-    "pride prejudice": {
-      "min_total": 1,
-      "contains_book_id": 1342
+    "multi_word": {
+      "path": "/search?q=pride%20prejudice",
+      "total": 1,
+      "book_ids": [
+        1342
+      ]
     },
-    "the and": {
-      "total": 0
+    "filter_author": {
+      "path": "/search?q=pride&author=Austen",
+      "total": 1,
+      "book_ids": [
+        1342
+      ]
     },
-    "pyromaniac liliput": {
-      "total": 0
+    "filter_language": {
+      "path": "/search?q=pride&language=en",
+      "total": 1,
+      "book_ids": [
+        1342
+      ]
+    },
+    "filter_year": {
+      "path": "/search?q=pride&year=1998",
+      "total": 1,
+      "book_ids": [
+        1342
+      ]
+    },
+    "combined_filter": {
+      "path": "/search?q=pride&author=Austen&language=en&year=1998",
+      "total": 1,
+      "book_ids": [
+        1342
+      ]
+    },
+    "pagination_page0": {
+      "path": "/search?q=pride&offset=0&limit=1",
+      "total": 1,
+      "book_ids": [
+        1342
+      ]
+    },
+    "pagination_page1": {
+      "path": "/search?q=pride&offset=1&limit=1",
+      "total": 1,
+      "book_ids": []
+    },
+    "pagination_large_offset": {
+      "path": "/search?q=pride&offset=1000000000",
+      "total": 1,
+      "book_ids": []
+    },
+    "stopwords_only": {
+      "path": "/search?q=the%20and",
+      "total": 0,
+      "book_ids": []
+    },
+    "empty_results": {
+      "path": "/search?q=pyromaniac%20liliput",
+      "total": 0,
+      "book_ids": []
     }
   },
   "books": {
@@ -44,7 +99,160 @@
       "title": "Pride and Prejudice",
       "author": "Jane Austen",
       "language": "en",
-      "year": 1998
+      "year": 1998,
+      "languages": ["en"]
+    },
+    "84": {
+      "book_id": 84,
+      "title": "Frankenstein; Or, The Modern Prometheus",
+      "author": "Mary Wollstonecraft Shelley",
+      "language": "en",
+      "year": 1993,
+      "languages": ["en"]
+    },
+    "11": {
+      "book_id": 11,
+      "title": "Alice's Adventures in Wonderland",
+      "author": "Lewis Carroll",
+      "language": "en",
+      "year": 2008,
+      "languages": ["en"]
+    },
+    "1661": {
+      "book_id": 1661,
+      "title": "The Adventures of Sherlock Holmes",
+      "author": "Arthur Conan Doyle",
+      "language": "en",
+      "year": 1999,
+      "languages": ["en"]
+    },
+    "2701": {
+      "book_id": 2701,
+      "title": "Moby Dick; Or, The Whale",
+      "author": "Herman Melville",
+      "language": "en",
+      "year": 2001,
+      "languages": ["en"]
+    },
+    "98": {
+      "book_id": 98,
+      "title": "A Tale of Two Cities",
+      "author": "Charles Dickens",
+      "language": "en",
+      "year": 1994,
+      "languages": ["en"]
+    },
+    "74": {
+      "book_id": 74,
+      "title": "The Adventures of Tom Sawyer, Complete",
+      "author": "Mark Twain",
+      "language": "en",
+      "year": 2006,
+      "languages": ["en"]
+    },
+    "76": {
+      "book_id": 76,
+      "title": "Adventures of Huckleberry Finn",
+      "author": "Mark Twain",
+      "language": "en",
+      "year": 2006,
+      "languages": ["en"]
+    },
+    "345": {
+      "book_id": 345,
+      "title": "Dracula",
+      "author": "Bram Stoker",
+      "language": "en",
+      "year": 1995,
+      "languages": ["en"]
+    },
+    "2229": {
+      "book_id": 2229,
+      "title": "Faust: Der Tragödie erster Teil",
+      "author": "Johann Wolfgang von Goethe",
+      "language": "de",
+      "year": 2000,
+      "languages": ["de"]
+    },
+    "1080": {
+      "book_id": 1080,
+      "title": "A Modest Proposal",
+      "author": "Jonathan Swift",
+      "language": "en",
+      "year": 1997,
+      "languages": ["en"]
+    },
+    "174": {
+      "book_id": 174,
+      "title": "The Picture of Dorian Gray",
+      "author": "Oscar Wilde",
+      "language": "en",
+      "year": 1994,
+      "languages": ["en"]
+    },
+    "2542": {
+      "book_id": 2542,
+      "title": "A Doll's House : a play",
+      "author": "Henrik Ibsen",
+      "language": "en",
+      "year": 2001,
+      "languages": ["en"]
+    },
+    "844": {
+      "book_id": 844,
+      "title": "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+      "author": "Oscar Wilde",
+      "language": "en",
+      "year": 1997,
+      "languages": ["en"]
+    },
+    "800": {
+      "book_id": 800,
+      "title": "The War of the Worlds",
+      "author": "H. G. Wells",
+      "language": "en",
+      "year": 2004,
+      "languages": ["en"]
+    },
+    "1952": {
+      "book_id": 1952,
+      "title": "The Yellow Wallpaper",
+      "author": "Charlotte Perkins Gilman",
+      "language": "en",
+      "year": 1999,
+      "languages": ["en"]
+    },
+    "43": {
+      "book_id": 43,
+      "title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+      "author": "Robert Louis Stevenson",
+      "language": "en",
+      "year": 2008,
+      "languages": ["en"]
+    },
+    "417": {
+      "book_id": 417,
+      "title": "The Legend of Sleepy Hollow",
+      "author": "Washington Irving",
+      "language": "en",
+      "year": 2008,
+      "languages": ["en"]
+    },
+    "1232": {
+      "book_id": 1232,
+      "title": "The Prince",
+      "author": "Niccolò Machiavelli",
+      "language": "en",
+      "year": 2006,
+      "languages": ["en"]
+    },
+    "2600": {
+      "book_id": 2600,
+      "title": "War and Peace",
+      "author": "Leo Tolstoy",
+      "language": "en",
+      "year": 2001,
+      "languages": ["en"]
     }
   }
 }

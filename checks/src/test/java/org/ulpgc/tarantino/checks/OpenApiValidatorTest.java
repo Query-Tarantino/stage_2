@@ -1,7 +1,9 @@
 package org.ulpgc.tarantino.checks;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,7 +15,9 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OpenApiValidatorTest {
 
@@ -211,5 +215,71 @@ class OpenApiValidatorTest {
     void failsOnUndeclaredStatusCode() {
         Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
         assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/search?q=pride", 418, headers, "{}"));
+    }
+
+    @Test
+    void validatesNginxNotFoundProblemDetails() {
+        String body = """
+                {
+                  "type": "about:blank",
+                  "title": "Not Found",
+                  "status": 404,
+                  "detail": "The requested path does not exist"
+                }
+                """;
+        JsonNode jsonNode = assertDoesNotThrow(() -> TarantinoJson.mapper().readTree(body));
+        assertDoesNotThrow(() -> validator.validateProblem(jsonNode));
+        assertTrue(!jsonNode.has("code"));
+    }
+
+    @Test
+    void verifiesExpectedJsonStructureAndSchemas() throws IOException {
+        Path expectedPath = findFile("checks/expected.json");
+        JsonNode root = TarantinoJson.mapper().readTree(expectedPath.toFile());
+        assertTrue(root.has("total_books"));
+        assertEquals(20, root.get("total_books").asInt());
+        assertTrue(root.has("sample_ids") && root.get("sample_ids").isArray());
+        assertEquals(20, root.get("sample_ids").size());
+
+        assertTrue(root.has("searches") && root.get("searches").isObject());
+        JsonNode searches = root.get("searches");
+        List<String> requiredCases = List.of(
+                "single_word", "multi_word", "filter_author", "filter_language", "filter_year",
+                "combined_filter", "pagination_page0", "pagination_page1", "pagination_large_offset",
+                "stopwords_only", "empty_results"
+        );
+        for (String testCase : requiredCases) {
+            assertTrue(searches.has(testCase), "Missing search case: " + testCase);
+            JsonNode caseNode = searches.get(testCase);
+            assertTrue(caseNode.has("path"));
+            assertTrue(caseNode.has("total"));
+            assertTrue(caseNode.has("book_ids") && caseNode.get("book_ids").isArray());
+        }
+
+        assertTrue(root.has("books") && root.get("books").isObject());
+        JsonNode books = root.get("books");
+        assertEquals(20, books.size());
+        for (JsonNode idNode : root.get("sample_ids")) {
+            String bookId = String.valueOf(idNode.asInt());
+            assertTrue(books.has(bookId), "Missing book metadata for " + bookId);
+            JsonNode book = books.get(bookId);
+            assertTrue(book.has("book_id"));
+            assertTrue(book.has("title"));
+            assertTrue(book.has("author"));
+            assertTrue(book.has("language"));
+            assertTrue(book.has("year"));
+        }
+    }
+
+    private static Path findFile(String relativePath) {
+        List<Path> candidates = List.of(
+                Paths.get(relativePath),
+                Paths.get("../" + relativePath),
+                Paths.get("../../" + relativePath)
+        );
+        return candidates.stream()
+                .filter(Files::exists)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Could not find file: " + relativePath));
     }
 }

@@ -7,17 +7,20 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
+import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
+import org.ulpgc.tarantino.common.terms.Tokenizer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 
 public class ApiChecker {
@@ -29,21 +32,27 @@ public class ApiChecker {
     private final CheckedClient client;
     private final String frontEndUrl;
     private final String operationalUrl;
+    private final Tokenizer tokenizer;
     private final List<JsonNode> sampleBooks = new ArrayList<>();
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
         this.frontEndUrl = trimSlash(frontEndUrl);
         this.operationalUrl = trimSlash(operationalUrl);
-    }
-
-    public void checkAll(List<Integer> sampleIds) throws IOException, InterruptedException {
-        checkAll(sampleIds, null);
+        Path stopwordsPath = findStopwordsPath();
+        Set<String> stopwords = Files.exists(stopwordsPath)
+                ? new FileStopwordsLoader(stopwordsPath).stopwords()
+                : Set.of();
+        this.tokenizer = new Tokenizer(stopwords);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
+        if (expectedPath == null || !Files.exists(expectedPath)) {
+            throw new AssertionError("Expected answers file not found at " + expectedPath);
+        }
         LOGGER.info("Starting API conformance checks");
         checkHealth();
+        checkNginxUnknownPaths();
         checkOperationalEndpoints();
         ensurePublishedAndRefreshed(sampleIds);
         checkStatusEndpoints();
@@ -52,10 +61,31 @@ public class ApiChecker {
         checkFiltersSummary();
         checkSearchParametersOrder();
         checkSearchEndpoints();
-        if (expectedPath != null && Files.exists(expectedPath)) {
-            checkAgainstExpected(expectedPath);
-        }
+        checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
+    }
+
+    public void checkNginxUnknownPaths() throws IOException, InterruptedException {
+        LOGGER.info("Checking nginx 404 Problem Details on unknown paths");
+        checkUnknownPath(frontEndUrl + "/unknown-path");
+        checkUnknownPath(operationalUrl + "/unknown-path");
+    }
+
+    private void checkUnknownPath(String url) throws IOException, InterruptedException {
+        CheckedClient.Response response = client.getRaw(url);
+        assertEquals(404, response.status());
+        List<String> contentTypes = response.headers().get("Content-Type");
+        if (contentTypes == null || contentTypes.isEmpty()) {
+            contentTypes = response.headers().get("content-type");
+        }
+        assertTrue(contentTypes != null && !contentTypes.isEmpty());
+        assertTrue(contentTypes.getFirst().toLowerCase().startsWith("application/problem+json"));
+        assertTrue(response.json() != null);
+        client.validator().validateProblem(response.json());
+        assertEquals(404, response.json().get("status").asInt());
+        assertTrue(response.json().has("title"));
+        assertTrue(response.json().has("detail"));
+        assertTrue(!response.json().has("code"));
     }
 
     public void checkHealth() throws IOException, InterruptedException {
@@ -256,10 +286,9 @@ public class ApiChecker {
         assertEquals(200, listResponse.status());
         JsonNode booksNode = listResponse.json().get("books");
         assertTrue(booksNode != null && booksNode.isArray());
-        List<Integer> ingestedBooks = new ArrayList<>();
-        for (JsonNode bookNode : booksNode) {
-            ingestedBooks.add(bookNode.asInt());
-        }
+        List<Integer> ingestedBooks = StreamSupport.stream(booksNode.spliterator(), false)
+                .map(JsonNode::asInt)
+                .toList();
         for (int bookId : sampleIds) {
             assertTrue(ingestedBooks.contains(bookId));
         }
@@ -423,26 +452,31 @@ public class ApiChecker {
         LOGGER.info("Validating responses against expected.json: {}", expectedPath);
         JsonNode expected = MAPPER.readTree(expectedPath.toFile());
         if (expected.has("searches")) {
-            for (Iterator<Map.Entry<String, JsonNode>> entries = expected.get("searches").fields(); entries.hasNext(); ) {
-                Map.Entry<String, JsonNode> entry = entries.next();
-                String query = entry.getKey();
+            Iterable<Map.Entry<String, JsonNode>> searchEntries = () -> expected.get("searches").fields();
+            for (Map.Entry<String, JsonNode> entry : searchEntries) {
                 JsonNode searchExpected = entry.getValue();
-                CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + query.replace(" ", "%20"));
+                String path = searchExpected.has("path")
+                        ? searchExpected.get("path").asText()
+                        : "/search?q=" + entry.getKey().replace(" ", "%20");
+                CheckedClient.Response response = client.get(frontEndUrl + path);
                 assertEquals(200, response.status());
                 if (searchExpected.has("total")) {
                     assertEquals(searchExpected.get("total").asInt(), response.json().get("total").asInt());
                 }
-                if (searchExpected.has("min_total")) {
-                    assertTrue(response.json().get("total").asInt() >= searchExpected.get("min_total").asInt());
-                }
-                if (searchExpected.has("contains_book_id")) {
-                    assertTrue(containsBook(response.json().get("results"), searchExpected.get("contains_book_id").asInt()));
+                if (searchExpected.has("book_ids") && searchExpected.get("book_ids").isArray()) {
+                    List<Integer> expectedIds = StreamSupport.stream(searchExpected.get("book_ids").spliterator(), false)
+                            .map(JsonNode::asInt)
+                            .toList();
+                    List<Integer> actualIds = StreamSupport.stream(response.json().get("results").spliterator(), false)
+                            .map(resultNode -> resultNode.get("book_id").asInt())
+                            .toList();
+                    assertEquals(expectedIds, actualIds);
                 }
             }
         }
         if (expected.has("books")) {
-            for (Iterator<Map.Entry<String, JsonNode>> entries = expected.get("books").fields(); entries.hasNext(); ) {
-                Map.Entry<String, JsonNode> entry = entries.next();
+            Iterable<Map.Entry<String, JsonNode>> bookEntries = () -> expected.get("books").fields();
+            for (Map.Entry<String, JsonNode> entry : bookEntries) {
                 String bookIdStr = entry.getKey();
                 JsonNode bookExpected = entry.getValue();
                 CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookIdStr);
@@ -455,6 +489,9 @@ public class ApiChecker {
                 }
                 if (bookExpected.has("language") && !bookExpected.get("language").isNull()) {
                     assertEquals(bookExpected.get("language").asText(), response.json().get("language").asText());
+                }
+                if (bookExpected.has("year") && !bookExpected.get("year").isNull()) {
+                    assertEquals(bookExpected.get("year").asInt(), response.json().get("year").asInt());
                 }
             }
         }
@@ -469,13 +506,31 @@ public class ApiChecker {
         sampleIds.forEach(sampleIdsArray::add);
 
         ObjectNode searchesNode = root.putObject("searches");
-        List<String> testQueries = List.of("pride", "pride prejudice", "the and", "pyromaniac liliput");
-        for (String query : testQueries) {
-            CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + query.replace(" ", "%20"));
-            ObjectNode queryNode = searchesNode.putObject(query);
-            queryNode.put("total", response.json().get("total").asInt());
-            if (response.json().has("results") && response.json().get("results").size() > 0) {
-                queryNode.put("contains_book_id", response.json().get("results").get(0).get("book_id").asInt());
+        record SearchCase(String name, String path) {}
+        List<SearchCase> searchCases = List.of(
+                new SearchCase("single_word", "/search?q=pride"),
+                new SearchCase("multi_word", "/search?q=pride%20prejudice"),
+                new SearchCase("filter_author", "/search?q=pride&author=Austen"),
+                new SearchCase("filter_language", "/search?q=pride&language=en"),
+                new SearchCase("filter_year", "/search?q=pride&year=1998"),
+                new SearchCase("combined_filter", "/search?q=pride&author=Austen&language=en&year=1998"),
+                new SearchCase("pagination_page0", "/search?q=pride&offset=0&limit=1"),
+                new SearchCase("pagination_page1", "/search?q=pride&offset=1&limit=1"),
+                new SearchCase("pagination_large_offset", "/search?q=pride&offset=1000000000"),
+                new SearchCase("stopwords_only", "/search?q=the%20and"),
+                new SearchCase("empty_results", "/search?q=pyromaniac%20liliput")
+        );
+        for (SearchCase searchCase : searchCases) {
+            CheckedClient.Response response = client.get(frontEndUrl + searchCase.path());
+            ObjectNode queryNode = searchesNode.putObject(searchCase.name());
+            queryNode.put("path", searchCase.path());
+            int total = response.json().get("total").asInt();
+            queryNode.put("total", total);
+            ArrayNode bookIdsArray = queryNode.putArray("book_ids");
+            if (response.json().has("results") && response.json().get("results").isArray()) {
+                StreamSupport.stream(response.json().get("results").spliterator(), false)
+                        .map(resultNode -> resultNode.get("book_id").asInt())
+                        .forEach(bookIdsArray::add);
             }
         }
 
@@ -489,6 +544,9 @@ public class ApiChecker {
                 bookNode.set("author", response.json().get("author"));
                 bookNode.set("language", response.json().get("language"));
                 bookNode.set("year", response.json().get("year"));
+                if (response.json().has("languages")) {
+                    bookNode.set("languages", response.json().get("languages"));
+                }
             }
         }
 
@@ -517,24 +575,32 @@ public class ApiChecker {
         }
     }
 
-    private static String pickSearchTerm(JsonNode book) {
+    private String pickSearchTerm(JsonNode book) {
         if (book.has("title") && !book.get("title").isNull()) {
-            String title = book.get("title").asText();
-            for (String word : title.split("[^a-zA-Z0-9]+")) {
-                if (word.length() >= 4) {
-                    return word.toLowerCase();
-                }
+            List<String> terms = tokenizer.distinctTerms(book.get("title").asText());
+            if (!terms.isEmpty()) {
+                return terms.getFirst();
             }
         }
         if (book.has("author") && !book.get("author").isNull()) {
-            String author = book.get("author").asText();
-            for (String word : author.split("[^a-zA-Z0-9]+")) {
-                if (word.length() >= 4) {
-                    return word.toLowerCase();
-                }
+            List<String> terms = tokenizer.distinctTerms(book.get("author").asText());
+            if (!terms.isEmpty()) {
+                return terms.getFirst();
             }
         }
-        return "the";
+        return "pride";
+    }
+
+    private static Path findStopwordsPath() {
+        List<Path> candidates = List.of(
+                Paths.get("workload/stopwords.txt"),
+                Paths.get("../workload/stopwords.txt"),
+                Paths.get("../../workload/stopwords.txt")
+        );
+        return candidates.stream()
+                .filter(Files::exists)
+                .findFirst()
+                .orElse(Paths.get("workload/stopwords.txt"));
     }
 
     private static boolean containsBook(JsonNode resultsNode, int bookId) {
@@ -549,10 +615,12 @@ public class ApiChecker {
     private void assertProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
         CheckedClient.Response response = client.get(url);
         assertEquals(expectedStatus, response.status());
-        if (expectedCode != null && response.json() != null && response.json().has("code")) {
+        if (expectedCode != null) {
+            assertTrue(response.json() != null && response.json().has("code"));
             assertEquals(expectedCode, response.json().get("code").asText());
         }
-        if (expectedParam != null && response.json() != null && response.json().has("parameter")) {
+        if (expectedParam != null) {
+            assertTrue(response.json() != null && response.json().has("parameter"));
             assertEquals(expectedParam, response.json().get("parameter").asText());
         }
     }
@@ -560,10 +628,12 @@ public class ApiChecker {
     private void assertPostProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
         CheckedClient.Response response = client.post(url, "");
         assertEquals(expectedStatus, response.status());
-        if (expectedCode != null && response.json() != null && response.json().has("code")) {
+        if (expectedCode != null) {
+            assertTrue(response.json() != null && response.json().has("code"));
             assertEquals(expectedCode, response.json().get("code").asText());
         }
-        if (expectedParam != null && response.json() != null && response.json().has("parameter")) {
+        if (expectedParam != null) {
+            assertTrue(response.json() != null && response.json().has("parameter"));
             assertEquals(expectedParam, response.json().get("parameter").asText());
         }
     }

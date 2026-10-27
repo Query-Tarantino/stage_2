@@ -37,6 +37,16 @@ public class CheckedClient {
         return validateAndWrap("GET", pathAndQuery(uri), response);
     }
 
+    public Response getRaw(String url) throws IOException, InterruptedException {
+        URI uri = URI.create(url);
+        HttpRequest request = HttpRequest.newBuilder(uri).timeout(TIMEOUT).GET().build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = (response.body() != null && !response.body().isBlank() && isJson(response.headers().map()))
+                ? MAPPER.readTree(response.body())
+                : null;
+        return new Response(response.statusCode(), response.headers().map(), response.body(), json);
+    }
+
     public Response post(String url, String body) throws IOException, InterruptedException {
         URI uri = URI.create(url);
         HttpRequest.BodyPublisher publisher = body == null || body.isBlank()

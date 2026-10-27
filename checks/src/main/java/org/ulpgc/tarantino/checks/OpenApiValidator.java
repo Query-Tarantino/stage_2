@@ -13,11 +13,11 @@ import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 
 public class OpenApiValidator {
 
@@ -50,6 +50,14 @@ public class OpenApiValidator {
         validateBody(responseDef, headers, responseBody, method, template, statusCode);
     }
 
+    public void validateProblem(JsonNode bodyJson) {
+        JsonNode problemSchema = openApi.at("/components/schemas/Problem");
+        if (problemSchema.isMissingNode()) {
+            throw new AssertionError("Problem schema not found in OpenAPI");
+        }
+        validateWithJsonSchema(bodyJson, problemSchema);
+    }
+
     private String matchPathTemplate(String path) {
         String cleanPath = path.contains("?") ? path.substring(0, path.indexOf('?')) : path;
         JsonNode pathsNode = openApi.get("paths");
@@ -59,13 +67,11 @@ public class OpenApiValidator {
         if (pathsNode.has(cleanPath)) {
             return cleanPath;
         }
-        for (Iterator<String> pathNames = pathsNode.fieldNames(); pathNames.hasNext(); ) {
-            String template = pathNames.next();
-            if (matchesTemplate(template, cleanPath)) {
-                return template;
-            }
-        }
-        throw new AssertionError("Path not declared in OpenAPI: " + cleanPath);
+        Iterable<String> pathNames = pathsNode::fieldNames;
+        return StreamSupport.stream(pathNames.spliterator(), false)
+                .filter(template -> matchesTemplate(template, cleanPath))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Path not declared in OpenAPI: " + cleanPath));
     }
 
     private static boolean matchesTemplate(String template, String path) {
@@ -101,19 +107,20 @@ public class OpenApiValidator {
             return;
         }
         JsonNode declaredHeaders = responseDef.get("headers");
-        for (Iterator<Map.Entry<String, JsonNode>> headerEntries = declaredHeaders.fields(); headerEntries.hasNext(); ) {
-            Map.Entry<String, JsonNode> headerEntry = headerEntries.next();
-            String headerName = headerEntry.getKey();
-            JsonNode headerDef = resolveRef(headerEntry.getValue());
-            List<String> values = findHeader(headers, headerName);
-            if (values == null || values.isEmpty()) {
-                throw new AssertionError("Missing required header " + headerName + " on " + method + " " + template);
-            }
-            if (headerDef.has("schema")) {
-                JsonNode schemaNode = resolveRef(headerDef.get("schema"));
-                validateHeaderValue(headerName, values.getFirst(), schemaNode);
-            }
-        }
+        Iterable<Map.Entry<String, JsonNode>> headerEntries = declaredHeaders::fields;
+        StreamSupport.stream(headerEntries.spliterator(), false)
+                .forEach(headerEntry -> {
+                    String headerName = headerEntry.getKey();
+                    JsonNode headerDef = resolveRef(headerEntry.getValue());
+                    List<String> values = findHeader(headers, headerName);
+                    if (values == null || values.isEmpty()) {
+                        throw new AssertionError("Missing required header " + headerName + " on " + method + " " + template);
+                    }
+                    if (headerDef.has("schema")) {
+                        JsonNode schemaNode = resolveRef(headerDef.get("schema"));
+                        validateHeaderValue(headerName, values.getFirst(), schemaNode);
+                    }
+                });
     }
 
     private void validateHeaderValue(String headerName, String value, JsonNode schema) {
@@ -132,12 +139,11 @@ public class OpenApiValidator {
     }
 
     private static List<String> findHeader(Map<String, List<String>> headers, String name) {
-        for (Map.Entry<String, List<String>> headerEntry : headers.entrySet()) {
-            if (headerEntry.getKey().equalsIgnoreCase(name)) {
-                return headerEntry.getValue();
-            }
-        }
-        return null;
+        return headers.entrySet().stream()
+                .filter(headerEntry -> headerEntry.getKey().equalsIgnoreCase(name))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
     }
 
     private void validateBody(
@@ -153,14 +159,11 @@ public class OpenApiValidator {
         JsonNode contentNode = responseDef.get("content");
         List<String> contentTypes = findHeader(headers, "Content-Type");
         String actualType = (contentTypes == null || contentTypes.isEmpty()) ? "" : contentTypes.getFirst();
-        String matchingContentType = null;
-        for (Iterator<String> contentKeys = contentNode.fieldNames(); contentKeys.hasNext(); ) {
-            String expectedType = contentKeys.next();
-            if (actualType.toLowerCase().startsWith(expectedType.toLowerCase())) {
-                matchingContentType = expectedType;
-                break;
-            }
-        }
+        Iterable<String> contentKeys = contentNode::fieldNames;
+        String matchingContentType = StreamSupport.stream(contentKeys.spliterator(), false)
+                .filter(expectedType -> actualType.toLowerCase().startsWith(expectedType.toLowerCase()))
+                .findFirst()
+                .orElse(null);
         if (matchingContentType == null) {
             throw new AssertionError("Content-Type " + actualType + " does not match expected for " + method + " " + template);
         }
