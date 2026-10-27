@@ -33,7 +33,7 @@ public final class CrawlerFactory {
         Consumer<CrashPoint> crashPoints = new CrashPoints(config.crashAt())::hit;
         DownloadBookCommand download = new DownloadBookCommand(new MongoBookClaims(connections.database(), config.lease()),
                 ingestCommand(config), indexing::offer, new TransitionLog(), Clock.systemUTC(), crashPoints);
-        return new DownloadWorker(downloads::poll, download);
+        return new DownloadWorker(downloads::poll, download, crashPoints);
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {
