@@ -3,35 +3,38 @@ package org.ulpgc.tarantino.checks;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class OpenApiValidator {
 
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
+    private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
+    private static final JsonSchemaFactory SCHEMA_FACTORY =
+            JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
 
-    private final Map<String, Object> openApi;
+    private final JsonNode openApi;
 
-    public OpenApiValidator(Map<String, Object> openApi) {
+    public OpenApiValidator(JsonNode openApi) {
         this.openApi = openApi;
     }
 
     public static OpenApiValidator load(Path path) throws IOException {
-        try (InputStream stream = Files.newInputStream(path)) {
-            Map<String, Object> parsed = new Yaml().load(stream);
-            return new OpenApiValidator(parsed);
-        }
+        JsonNode rootNode = YAML_MAPPER.readTree(path.toFile());
+        return new OpenApiValidator(rootNode);
     }
 
     public void validateResponse(
@@ -41,19 +44,23 @@ public class OpenApiValidator {
             Map<String, List<String>> headers,
             String responseBody) {
         String template = matchPathTemplate(requestPath);
-        Map<String, Object> operation = operation(template, method.toLowerCase());
-        Map<String, Object> responseDef = responseDefinition(operation, statusCode, method, template);
+        JsonNode operationNode = operation(template, method.toLowerCase());
+        JsonNode responseDef = responseDefinition(operationNode, statusCode, method, template);
         validateHeaders(responseDef, headers, method, template, statusCode);
         validateBody(responseDef, headers, responseBody, method, template, statusCode);
     }
 
     private String matchPathTemplate(String path) {
         String cleanPath = path.contains("?") ? path.substring(0, path.indexOf('?')) : path;
-        Map<String, Object> paths = section(openApi, "paths");
-        if (paths.containsKey(cleanPath)) {
+        JsonNode pathsNode = openApi.get("paths");
+        if (pathsNode == null) {
+            throw new AssertionError("No paths found in OpenAPI specification");
+        }
+        if (pathsNode.has(cleanPath)) {
             return cleanPath;
         }
-        for (String template : paths.keySet()) {
+        for (Iterator<String> pathNames = pathsNode.fieldNames(); pathNames.hasNext(); ) {
+            String template = pathNames.next();
             if (matchesTemplate(template, cleanPath)) {
                 return template;
             }
@@ -66,58 +73,58 @@ public class OpenApiValidator {
         return Pattern.matches("^" + regex + "$", path);
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> operation(String template, String method) {
-        Map<String, Object> pathItem = (Map<String, Object>) section(openApi, "paths").get(template);
-        if (!pathItem.containsKey(method)) {
+    private JsonNode operation(String template, String method) {
+        JsonNode pathItem = openApi.get("paths").get(template);
+        if (pathItem == null || !pathItem.has(method)) {
             throw new AssertionError("Method " + method.toUpperCase() + " not allowed for path " + template);
         }
-        return (Map<String, Object>) pathItem.get(method);
+        return pathItem.get(method);
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> responseDefinition(
-            Map<String, Object> operation, int statusCode, String method, String template) {
-        Map<String, Object> responses = (Map<String, Object>) operation.get("responses");
-        String code = String.valueOf(statusCode);
-        if (!responses.containsKey(code)) {
+    private JsonNode responseDefinition(
+            JsonNode operationNode, int statusCode, String method, String template) {
+        JsonNode responsesNode = operationNode.get("responses");
+        String codeStr = String.valueOf(statusCode);
+        if (responsesNode == null || !responsesNode.has(codeStr)) {
             throw new AssertionError("Status code " + statusCode + " not declared for " + method + " " + template);
         }
-        return resolveRef((Map<String, Object>) responses.get(code));
+        return resolveRef(responsesNode.get(codeStr));
     }
 
-    @SuppressWarnings("unchecked")
     private void validateHeaders(
-            Map<String, Object> responseDef,
+            JsonNode responseDef,
             Map<String, List<String>> headers,
             String method,
             String template,
             int statusCode) {
-        if (!responseDef.containsKey("headers")) {
+        if (!responseDef.has("headers")) {
             return;
         }
-        Map<String, Object> declaredHeaders = (Map<String, Object>) responseDef.get("headers");
-        for (Map.Entry<String, Object> headerEntry : declaredHeaders.entrySet()) {
+        JsonNode declaredHeaders = responseDef.get("headers");
+        for (Iterator<Map.Entry<String, JsonNode>> headerEntries = declaredHeaders.fields(); headerEntries.hasNext(); ) {
+            Map.Entry<String, JsonNode> headerEntry = headerEntries.next();
             String headerName = headerEntry.getKey();
-            Map<String, Object> headerDef = resolveRef((Map<String, Object>) headerEntry.getValue());
+            JsonNode headerDef = resolveRef(headerEntry.getValue());
             List<String> values = findHeader(headers, headerName);
             if (values == null || values.isEmpty()) {
                 throw new AssertionError("Missing required header " + headerName + " on " + method + " " + template);
             }
-            Map<String, Object> schema = resolveRef((Map<String, Object>) headerDef.get("schema"));
-            validateHeaderValue(headerName, values.getFirst(), schema);
+            if (headerDef.has("schema")) {
+                JsonNode schemaNode = resolveRef(headerDef.get("schema"));
+                validateHeaderValue(headerName, values.getFirst(), schemaNode);
+            }
         }
     }
 
-    private void validateHeaderValue(String headerName, String value, Map<String, Object> schema) {
-        if (schema.containsKey("const")) {
-            String expected = String.valueOf(schema.get("const"));
+    private void validateHeaderValue(String headerName, String value, JsonNode schema) {
+        if (schema.has("const")) {
+            String expected = schema.get("const").asText();
             if (!expected.equals(value)) {
                 throw new AssertionError("Header " + headerName + " expected " + expected + " but was " + value);
             }
         }
-        if (schema.containsKey("pattern")) {
-            String pattern = String.valueOf(schema.get("pattern"));
+        if (schema.has("pattern")) {
+            String pattern = schema.get("pattern").asText();
             if (!Pattern.matches(pattern, value)) {
                 throw new AssertionError("Header " + headerName + " does not match pattern " + pattern + ": " + value);
             }
@@ -133,204 +140,69 @@ public class OpenApiValidator {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     private void validateBody(
-            Map<String, Object> responseDef,
+            JsonNode responseDef,
             Map<String, List<String>> headers,
             String responseBody,
             String method,
             String template,
             int statusCode) {
-        if (!responseDef.containsKey("content")) {
+        if (!responseDef.has("content")) {
             return;
         }
-        Map<String, Object> content = (Map<String, Object>) responseDef.get("content");
+        JsonNode contentNode = responseDef.get("content");
         List<String> contentTypes = findHeader(headers, "Content-Type");
         String actualType = (contentTypes == null || contentTypes.isEmpty()) ? "" : contentTypes.getFirst();
-        String matchingKey = content.keySet().stream()
-                .filter(expected -> actualType.toLowerCase().startsWith(expected.toLowerCase()))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Content-Type " + actualType + " does not match expected for " + method + " " + template));
-        Map<String, Object> mediaType = (Map<String, Object>) content.get(matchingKey);
-        if (!mediaType.containsKey("schema")) {
+        String matchingContentType = null;
+        for (Iterator<String> contentKeys = contentNode.fieldNames(); contentKeys.hasNext(); ) {
+            String expectedType = contentKeys.next();
+            if (actualType.toLowerCase().startsWith(expectedType.toLowerCase())) {
+                matchingContentType = expectedType;
+                break;
+            }
+        }
+        if (matchingContentType == null) {
+            throw new AssertionError("Content-Type " + actualType + " does not match expected for " + method + " " + template);
+        }
+        JsonNode mediaTypeNode = contentNode.get(matchingContentType);
+        if (!mediaTypeNode.has("schema")) {
             return;
         }
-        Map<String, Object> schema = resolveRef((Map<String, Object>) mediaType.get("schema"));
+        JsonNode schemaNode = mediaTypeNode.get("schema");
         try {
-            JsonNode json = MAPPER.readTree(responseBody);
-            validateJsonAgainstSchema(json, schema, "");
+            JsonNode bodyJson = MAPPER.readTree(responseBody);
+            validateWithJsonSchema(bodyJson, schemaNode);
         } catch (JsonProcessingException exception) {
             throw new AssertionError("Response body is not valid JSON: " + responseBody, exception);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void validateJsonAgainstSchema(JsonNode node, Map<String, Object> schema, String path) {
-        schema = resolveRef(schema);
-        if (schema.containsKey("allOf")) {
-            Map<String, Object> merged = new HashMap<>();
-            Map<String, Object> mergedProperties = new HashMap<>();
-            List<String> mergedRequired = new ArrayList<>();
-            boolean additionalPropertiesFalse = false;
-            for (Object subObject : (List<Object>) schema.get("allOf")) {
-                Map<String, Object> subSchema = resolveRef((Map<String, Object>) subObject);
-                if (subSchema.containsKey("properties")) {
-                    mergedProperties.putAll((Map<String, Object>) subSchema.get("properties"));
-                }
-                if (subSchema.containsKey("required")) {
-                    mergedRequired.addAll((List<String>) subSchema.get("required"));
-                }
-                if (Boolean.FALSE.equals(subSchema.get("additionalProperties"))) {
-                    additionalPropertiesFalse = true;
-                }
-            }
-            merged.put("type", "object");
-            merged.put("properties", mergedProperties);
-            if (!mergedRequired.isEmpty()) {
-                merged.put("required", mergedRequired);
-            }
-            if (additionalPropertiesFalse || Boolean.FALSE.equals(schema.get("additionalProperties"))) {
-                merged.put("additionalProperties", false);
-            }
-            validateTypeAndConstraints(node, merged, path);
-            return;
+    private void validateWithJsonSchema(JsonNode bodyJson, JsonNode schemaNode) {
+        ObjectNode schemaWrapper = MAPPER.createObjectNode();
+        schemaWrapper.put("$schema", "https://json-schema.org/draft/2020-12/schema");
+        if (openApi.has("components")) {
+            schemaWrapper.set("components", openApi.get("components").deepCopy());
         }
-        if (schema.containsKey("oneOf")) {
-            boolean matched = false;
-            for (Object subObject : (List<Object>) schema.get("oneOf")) {
-                try {
-                    validateJsonAgainstSchema(node, (Map<String, Object>) subObject, path);
-                    matched = true;
-                    break;
-                } catch (AssertionError ignored) {
-                }
-            }
-            if (!matched) {
-                throw new AssertionError("Node at " + path + " did not match any oneOf schema: " + node);
-            }
-            return;
+        if (schemaNode.has("$ref")) {
+            schemaWrapper.set("$ref", schemaNode.get("$ref"));
+        } else {
+            schemaWrapper.setAll((ObjectNode) schemaNode.deepCopy());
         }
-        validateTypeAndConstraints(node, schema, path);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void validateTypeAndConstraints(JsonNode node, Map<String, Object> schema, String path) {
-        Object typeObj = schema.get("type");
-        if (typeObj instanceof String type) {
-            validateSingleType(node, type, schema, path);
-        } else if (typeObj instanceof List<?> types) {
-            boolean matched = types.stream().anyMatch(expectedType -> isTypeOf(node, String.valueOf(expectedType)));
-            if (!matched) {
-                throw new AssertionError("Node at " + path + " expected one of " + types + " but was " + node);
-            }
-        }
-        if (schema.containsKey("enum")) {
-            List<String> values = ((List<?>) schema.get("enum")).stream().map(String::valueOf).toList();
-            if (!values.contains(node.asText())) {
-                throw new AssertionError("Node at " + path + " expected enum in " + values + " but was " + node.asText());
-            }
-        }
-        if (schema.containsKey("minimum") && node.isNumber()) {
-            double minimum = ((Number) schema.get("minimum")).doubleValue();
-            if (node.asDouble() < minimum) {
-                throw new AssertionError("Value " + node.asDouble() + " at " + path + " is less than minimum " + minimum);
-            }
-        }
-        if (schema.containsKey("maximum") && node.isNumber()) {
-            double maximum = ((Number) schema.get("maximum")).doubleValue();
-            if (node.asDouble() > maximum) {
-                throw new AssertionError("Value " + node.asDouble() + " at " + path + " is greater than maximum " + maximum);
-            }
-        }
-        if (schema.containsKey("minItems") && node.isArray()) {
-            int minItems = ((Number) schema.get("minItems")).intValue();
-            if (node.size() < minItems) {
-                throw new AssertionError("Array at " + path + " size " + node.size() + " is less than minItems " + minItems);
-            }
-        }
-        if (schema.containsKey("maxItems") && node.isArray()) {
-            int maxItems = ((Number) schema.get("maxItems")).intValue();
-            if (node.size() > maxItems) {
-                throw new AssertionError("Array at " + path + " size " + node.size() + " is greater than maxItems " + maxItems);
-            }
-        }
-        if (schema.containsKey("pattern") && node.isTextual()) {
-            String pattern = String.valueOf(schema.get("pattern"));
-            if (!Pattern.compile(pattern).matcher(node.asText()).find()) {
-                throw new AssertionError("Value '" + node.asText() + "' at " + path + " does not match pattern " + pattern);
-            }
+        JsonSchema jsonSchema = SCHEMA_FACTORY.getSchema(schemaWrapper);
+        Set<ValidationMessage> validationErrors = jsonSchema.validate(bodyJson);
+        if (!validationErrors.isEmpty()) {
+            throw new AssertionError("Schema validation failed: " + validationErrors);
         }
     }
 
-    private static boolean isTypeOf(JsonNode node, String type) {
-        return switch (type) {
-            case "string" -> node.isTextual();
-            case "integer" -> node.isIntegralNumber();
-            case "number" -> node.isNumber();
-            case "boolean" -> node.isBoolean();
-            case "array" -> node.isArray();
-            case "object" -> node.isObject();
-            case "null" -> node.isNull();
-            default -> true;
-        };
-    }
-
-    @SuppressWarnings("unchecked")
-    private void validateSingleType(JsonNode node, String type, Map<String, Object> schema, String path) {
-        if (!isTypeOf(node, type)) {
-            throw new AssertionError("Node at " + path + " expected type " + type + " but was " + node.getNodeType());
-        }
-        if ("object".equals(type) && schema.containsKey("required")) {
-            List<String> required = (List<String>) schema.get("required");
-            for (String req : required) {
-                if (!node.has(req)) {
-                    throw new AssertionError("Missing required field '" + req + "' at " + path);
-                }
-            }
-        }
-        if ("object".equals(type) && Boolean.FALSE.equals(schema.get("additionalProperties"))) {
-            Map<String, Object> properties = (Map<String, Object>) schema.getOrDefault("properties", Map.of());
-            for (Iterator<String> fieldNames = node.fieldNames(); fieldNames.hasNext(); ) {
-                String fieldName = fieldNames.next();
-                if (!properties.containsKey(fieldName)) {
-                    throw new AssertionError("Undeclared field '" + fieldName + "' at " + path + " (additionalProperties: false)");
-                }
-            }
-        }
-        if ("object".equals(type) && schema.containsKey("properties")) {
-            Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
-            for (Iterator<Map.Entry<String, JsonNode>> fields = node.fields(); fields.hasNext(); ) {
-                Map.Entry<String, JsonNode> field = fields.next();
-                if (properties.containsKey(field.getKey())) {
-                    validateJsonAgainstSchema(field.getValue(), (Map<String, Object>) properties.get(field.getKey()), path + "." + field.getKey());
-                }
-            }
-        }
-        if ("array".equals(type) && schema.containsKey("items")) {
-            Map<String, Object> itemSchema = (Map<String, Object>) schema.get("items");
-            for (int index = 0; index < node.size(); index++) {
-                validateJsonAgainstSchema(node.get(index), itemSchema, path + "[" + index + "]");
-            }
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> resolveRef(Map<String, Object> target) {
-        if (target != null && target.containsKey("$ref")) {
-            String ref = String.valueOf(target.get("$ref"));
+    private JsonNode resolveRef(JsonNode node) {
+        if (node != null && node.has("$ref")) {
+            String ref = node.get("$ref").asText();
             if (ref.startsWith("#/")) {
-                String[] parts = ref.substring(2).split("/");
-                Map<String, Object> current = openApi;
-                for (String part : parts) {
-                    current = (Map<String, Object>) current.get(part);
-                }
-                return current;
+                String pointer = ref.substring(1);
+                return openApi.at(pointer);
             }
         }
-        return target;
-    }
-
-    private static Map<String, Object> section(Map<String, Object> root, String name) {
-        return (Map<String, Object>) root.get(name);
+        return node;
     }
 }
