@@ -26,15 +26,13 @@ import org.ulpgc.tarantino.query.ports.PostingsReader;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @State(Scope.Benchmark)
@@ -61,25 +59,26 @@ public class SearchBenchmark {
     @Setup
     public void setup() {
         totalBooks = 1000;
-        Set<Integer> allBooks = new HashSet<>(IntStream.rangeClosed(1, totalBooks).boxed().toList());
+        Set<Integer> allBooks = IntStream.rangeClosed(1, totalBooks).boxed().collect(Collectors.toSet());
         Set<String> batchIds = Set.of("batch_1", "batch_2");
         snapshot = new Snapshot(1, batchIds, allBooks);
 
-        Map<String, TermPostings> postingsData = new HashMap<>();
-        postingsData.put("love", createPostings("love", 1, 400));
-        postingsData.put("night", createPostings("night", 200, 600));
+        Map<String, TermPostings> postingsByTerm = Map.of(
+                "love", createPostings("love", 1, 400),
+                "night", createPostings("night", 200, 600)
+        );
 
         PostingsReader postingsReader = (gen, terms, batches) -> terms.stream()
-                .filter(postingsData::containsKey)
-                .map(postingsData::get)
+                .filter(postingsByTerm::containsKey)
+                .map(postingsByTerm::get)
                 .toList();
 
-        Set<Integer> austenBooks = new HashSet<>(IntStream.rangeClosed(1, 100).boxed().toList());
+        Set<Integer> austenBooks = IntStream.rangeClosed(1, 100).boxed().collect(Collectors.toSet());
         MetadataReader metadataReader = new MetadataReader() {
             @Override
             public List<SearchResult> results(int generation, Collection<Integer> bookIds) {
                 return bookIds.stream()
-                        .map(id -> new SearchResult(id, "Title " + id, "Austen", "en", 1998))
+                        .map(bookId -> new SearchResult(bookId, "Title " + bookId, "Austen", "en", 1998))
                         .toList();
             }
 
@@ -114,34 +113,35 @@ public class SearchBenchmark {
     @Benchmark
     public List<ScoredBook> tfidfRanking() {
         return candidateBookIds.stream()
-                .map(id -> new ScoredBook(id, score(id, rankingTerms, rankingIndex, totalBooks)))
+                .map(candidateId -> new ScoredBook(candidateId, score(candidateId, rankingTerms, rankingIndex, totalBooks)))
                 .sorted(RANKING)
                 .toList();
     }
 
-    private static double score(int bookId, List<String> terms, Map<String, Map<Integer, Integer>> index, int total) {
+    private static double score(
+            int bookId, List<String> terms, Map<String, Map<Integer, Integer>> index, int totalBooks) {
         return terms.stream()
                 .map(index::get)
-                .mapToDouble(books -> (1 + Math.log(books.get(bookId))) * Math.log((double) total / books.size()))
+                .mapToDouble(termBooks -> (1 + Math.log(termBooks.get(bookId))) * Math.log((double) totalBooks / termBooks.size()))
                 .sum();
     }
 
     private static TermPostings createPostings(String term, int start, int end) {
-        List<Integer> books = new ArrayList<>();
-        List<Integer> tfs = new ArrayList<>();
-        for (int i = start; i <= end; i++) {
-            books.add(i);
-            tfs.add((i % 10) + 1);
-        }
-        return new TermPostings(term, books, tfs);
+        List<Integer> books = IntStream.rangeClosed(start, end).boxed().toList();
+        List<Integer> termFrequencies = IntStream.rangeClosed(start, end)
+                .map(bookId -> (bookId % 10) + 1)
+                .boxed()
+                .toList();
+        return new TermPostings(term, books, termFrequencies);
     }
 
     private static Map<Integer, Integer> createTfMap(int start, int end) {
-        Map<Integer, Integer> map = new HashMap<>();
-        for (int i = start; i <= end; i++) {
-            map.put(i, (i % 10) + 1);
-        }
-        return map;
+        return IntStream.rangeClosed(start, end)
+                .boxed()
+                .collect(Collectors.toMap(
+                        bookId -> bookId,
+                        bookId -> (bookId % 10) + 1
+                ));
     }
 
     public static void main(String[] args) throws Exception {
