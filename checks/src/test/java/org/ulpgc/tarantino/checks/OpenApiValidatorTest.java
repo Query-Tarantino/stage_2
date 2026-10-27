@@ -9,10 +9,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -234,7 +234,7 @@ class OpenApiValidatorTest {
 
     @Test
     void verifiesExpectedJsonStructureAndSchemas() throws IOException {
-        Path expectedPath = findFile("checks/expected.json");
+        Path expectedPath = findFile("expected.json");
         JsonNode root = TarantinoJson.mapper().readTree(expectedPath.toFile());
         assertTrue(root.has("total_books"));
         assertEquals(20, root.get("total_books").asInt());
@@ -244,22 +244,23 @@ class OpenApiValidatorTest {
         assertTrue(root.has("searches") && root.get("searches").isObject());
         JsonNode searches = root.get("searches");
         List<String> requiredCases = List.of(
-                "single_word", "multi_word", "filter_author", "filter_language", "filter_year",
-                "combined_filter", "pagination_page0", "pagination_page1", "pagination_large_offset",
-                "stopwords_only", "empty_results"
+                "single_word", "multi_word", "filter_author", "filter_language",
+                "filter_language_de", "filter_language_fr", "filter_language_zz",
+                "filter_year", "combined_filter", "pagination_page0", "pagination_page1",
+                "pagination_large_offset", "stopwords_only", "empty_results"
         );
-        for (String testCase : requiredCases) {
+        requiredCases.forEach(testCase -> {
             assertTrue(searches.has(testCase), "Missing search case: " + testCase);
             JsonNode caseNode = searches.get(testCase);
             assertTrue(caseNode.has("path"));
             assertTrue(caseNode.has("total"));
             assertTrue(caseNode.has("book_ids") && caseNode.get("book_ids").isArray());
-        }
+        });
 
         assertTrue(root.has("books") && root.get("books").isObject());
         JsonNode books = root.get("books");
         assertEquals(20, books.size());
-        for (JsonNode idNode : root.get("sample_ids")) {
+        StreamSupport.stream(root.get("sample_ids").spliterator(), false).forEach(idNode -> {
             String bookId = String.valueOf(idNode.asInt());
             assertTrue(books.has(bookId), "Missing book metadata for " + bookId);
             JsonNode book = books.get(bookId);
@@ -268,15 +269,23 @@ class OpenApiValidatorTest {
             assertTrue(book.has("author"));
             assertTrue(book.has("language"));
             assertTrue(book.has("year"));
-        }
+        });
     }
 
     private static Path findFile(String relativePath) {
-        List<Path> candidates = List.of(
-                Paths.get(relativePath),
-                Paths.get("../" + relativePath),
-                Paths.get("../../" + relativePath)
-        );
+        List<Path> candidates = relativePath.endsWith("expected.json")
+                ? List.of(
+                        Paths.get("expected.json"),
+                        Paths.get("checks/expected.json"),
+                        Paths.get("check/expected.json"),
+                        Paths.get("../checks/expected.json"),
+                        Paths.get("../check/expected.json")
+                )
+                : List.of(
+                        Paths.get(relativePath),
+                        Paths.get("../" + relativePath),
+                        Paths.get("../../" + relativePath)
+                );
         return candidates.stream()
                 .filter(Files::exists)
                 .findFirst()

@@ -51,6 +51,25 @@
         1342
       ]
     },
+    "filter_language_de": {
+      "path": "/search?q=faust&language=de",
+      "total": 1,
+      "book_ids": [
+        2229
+      ]
+    },
+    "filter_language_fr": {
+      "path": "/search?q=tour&language=fr",
+      "total": 1,
+      "book_ids": [
+        800
+      ]
+    },
+    "filter_language_zz": {
+      "path": "/search?q=pride&language=zz",
+      "total": 0,
+      "book_ids": []
+    },
     "filter_year": {
       "path": "/search?q=pride&year=1998",
       "total": 1,
@@ -208,11 +227,11 @@
     },
     "800": {
       "book_id": 800,
-      "title": "The War of the Worlds",
-      "author": "H. G. Wells",
-      "language": "en",
-      "year": 2004,
-      "languages": ["en"]
+      "title": "Le tour du monde en quatre-vingts jours",
+      "author": "Jules Verne",
+      "language": "fr",
+      "year": 1997,
+      "languages": ["fr"]
     },
     "1952": {
       "book_id": 1952,
@@ -232,11 +251,11 @@
     },
     "417": {
       "book_id": 417,
-      "title": "The Legend of Sleepy Hollow",
-      "author": "Washington Irving",
-      "language": "en",
-      "year": 2008,
-      "languages": ["en"]
+      "title": "Deutsche Geistliche Lieder",
+      "author": null,
+      "language": "de",
+      "year": 1996,
+      "languages": ["de", "en"]
     },
     "1232": {
       "book_id": 1232,

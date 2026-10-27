@@ -47,9 +47,11 @@ public class Main {
 
     private static Path resolveExpectedPath() {
         List<Path> candidates = List.of(
-                Paths.get("checks/expected.json"),
                 Paths.get("expected.json"),
-                Paths.get("../checks/expected.json")
+                Paths.get("checks/expected.json"),
+                Paths.get("check/expected.json"),
+                Paths.get("../checks/expected.json"),
+                Paths.get("../check/expected.json")
         );
         return candidates.stream()
                 .filter(Files::exists)
