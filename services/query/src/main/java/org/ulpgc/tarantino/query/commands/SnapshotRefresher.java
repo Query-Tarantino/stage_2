@@ -61,8 +61,8 @@ public class SnapshotRefresher {
     public void refreshOrKeep() {
         try {
             refresh();
-        } catch (RuntimeException e) {
-            LOGGER.warn("Kept the previous snapshot: {}", e.getMessage());
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Kept the previous snapshot: {}", exception.getMessage());
         }
     }
 }

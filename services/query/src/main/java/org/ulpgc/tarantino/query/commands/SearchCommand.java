@@ -80,9 +80,9 @@ public class SearchCommand {
         Map<String, Map<Integer, Integer>> index = new HashMap<>();
         for (TermPostings document : documents) {
             Map<Integer, Integer> books = index.computeIfAbsent(document.term(), key -> new HashMap<>());
-            for (int i = 0; i < document.bookIds().size(); i++) {
-                Integer bookId = document.bookIds().get(i);
-                Integer previous = books.putIfAbsent(bookId, document.tfs().get(i));
+            for (int position = 0; position < document.bookIds().size(); position++) {
+                Integer bookId = document.bookIds().get(position);
+                Integer previous = books.putIfAbsent(bookId, document.tfs().get(position));
                 if (previous != null) {
                     LOGGER.error("Book {} appears twice in the postings of {}", bookId, document.term());
                 }

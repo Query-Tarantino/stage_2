@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * What {@code query} can see (SPEC §7): the {@code PUBLISHED} batches of a generation, their books, and the
@@ -66,12 +67,9 @@ public record Snapshot(
         if (totalBooks == 0) {
             return FiltersSummary.empty();
         }
-        Map<String, Integer> languageCounts = new HashMap<>();
-        for (BookFilter filter : filters) {
-            for (String code : filter.languages()) {
-                languageCounts.merge(code, 1, Integer::sum);
-            }
-        }
+        Map<String, Integer> languageCounts = filters.stream()
+                .flatMap(filter -> filter.languages().stream())
+                .collect(Collectors.groupingBy(code -> code, Collectors.summingInt(code -> 1)));
         List<LanguageFilter> languages = languageCounts.entrySet().stream()
                 .sorted(Comparator.comparingInt(Map.Entry<String, Integer>::getValue).reversed()
                         .thenComparing(Map.Entry::getKey))
