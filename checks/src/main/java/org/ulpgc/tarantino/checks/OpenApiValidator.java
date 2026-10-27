@@ -3,12 +3,15 @@ package org.ulpgc.tarantino.checks;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.ulpgc.tarantino.common.json.TarantinoJson;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +19,7 @@ import java.util.regex.Pattern;
 
 public class OpenApiValidator {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = TarantinoJson.mapper();
 
     private final Map<String, Object> openApi;
 
@@ -94,9 +97,9 @@ public class OpenApiValidator {
             return;
         }
         Map<String, Object> declaredHeaders = (Map<String, Object>) responseDef.get("headers");
-        for (Map.Entry<String, Object> entry : declaredHeaders.entrySet()) {
-            String headerName = entry.getKey();
-            Map<String, Object> headerDef = resolveRef((Map<String, Object>) entry.getValue());
+        for (Map.Entry<String, Object> headerEntry : declaredHeaders.entrySet()) {
+            String headerName = headerEntry.getKey();
+            Map<String, Object> headerDef = resolveRef((Map<String, Object>) headerEntry.getValue());
             List<String> values = findHeader(headers, headerName);
             if (values == null || values.isEmpty()) {
                 throw new AssertionError("Missing required header " + headerName + " on " + method + " " + template);
@@ -122,9 +125,9 @@ public class OpenApiValidator {
     }
 
     private static List<String> findHeader(Map<String, List<String>> headers, String name) {
-        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-            if (entry.getKey().equalsIgnoreCase(name)) {
-                return entry.getValue();
+        for (Map.Entry<String, List<String>> headerEntry : headers.entrySet()) {
+            if (headerEntry.getKey().equalsIgnoreCase(name)) {
+                return headerEntry.getValue();
             }
         }
         return null;
@@ -156,8 +159,8 @@ public class OpenApiValidator {
         try {
             JsonNode json = MAPPER.readTree(responseBody);
             validateJsonAgainstSchema(json, schema, "");
-        } catch (JsonProcessingException e) {
-            throw new AssertionError("Response body is not valid JSON: " + responseBody, e);
+        } catch (JsonProcessingException exception) {
+            throw new AssertionError("Response body is not valid JSON: " + responseBody, exception);
         }
     }
 
@@ -165,16 +168,38 @@ public class OpenApiValidator {
     private void validateJsonAgainstSchema(JsonNode node, Map<String, Object> schema, String path) {
         schema = resolveRef(schema);
         if (schema.containsKey("allOf")) {
-            for (Object sub : (List<Object>) schema.get("allOf")) {
-                validateJsonAgainstSchema(node, (Map<String, Object>) sub, path);
+            Map<String, Object> merged = new HashMap<>();
+            Map<String, Object> mergedProperties = new HashMap<>();
+            List<String> mergedRequired = new ArrayList<>();
+            boolean additionalPropertiesFalse = false;
+            for (Object subObject : (List<Object>) schema.get("allOf")) {
+                Map<String, Object> subSchema = resolveRef((Map<String, Object>) subObject);
+                if (subSchema.containsKey("properties")) {
+                    mergedProperties.putAll((Map<String, Object>) subSchema.get("properties"));
+                }
+                if (subSchema.containsKey("required")) {
+                    mergedRequired.addAll((List<String>) subSchema.get("required"));
+                }
+                if (Boolean.FALSE.equals(subSchema.get("additionalProperties"))) {
+                    additionalPropertiesFalse = true;
+                }
             }
+            merged.put("type", "object");
+            merged.put("properties", mergedProperties);
+            if (!mergedRequired.isEmpty()) {
+                merged.put("required", mergedRequired);
+            }
+            if (additionalPropertiesFalse || Boolean.FALSE.equals(schema.get("additionalProperties"))) {
+                merged.put("additionalProperties", false);
+            }
+            validateTypeAndConstraints(node, merged, path);
             return;
         }
         if (schema.containsKey("oneOf")) {
             boolean matched = false;
-            for (Object sub : (List<Object>) schema.get("oneOf")) {
+            for (Object subObject : (List<Object>) schema.get("oneOf")) {
                 try {
-                    validateJsonAgainstSchema(node, (Map<String, Object>) sub, path);
+                    validateJsonAgainstSchema(node, (Map<String, Object>) subObject, path);
                     matched = true;
                     break;
                 } catch (AssertionError ignored) {
@@ -194,7 +219,7 @@ public class OpenApiValidator {
         if (typeObj instanceof String type) {
             validateSingleType(node, type, schema, path);
         } else if (typeObj instanceof List<?> types) {
-            boolean matched = types.stream().anyMatch(t -> isTypeOf(node, String.valueOf(t)));
+            boolean matched = types.stream().anyMatch(expectedType -> isTypeOf(node, String.valueOf(expectedType)));
             if (!matched) {
                 throw new AssertionError("Node at " + path + " expected one of " + types + " but was " + node);
             }
@@ -203,6 +228,36 @@ public class OpenApiValidator {
             List<String> values = ((List<?>) schema.get("enum")).stream().map(String::valueOf).toList();
             if (!values.contains(node.asText())) {
                 throw new AssertionError("Node at " + path + " expected enum in " + values + " but was " + node.asText());
+            }
+        }
+        if (schema.containsKey("minimum") && node.isNumber()) {
+            double minimum = ((Number) schema.get("minimum")).doubleValue();
+            if (node.asDouble() < minimum) {
+                throw new AssertionError("Value " + node.asDouble() + " at " + path + " is less than minimum " + minimum);
+            }
+        }
+        if (schema.containsKey("maximum") && node.isNumber()) {
+            double maximum = ((Number) schema.get("maximum")).doubleValue();
+            if (node.asDouble() > maximum) {
+                throw new AssertionError("Value " + node.asDouble() + " at " + path + " is greater than maximum " + maximum);
+            }
+        }
+        if (schema.containsKey("minItems") && node.isArray()) {
+            int minItems = ((Number) schema.get("minItems")).intValue();
+            if (node.size() < minItems) {
+                throw new AssertionError("Array at " + path + " size " + node.size() + " is less than minItems " + minItems);
+            }
+        }
+        if (schema.containsKey("maxItems") && node.isArray()) {
+            int maxItems = ((Number) schema.get("maxItems")).intValue();
+            if (node.size() > maxItems) {
+                throw new AssertionError("Array at " + path + " size " + node.size() + " is greater than maxItems " + maxItems);
+            }
+        }
+        if (schema.containsKey("pattern") && node.isTextual()) {
+            String pattern = String.valueOf(schema.get("pattern"));
+            if (!Pattern.compile(pattern).matcher(node.asText()).find()) {
+                throw new AssertionError("Value '" + node.asText() + "' at " + path + " does not match pattern " + pattern);
             }
         }
     }
@@ -233,10 +288,19 @@ public class OpenApiValidator {
                 }
             }
         }
+        if ("object".equals(type) && Boolean.FALSE.equals(schema.get("additionalProperties"))) {
+            Map<String, Object> properties = (Map<String, Object>) schema.getOrDefault("properties", Map.of());
+            for (Iterator<String> fieldNames = node.fieldNames(); fieldNames.hasNext(); ) {
+                String fieldName = fieldNames.next();
+                if (!properties.containsKey(fieldName)) {
+                    throw new AssertionError("Undeclared field '" + fieldName + "' at " + path + " (additionalProperties: false)");
+                }
+            }
+        }
         if ("object".equals(type) && schema.containsKey("properties")) {
             Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
-            for (Iterator<Map.Entry<String, JsonNode>> it = node.fields(); it.hasNext(); ) {
-                Map.Entry<String, JsonNode> field = it.next();
+            for (Iterator<Map.Entry<String, JsonNode>> fields = node.fields(); fields.hasNext(); ) {
+                Map.Entry<String, JsonNode> field = fields.next();
                 if (properties.containsKey(field.getKey())) {
                     validateJsonAgainstSchema(field.getValue(), (Map<String, Object>) properties.get(field.getKey()), path + "." + field.getKey());
                 }
@@ -244,8 +308,8 @@ public class OpenApiValidator {
         }
         if ("array".equals(type) && schema.containsKey("items")) {
             Map<String, Object> itemSchema = (Map<String, Object>) schema.get("items");
-            for (int i = 0; i < node.size(); i++) {
-                validateJsonAgainstSchema(node.get(i), itemSchema, path + "[" + i + "]");
+            for (int index = 0; index < node.size(); index++) {
+                validateJsonAgainstSchema(node.get(index), itemSchema, path + "[" + index + "]");
             }
         }
     }
@@ -266,7 +330,6 @@ public class OpenApiValidator {
         return target;
     }
 
-    @SuppressWarnings("unchecked")
     private static Map<String, Object> section(Map<String, Object> root, String name) {
         return (Map<String, Object>) root.get(name);
     }
