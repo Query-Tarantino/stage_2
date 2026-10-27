@@ -90,14 +90,15 @@ public class SummaryStats {
             String config = args.length > 1 ? args[1] : "default";
             String sanitizedConfig = config.replaceAll("[^a-zA-Z0-9_=-]", "_");
             Path specificCsv = runDir.resolve("load").resolve(sanitizedConfig + ".csv");
-            Path requestsCsv = args.length > 2
+            Path requestsCsv = args.length > 2 && !args[2].isBlank()
                     ? Paths.get(args[2])
                     : (Files.exists(specificCsv) ? specificCsv : runDir.resolve("load/requests.csv"));
+            String metricName = args.length > 3 && !args[3].isBlank() ? args[3] : "search_latency";
             Path summaryCsv = runDir.resolve("summary.csv");
 
             List<Long> latencies = readLatencies(requestsCsv);
             Metrics metrics = calculate(latencies);
-            appendToSummary(summaryCsv, "search_latency", config, metrics, "us");
+            appendToSummary(summaryCsv, metricName, config, metrics, "us");
         } catch (Exception exception) {
             exception.printStackTrace();
             System.exit(1);

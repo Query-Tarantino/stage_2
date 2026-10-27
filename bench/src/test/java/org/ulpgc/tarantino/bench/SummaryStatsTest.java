@@ -40,4 +40,20 @@ class SummaryStatsTest {
         assertEquals("metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit", lines.getFirst());
         assertTrue(lines.get(1).startsWith("search_latency,\"clients=4\",150.00,12.00,7.50,148,170,180,us"));
     }
+
+    @Test
+    void shouldExecuteMainWithCustomMetricName(@TempDir Path tempDir) throws IOException {
+        Path loadDir = tempDir.resolve("load");
+        Files.createDirectories(loadDir);
+        Path requestsCsv = loadDir.resolve("requests.csv");
+        Files.writeString(requestsCsv, "instant,path,status,latency_us\n2026-10-27T12:00:00Z,/search,200,12345\n");
+
+        SummaryStats.main(new String[]{tempDir.toString(), "series=clients,clients=32", requestsCsv.toString(), "custom_metric"});
+
+        Path summaryCsv = tempDir.resolve("summary.csv");
+        assertTrue(Files.exists(summaryCsv));
+        List<String> lines = Files.readAllLines(summaryCsv);
+        assertEquals(2, lines.size());
+        assertTrue(lines.get(1).startsWith("custom_metric,\"series=clients,clients=32\",12345.00,0.00,0.00,12345,12345,12345,us"));
+    }
 }
