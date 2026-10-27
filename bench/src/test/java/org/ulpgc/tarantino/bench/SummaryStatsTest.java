@@ -31,8 +31,8 @@ class SummaryStatsTest {
     @Test
     void shouldAppendSummaryCsv(@TempDir Path tempDir) throws IOException {
         Path summaryCsv = tempDir.resolve("summary.csv");
-        SummaryStats.Metrics m = new SummaryStats.Metrics(10, 150.0, 12.0, 7.5, 148, 170, 180);
-        SummaryStats.appendToSummary(summaryCsv, "search_latency", "clients=4", m, "us");
+        SummaryStats.Metrics metrics = new SummaryStats.Metrics(10, 150.0, 12.0, 7.5, 148, 170, 180);
+        SummaryStats.appendToSummary(summaryCsv, "search_latency", "clients=4", metrics, "us");
 
         assertTrue(Files.exists(summaryCsv));
         List<String> lines = Files.readAllLines(summaryCsv);

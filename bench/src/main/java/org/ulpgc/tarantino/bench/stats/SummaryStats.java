@@ -30,35 +30,35 @@ public class SummaryStats {
         }
         List<Long> sorted = new ArrayList<>(values);
         Collections.sort(sorted);
-        int n = sorted.size();
+        int count = sorted.size();
 
         double sum = 0.0;
-        for (long v : sorted) {
-            sum += v;
+        for (long value : sorted) {
+            sum += value;
         }
-        double mean = sum / n;
+        double mean = sum / count;
 
         double sumSq = 0.0;
-        for (long v : sorted) {
-            double diff = v - mean;
-            sumSq += diff * diff;
+        for (long value : sorted) {
+            double difference = value - mean;
+            sumSq += difference * difference;
         }
-        double stdDev = n > 1 ? Math.sqrt(sumSq / (n - 1)) : 0.0;
-        double ci95 = n > 1 ? 1.96 * (stdDev / Math.sqrt(n)) : 0.0;
+        double stdDev = count > 1 ? Math.sqrt(sumSq / (count - 1)) : 0.0;
+        double ci95 = count > 1 ? 1.96 * (stdDev / Math.sqrt(count)) : 0.0;
 
         long p50 = percentile(sorted, 50);
         long p95 = percentile(sorted, 95);
         long p99 = percentile(sorted, 99);
 
-        return new Metrics(n, mean, stdDev, ci95, p50, p95, p99);
+        return new Metrics(count, mean, stdDev, ci95, p50, p95, p99);
     }
 
-    private static long percentile(List<Long> sorted, double pct) {
-        int index = (int) Math.ceil((pct / 100.0) * sorted.size()) - 1;
+    private static long percentile(List<Long> sorted, double percentage) {
+        int index = (int) Math.ceil((percentage / 100.0) * sorted.size()) - 1;
         return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
     }
 
-    public static void appendToSummary(Path summaryCsv, String metric, String configuration, Metrics m, String unit) throws IOException {
+    public static void appendToSummary(Path summaryCsv, String metric, String configuration, Metrics metrics, String unit) throws IOException {
         boolean exists = Files.exists(summaryCsv);
         try (BufferedWriter writer = Files.newBufferedWriter(
                 summaryCsv,
@@ -69,7 +69,7 @@ public class SummaryStats {
                 writer.write("metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit\n");
             }
             String line = String.format(Locale.ROOT, "%s,\"%s\",%.2f,%.2f,%.2f,%d,%d,%d,%s\n",
-                    metric, configuration, m.mean(), m.stdDev(), m.ci95(), m.p50(), m.p95(), m.p99(), unit);
+                    metric, configuration, metrics.mean(), metrics.stdDev(), metrics.ci95(), metrics.p50(), metrics.p95(), metrics.p99(), unit);
             writer.write(line);
         }
     }
@@ -93,14 +93,18 @@ public class SummaryStats {
         try {
             Path runDir = Paths.get(args.length > 0 ? args[0] : "benchmarks/runs/latest");
             String config = args.length > 1 ? args[1] : "default";
-            Path requestsCsv = runDir.resolve("load/requests.csv");
+            String sanitizedConfig = config.replaceAll("[^a-zA-Z0-9_=-]", "_");
+            Path specificCsv = runDir.resolve("load").resolve(sanitizedConfig + ".csv");
+            Path requestsCsv = args.length > 2
+                    ? Paths.get(args[2])
+                    : (Files.exists(specificCsv) ? specificCsv : runDir.resolve("load/requests.csv"));
             Path summaryCsv = runDir.resolve("summary.csv");
 
             List<Long> latencies = readLatencies(requestsCsv);
             Metrics metrics = calculate(latencies);
             appendToSummary(summaryCsv, "search_latency", config, metrics, "us");
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception exception) {
+            exception.printStackTrace();
             System.exit(1);
         }
     }
