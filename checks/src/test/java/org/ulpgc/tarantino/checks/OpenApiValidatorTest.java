@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +57,105 @@ class OpenApiValidatorTest {
                 """;
         Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
         assertDoesNotThrow(() -> validator.validateResponse("GET", "/search?q=pride", 200, headers, body));
+    }
+
+    @Test
+    void failsOnAdditionalProperties() {
+        String body = """
+                {
+                  "query": "pride",
+                  "filters": {},
+                  "total": 1,
+                  "offset": 0,
+                  "limit": 20,
+                  "results": [],
+                  "unexpected_extra_field": true
+                }
+                """;
+        Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
+        assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/search?q=pride", 200, headers, body));
+    }
+
+    @Test
+    void failsOnMinimumViolation() {
+        String body = """
+                {
+                  "query": "pride",
+                  "filters": {},
+                  "total": 1,
+                  "offset": -1,
+                  "limit": 20,
+                  "results": []
+                }
+                """;
+        Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
+        assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/search?q=pride", 200, headers, body));
+    }
+
+    @Test
+    void failsOnMaximumViolation() {
+        String body = """
+                {
+                  "query": "pride",
+                  "filters": {},
+                  "total": 1,
+                  "offset": 0,
+                  "limit": 101,
+                  "results": []
+                }
+                """;
+        Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
+        assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/search?q=pride", 200, headers, body));
+    }
+
+    @Test
+    void failsOnMinItemsViolation() {
+        String body = """
+                {
+                  "status": "DOWN",
+                  "down": []
+                }
+                """;
+        Map<String, List<String>> headers = Map.of(
+                "Content-Type", List.of("application/json"),
+                "Retry-After", List.of("5")
+        );
+        assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/health", 503, headers, body));
+    }
+
+    @Test
+    void failsOnMaxItemsViolation() {
+        List<String> items = new ArrayList<>();
+        for (int index = 0; index < 101; index++) {
+            items.add("{\"book_id\": 1, \"title\": null, \"author\": null, \"language\": null, \"year\": null}");
+        }
+        String body = "{\"query\":\"q\",\"filters\":{},\"total\":101,\"offset\":0,\"limit\":100,\"results\":[" + String.join(",", items) + "]}";
+        Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
+        assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/search?q=q", 200, headers, body));
+    }
+
+    @Test
+    void failsOnPatternMismatch() {
+        String body = """
+                {
+                  "query": "pride",
+                  "filters": {},
+                  "total": 1,
+                  "offset": 0,
+                  "limit": 20,
+                  "results": [
+                    {
+                      "book_id": 1342,
+                      "title": "Pride and Prejudice",
+                      "author": "Jane Austen",
+                      "language": "english",
+                      "year": 1998
+                    }
+                  ]
+                }
+                """;
+        Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
+        assertThrows(AssertionError.class, () -> validator.validateResponse("GET", "/search?q=pride", 200, headers, body));
     }
 
     @Test
