@@ -62,6 +62,7 @@ services:
       TARANTINO_DATALAKE: /data/datalake
       TARANTINO_WORKLOAD: /app/workload
       TARANTINO_INDEX_BATCH: ${TARANTINO_INDEX_BATCH:-100}
+      TARANTINO_CRASH_AT: ${INDEXER_CRASH_AT:-}
     volumes:
       - datalake:/data/datalake
       - ./workload:/app/workload:ro
