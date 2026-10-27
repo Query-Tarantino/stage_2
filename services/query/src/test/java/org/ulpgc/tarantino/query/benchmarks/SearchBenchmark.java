@@ -10,8 +10,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.results.RunResult;
-import org.openjdk.jmh.results.format.ResultFormatFactory;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
@@ -118,7 +116,6 @@ public class SearchBenchmark {
         File jmhDir = Paths.get(runDir, "jmh").toFile();
         jmhDir.mkdirs();
         File jsonResult = new File(jmhDir, "query.json");
-        File csvResult = new File(jmhDir, "query.csv");
 
         Options options = new OptionsBuilder()
                 .include(SearchBenchmark.class.getSimpleName())
@@ -130,7 +127,6 @@ public class SearchBenchmark {
                 .result(jsonResult.getAbsolutePath())
                 .build();
 
-        Collection<RunResult> results = new Runner(options).run();
-        ResultFormatFactory.getInstance(ResultFormatType.CSV, csvResult.getAbsolutePath()).writeOut(results);
+        new Runner(options).run();
     }
 }

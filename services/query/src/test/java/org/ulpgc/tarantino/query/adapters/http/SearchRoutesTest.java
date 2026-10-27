@@ -173,6 +173,19 @@ class SearchRoutesTest {
         assertEquals("*", response.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
     }
 
+    @Test
+    void handlesOptionsPreflight() throws IOException, InterruptedException {
+        start();
+        HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + app.port() + "/search"))
+                .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        assertEquals("*", response.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
+        assertEquals("GET, OPTIONS", response.headers().firstValue("Access-Control-Allow-Methods").orElseThrow());
+        assertEquals("*", response.headers().firstValue("Access-Control-Allow-Headers").orElseThrow());
+    }
+
     private void start() throws IOException {
         Tokenizer tokenizer = new Tokenizer(Set.of());
         SearchCommand search = new SearchCommand(

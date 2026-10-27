@@ -50,6 +50,18 @@ public class SearchRoutes {
         app.get("/search", this::search);
         app.get("/books/{book_id}", this::book);
         app.get("/search/filters", this::filters);
+        app.options("/search", this::options);
+        app.options("/books/{book_id}", this::options);
+        app.options("/search/filters", this::options);
+    }
+
+    private void options(Context context) {
+        if (corsOrigin != null && !corsOrigin.isBlank()) {
+            context.header("Access-Control-Allow-Origin", corsOrigin);
+            context.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+            context.header("Access-Control-Allow-Headers", "*");
+        }
+        context.status(200);
     }
 
     private void search(Context context) {
