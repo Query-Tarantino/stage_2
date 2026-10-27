@@ -56,8 +56,23 @@ class SearchLoadGeneratorTest {
     }
 
     @Test
+    void shouldPreserveConfigurationCsv(@TempDir Path tempDir) throws IOException, InterruptedException {
+        RunContext context = RunContext.of("test-bench", "abcdef1", tempDir);
+        List<String> queries = List.of("love", "night");
+        SearchLoadGenerator generator = new SearchLoadGenerator("http://localhost:" + port, queries, context);
+        generator.run(2, 4, "clients_4");
+
+        Path configCsv = context.loadDirectory().resolve("clients_4.csv");
+        Path aggregateCsv = context.loadDirectory().resolve("requests.csv");
+        assertTrue(Files.exists(configCsv));
+        assertTrue(Files.exists(aggregateCsv));
+        assertEquals(5, Files.readAllLines(configCsv).size());
+        assertEquals(5, Files.readAllLines(aggregateCsv).size());
+    }
+
+    @Test
     void shouldExtractQueriesFromLines() {
         List<String> queries = List.of("frequent: love", "rare: pyromaniac", "simple");
-        assertEquals("love", queries.stream().map(q -> q.substring(q.indexOf(':') + 1).trim()).toList().getFirst());
+        assertEquals("love", queries.stream().map(query -> query.substring(query.indexOf(':') + 1).trim()).toList().getFirst());
     }
 }

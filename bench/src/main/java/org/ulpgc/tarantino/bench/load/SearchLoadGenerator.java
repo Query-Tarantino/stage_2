@@ -15,13 +15,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SearchLoadGenerator {
 
@@ -43,34 +43,55 @@ public class SearchLoadGenerator {
                 .map(String::trim)
                 .filter(line -> !line.isEmpty() && !line.startsWith("#"))
                 .map(SearchLoadGenerator::extractQuery)
-                .filter(q -> !q.isEmpty())
+                .filter(query -> !query.isEmpty())
                 .toList();
     }
 
     private static String extractQuery(String line) {
-        int colon = line.indexOf(':');
-        return colon >= 0 ? line.substring(colon + 1).trim() : line.trim();
+        int colonIndex = line.indexOf(':');
+        return colonIndex >= 0 ? line.substring(colonIndex + 1).trim() : line.trim();
     }
 
     public void run(int concurrency, int totalRequests) throws IOException, InterruptedException {
-        Path csvFile = runContext.loadDirectory().resolve("requests.csv");
-        LOGGER.info("Starting load generator: {} requests across {} threads -> {}", totalRequests, concurrency, csvFile);
+        run(concurrency, totalRequests, null);
+    }
+
+    public void run(int concurrency, int totalRequests, String configName) throws IOException, InterruptedException {
+        Path loadDir = runContext.loadDirectory();
+        Path aggregateFile = loadDir.resolve("requests.csv");
+        boolean aggregateExists = Files.exists(aggregateFile);
+        Path configFile = null;
+        if (configName != null && !configName.isBlank()) {
+            String sanitizedConfig = configName.replaceAll("[^a-zA-Z0-9_=-]", "_");
+            configFile = loadDir.resolve(sanitizedConfig + ".csv");
+        }
+
+        LOGGER.info("Starting load generator: {} requests across {} threads", totalRequests, concurrency);
 
         HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
         ExecutorService executor = Executors.newFixedThreadPool(concurrency);
         CountDownLatch latch = new CountDownLatch(totalRequests);
 
-        try (BufferedWriter writer = Files.newBufferedWriter(csvFile, StandardCharsets.UTF_8)) {
-            writer.write("instant,path,status,latency_us\n");
+        try (BufferedWriter aggregateWriter = Files.newBufferedWriter(
+                aggregateFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+             BufferedWriter configWriter = configFile != null ? Files.newBufferedWriter(
+                     configFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null) {
+
+            if (!aggregateExists) {
+                aggregateWriter.write("instant,path,status,latency_us\n");
+            }
+            if (configWriter != null) {
+                configWriter.write("instant,path,status,latency_us\n");
+            }
             Object writeLock = new Object();
 
-            for (int i = 0; i < totalRequests; i++) {
-                final String query = queries.get(i % queries.size());
+            for (int requestIndex = 0; requestIndex < totalRequests; requestIndex++) {
+                final String query = queries.get(requestIndex % queries.size());
                 executor.submit(() -> {
                     try {
-                        executeRequest(client, query, writer, writeLock);
-                    } catch (Exception e) {
-                        LOGGER.error("Failed request: {}", e.getMessage());
+                        executeRequest(client, query, aggregateWriter, configWriter, writeLock);
+                    } catch (Exception exception) {
+                        LOGGER.error("Failed request: {}", exception.getMessage());
                     } finally {
                         latch.countDown();
                     }
@@ -80,11 +101,15 @@ public class SearchLoadGenerator {
         } finally {
             executor.shutdown();
         }
-        LOGGER.info("Load generator completed: {} requests recorded in {}", totalRequests, csvFile);
+        LOGGER.info("Load generator completed: {} requests recorded", totalRequests);
     }
 
     private void executeRequest(
-            HttpClient client, String query, BufferedWriter writer, Object writeLock) throws IOException, InterruptedException {
+            HttpClient client,
+            String query,
+            BufferedWriter aggregateWriter,
+            BufferedWriter configWriter,
+            Object writeLock) throws IOException, InterruptedException {
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
         String relativePath = "/search?q=" + encoded;
         URI uri = URI.create(baseUrl + relativePath);
@@ -96,14 +121,17 @@ public class SearchLoadGenerator {
         try {
             HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
             status = response.statusCode();
-        } catch (Exception e) {
+        } catch (Exception exception) {
             status = 500;
         }
         long latencyUs = (System.nanoTime() - start) / 1000;
 
         String line = instant + "," + relativePath + "," + status + "," + latencyUs + "\n";
         synchronized (writeLock) {
-            writer.write(line);
+            aggregateWriter.write(line);
+            if (configWriter != null) {
+                configWriter.write(line);
+            }
         }
     }
 
@@ -113,14 +141,15 @@ public class SearchLoadGenerator {
             Path runDir = args.length > 1 ? Paths.get(args[1]) : Paths.get("benchmarks/runs/latest");
             int concurrency = args.length > 2 ? Integer.parseInt(args[2]) : Integer.parseInt(System.getenv().getOrDefault("TARANTINO_CONCURRENCY", "4"));
             int requests = args.length > 3 ? Integer.parseInt(args[3]) : Integer.parseInt(System.getenv().getOrDefault("TARANTINO_BENCH_REQUESTS", "100"));
+            String configName = args.length > 4 ? args[4] : null;
 
             Path queriesFile = findQueriesFile();
             List<String> queries = loadQueries(queriesFile);
             RunContext context = RunContext.fromPath(runDir);
             SearchLoadGenerator generator = new SearchLoadGenerator(baseUrl, queries, context);
-            generator.run(concurrency, requests);
-        } catch (Exception e) {
-            LOGGER.error("Load generator failed: {}", e.getMessage(), e);
+            generator.run(concurrency, requests, configName);
+        } catch (Exception exception) {
+            LOGGER.error("Load generator failed: {}", exception.getMessage(), exception);
             System.exit(1);
         }
     }
