@@ -10,6 +10,7 @@ import org.ulpgc.tarantino.query.adapters.mongo.MongoPostingsReader;
 import org.ulpgc.tarantino.query.adapters.mongo.MongoPublishedBatches;
 import org.ulpgc.tarantino.query.commands.SearchCommand;
 import org.ulpgc.tarantino.query.commands.SnapshotRefresher;
+import org.ulpgc.tarantino.query.ports.MetadataReader;
 
 public final class QueryFactory {
 
@@ -17,13 +18,15 @@ public final class QueryFactory {
     }
 
     public static SnapshotRefresher snapshotRefresher(Connections connections) {
-        return new SnapshotRefresher(new MongoPublishedBatches(connections.database()));
+        return new SnapshotRefresher(new MongoPublishedBatches(connections.database()),
+                new MongoMetadataReader(connections.database()));
     }
 
     public static SearchRoutes searchRoutes(TarantinoConfig config, Connections connections, SnapshotRefresher snapshots) {
-        SearchCommand search = new SearchCommand(new MongoPostingsReader(connections.database()),
-                new MongoMetadataReader(connections.database()), tokenizer(config));
-        return new SearchRoutes(snapshots, search);
+        Tokenizer tokenizer = tokenizer(config);
+        MetadataReader metadata = new MongoMetadataReader(connections.database());
+        SearchCommand search = new SearchCommand(new MongoPostingsReader(connections.database()), metadata, tokenizer);
+        return new SearchRoutes(snapshots, search, metadata, tokenizer, config.corsOrigin());
     }
 
     private static Tokenizer tokenizer(TarantinoConfig config) {
