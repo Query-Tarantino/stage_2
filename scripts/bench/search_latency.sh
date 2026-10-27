@@ -5,9 +5,13 @@ readonly WORKLOAD_DIR="${TARANTINO_WORKLOAD:-workload}"
 readonly BENCHMARKS_DIR="${TARANTINO_BENCHMARKS:-benchmarks}"
 readonly CORPUS_SHA="${WORKLOAD_DIR}/corpus.sha256"
 readonly FRONTEND_URL="${TARANTINO_FRONTEND_URL:-http://localhost:8080}"
-readonly MONGO_URI="${TARANTINO_MONGO_URI:-mongodb://localhost:27017}"
+readonly MONGO_URI="${TARANTINO_MONGO_URI:-mongodb://mongo:27017/tarantino}"
 readonly BENCH_JAR="bench/target/bench-1.0-SNAPSHOT.jar"
 readonly REQUESTS_COUNT="${TARANTINO_BENCH_REQUESTS:-100}"
+
+readonly BASELINE_CLIENTS="${TARANTINO_BASELINE_CLIENTS:-16}"
+readonly BASELINE_THREADS="${TARANTINO_BASELINE_THREADS:-16}"
+readonly BASELINE_REPLICAS="${TARANTINO_BASELINE_REPLICAS:-1}"
 
 readonly CLIENTS_CONFIG="${TARANTINO_CLIENTS_LIST:-1 4 16 32}"
 readonly THREADS_CONFIG="${TARANTINO_THREADS_LIST:-8 16 32}"
@@ -65,33 +69,99 @@ write_manifest() {
   "variables": {
     "TARANTINO_FRONTEND_URL": "${FRONTEND_URL}",
     "TARANTINO_MONGO_URI": "${MONGO_URI}",
-    "clients": "${CLIENTS_CONFIG}",
-    "threads": "${THREADS_CONFIG}",
-    "replicas": "${REPLICAS_CONFIG}"
+    "baseline_clients": "${BASELINE_CLIENTS}",
+    "baseline_threads": "${BASELINE_THREADS}",
+    "baseline_replicas": "${BASELINE_REPLICAS}",
+    "clients_series": "${CLIENTS_CONFIG}",
+    "threads_series": "${THREADS_CONFIG}",
+    "replicas_series": "${REPLICAS_CONFIG}"
   }
 }
 EOF
 }
 
+wait_for_query_ready() {
+    local url="${FRONTEND_URL}/search/filters"
+    local max_attempts=60
+    local attempt=0
+    echo "Waiting for ${url} to answer 200 with total_books > 0..."
+    while (( attempt < max_attempts )); do
+        local response
+        if response=$(curl -sS -f "${url}" 2>/dev/null); then
+            local total_books
+            total_books=$(echo "$response" | grep -o '"total_books":[0-9]*' | cut -d: -f2 || echo 0)
+            if [[ -n "$total_books" && "$total_books" -gt 0 ]]; then
+                echo "Query service is ready: total_books=${total_books}"
+                return 0
+            fi
+        fi
+        sleep 1
+        (( attempt++ ))
+    done
+    echo "Error: Query service did not become ready at ${url} within ${max_attempts} seconds" >&2
+    exit 1
+}
+
 export_explain() {
     local run_dir=$1
     echo "Saving explain plans in ${run_dir}/explain..."
-    java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "${run_dir}/explain" "$MONGO_URI" 1 || true
+    if command -v docker >/dev/null 2>&1 && docker compose ps query 2>/dev/null | grep -q "query"; then
+        docker compose cp "$BENCH_JAR" query:/tmp/bench.jar
+        docker compose exec -T query java -cp "/tmp/bench.jar" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "/tmp/explain" "$MONGO_URI" 1
+        docker compose cp query:/tmp/explain/. "${run_dir}/explain/"
+        docker compose exec -T query rm -rf /tmp/bench.jar /tmp/explain
+    else
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "${run_dir}/explain" "$MONGO_URI" 1
+    fi
 }
 
 measure_latency() {
     local run_dir=$1
+
+    echo "Setting up baseline configuration: replicas=${BASELINE_REPLICAS}, threads=${BASELINE_THREADS}"
+    TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d --scale "query=${BASELINE_REPLICAS}" query
+    wait_for_query_ready
+
+    export_explain "$run_dir"
+
+    echo "=== Series 1: Varying concurrent clients (${CLIENTS_CONFIG}) with threads=${BASELINE_THREADS}, replicas=${BASELINE_REPLICAS} ==="
+    echo "Hypothesis: As concurrent clients increase, throughput scales until concurrency saturation while mean and p95 latency increase due to queuing."
+    for clients in $CLIENTS_CONFIG; do
+        local config_name="clients_${clients}"
+        local config="clients=${clients},threads=${BASELINE_THREADS},replicas=${BASELINE_REPLICAS}"
+        echo "Running load test: ${config}"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$clients" "$REQUESTS_COUNT" "$config_name"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
+    done
+
+    echo "=== Series 2: Varying TARANTINO_HTTP_THREADS (${THREADS_CONFIG}) with clients=${BASELINE_CLIENTS}, replicas=${BASELINE_REPLICAS} ==="
+    echo "Hypothesis: Increasing Javalin HTTP worker threads improves concurrent request handling until CPU core saturation."
+    for threads in $THREADS_CONFIG; do
+        echo "Recreating query with TARANTINO_HTTP_THREADS=${threads}..."
+        TARANTINO_HTTP_THREADS="$threads" docker compose up -d query
+        wait_for_query_ready
+        local config_name="threads_${threads}"
+        local config="clients=${BASELINE_CLIENTS},threads=${threads},replicas=${BASELINE_REPLICAS}"
+        echo "Running load test: ${config}"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$REQUESTS_COUNT" "$config_name"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
+    done
+
+    echo "Restoring baseline threads before series 3..."
+    TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d query
+    wait_for_query_ready
+
+    echo "=== Series 3: Varying query replicas (${REPLICAS_CONFIG}) with clients=${BASELINE_CLIENTS}, threads=${BASELINE_THREADS} ==="
+    echo "Hypothesis: Scaling query replicas behind nginx distributes CPU-bound search operations, decreasing p95 latency under high load."
     for replicas in $REPLICAS_CONFIG; do
         echo "Scaling query service to ${replicas} replicas..."
-        docker compose up -d --scale "query=${replicas}" --no-recreate 2>/dev/null || true
-        for threads in $THREADS_CONFIG; do
-            export TARANTINO_HTTP_THREADS="$threads"
-            for clients in $CLIENTS_CONFIG; do
-                echo "Running load test: replicas=${replicas}, threads=${threads}, clients=${clients}"
-                java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$clients" "$REQUESTS_COUNT"
-                java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "replicas=${replicas},threads=${threads},clients=${clients}"
-            done
-        done
+        TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d --scale "query=${replicas}"
+        wait_for_query_ready
+        local config_name="replicas_${replicas}"
+        local config="clients=${BASELINE_CLIENTS},threads=${BASELINE_THREADS},replicas=${replicas}"
+        echo "Running load test: ${config}"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$REQUESTS_COUNT" "$config_name"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
     done
 }
 
@@ -102,7 +172,6 @@ main() {
     run_dir=$(init_run)
     run_id=$(basename "$run_dir")
     write_manifest "$run_dir" "$run_id"
-    export_explain "$run_dir"
     measure_latency "$run_dir"
     echo "Benchmark completed. Results in ${run_dir}"
 }
