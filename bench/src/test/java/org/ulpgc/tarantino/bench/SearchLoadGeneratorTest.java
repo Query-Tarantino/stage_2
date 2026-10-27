@@ -11,6 +11,7 @@ import org.ulpgc.tarantino.bench.run.RunContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,6 +69,21 @@ class SearchLoadGeneratorTest {
         assertTrue(Files.exists(aggregateCsv));
         assertEquals(5, Files.readAllLines(configCsv).size());
         assertEquals(5, Files.readAllLines(aggregateCsv).size());
+    }
+
+    @Test
+    void shouldRunClosedLoopWithDurations(@TempDir Path tempDir) throws IOException, InterruptedException {
+        RunContext context = RunContext.of("test-bench", "abcdef1", tempDir);
+        List<String> queries = List.of("love", "night");
+        SearchLoadGenerator generator = new SearchLoadGenerator("http://localhost:" + port, queries, context);
+        generator.run(2, Duration.ofMillis(50), Duration.ofMillis(200), "clients_2");
+
+        Path configCsv = context.loadDirectory().resolve("clients_2.csv");
+        Path aggregateCsv = context.loadDirectory().resolve("requests.csv");
+        assertTrue(Files.exists(configCsv));
+        assertTrue(Files.exists(aggregateCsv));
+        assertTrue(Files.readAllLines(configCsv).size() > 1);
+        assertTrue(Files.readAllLines(aggregateCsv).size() > 1);
     }
 
     @Test

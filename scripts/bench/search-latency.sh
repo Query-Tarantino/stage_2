@@ -7,14 +7,13 @@ readonly CORPUS_SHA="${WORKLOAD_DIR}/corpus.sha256"
 readonly FRONTEND_URL="${TARANTINO_FRONTEND_URL:-http://localhost:8080}"
 readonly MONGO_URI="${TARANTINO_MONGO_URI:-mongodb://mongo:27017/tarantino}"
 readonly BENCH_JAR="bench/target/bench-1.0-SNAPSHOT.jar"
-readonly REQUESTS_COUNT="${TARANTINO_BENCH_REQUESTS:-100}"
 
-readonly BASELINE_CLIENTS="${TARANTINO_BASELINE_CLIENTS:-16}"
-readonly BASELINE_THREADS="${TARANTINO_BASELINE_THREADS:-16}"
+readonly BASELINE_CLIENTS="${TARANTINO_BASELINE_CLIENTS:-32}"
+readonly BASELINE_THREADS="${TARANTINO_BASELINE_THREADS:-32}"
 readonly BASELINE_REPLICAS="${TARANTINO_BASELINE_REPLICAS:-1}"
 
-readonly CLIENTS_CONFIG="${TARANTINO_CLIENTS_LIST:-1 4 16 32}"
-readonly THREADS_CONFIG="${TARANTINO_THREADS_LIST:-8 16 32}"
+readonly CLIENTS_CONFIG="${TARANTINO_CLIENTS_LIST:-1 8 32 64}"
+readonly THREADS_CONFIG="${TARANTINO_THREADS_LIST:-8 32 128}"
 readonly REPLICAS_CONFIG="${TARANTINO_REPLICAS_LIST:-1 2 3}"
 
 STATS_PID=""
@@ -185,6 +184,10 @@ run_jmh() {
         -Dexec.mainClass="org.ulpgc.tarantino.query.benchmarks.SearchBenchmark" \
         -Dexec.classpathScope=test \
         -Dexec.args="${run_dir}"
+    if [[ -f "${run_dir}/jmh/query.json" ]]; then
+        echo "Converting JMH JSON to CSV..."
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.jmh.JmhCsvConverter "${run_dir}/jmh/query.json" "${run_dir}/jmh/query.csv"
+    fi
 }
 
 measure_latency() {
@@ -202,7 +205,7 @@ measure_latency() {
         local config_name="clients_${clients}"
         local config="clients=${clients},threads=${BASELINE_THREADS},replicas=${BASELINE_REPLICAS}"
         echo "Running load test: ${config}"
-        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$clients" "$REQUESTS_COUNT" "$config_name"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$clients" "$config_name"
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
     done
 
@@ -215,7 +218,7 @@ measure_latency() {
         local config_name="threads_${threads}"
         local config="clients=${BASELINE_CLIENTS},threads=${threads},replicas=${BASELINE_REPLICAS}"
         echo "Running load test: ${config}"
-        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$REQUESTS_COUNT" "$config_name"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$config_name"
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
     done
 
@@ -232,7 +235,7 @@ measure_latency() {
         local config_name="replicas_${replicas}"
         local config="clients=${BASELINE_CLIENTS},threads=${BASELINE_THREADS},replicas=${replicas}"
         echo "Running load test: ${config}"
-        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$REQUESTS_COUNT" "$config_name"
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.load.SearchLoadGenerator "$FRONTEND_URL" "$run_dir" "$BASELINE_CLIENTS" "$config_name"
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.stats.SummaryStats "$run_dir" "$config" "${run_dir}/load/${config_name}.csv"
     done
 }
