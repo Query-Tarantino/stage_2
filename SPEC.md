@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.2 · October 27, 2026
+Version 1.3 · October 28, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -644,7 +644,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 
 **Tests.** Each conditional write has a test with two claimants at once, with Testcontainers MongoDB and embedded Hazelcast, in the module that owns it. The functional API checks (F4) live in `checks`, run against the running stack and validate every response against `api/openapi.yaml`.
 
-**JMH.** In each service's `src/test/java`, with at least 5 warmup and 10 measurement iterations, a fixed `-Xmx` and JSON output (`-rf json`) in the `jmh/` folder of its run; `bench` converts it to CSV.
+**JMH.** In each service's `src/test/java`, with at least 5 warmup and 10 measurement iterations, three forks, so that the error also covers the differences between JVMs, a fixed `-Xmx` and JSON output (`-rf json`) in the `jmh/` folder of its run; `bench` converts it to CSV. The iterations, forks and heap go in the benchmark's annotations, so every way of launching it keeps them, and each benchmark sets an iteration length that fits how long its operation takes. They run with `exec:exec` and `%classpath`, because JMH cannot fork its JVM from `exec:java`.
 
 **Runs.** Every figure in the report can be traced to a run: the footer of each table and chart carries its `run_id`, and the run keeps the command, the configuration and the raw data.
 
