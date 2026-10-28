@@ -149,30 +149,6 @@ class MongoBookClaimsTest {
         assertEquals(BookStatus.DOWNLOADING.name(), state().getString(MongoFields.STATUS));
     }
 
-    @Test
-    void onlyOneOfTwoRetriesAtOnceRequeuesAFailedBook() throws Exception {
-        MongoBookClaims claims = claims();
-        claims.fail(1342, claimedWithAnOldEnqueuedAt(claims), BookErrorCode.NOT_FOUND);
-
-        List<Boolean> outcomes = TwoAtOnce.call(() -> claims.retry(1342));
-
-        assertEquals(1, outcomes.stream().filter(Boolean::booleanValue).count());
-        Document state = state();
-        assertEquals(BookStatus.QUEUED.name(), state.getString(MongoFields.STATUS));
-        assertEquals(0, state.getInteger(MongoFields.ATTEMPTS));
-        assertTrue(state.containsKey(MongoFields.LAST_ERROR));
-        assertNull(state.get(MongoFields.LAST_ERROR));
-        assertTrue(state.getDate(MongoFields.ENQUEUED_AT).toInstant().isAfter(OLD_ENQUEUED_AT));
-    }
-
-    @Test
-    void doesNotRetryABookThatIsNotFailed() {
-        new BookStates(database()).create(1342);
-
-        assertFalse(claims().retry(1342));
-        assertEquals(BookStatus.QUEUED.name(), state().getString(MongoFields.STATUS));
-    }
-
     private String claimedWithAnOldLeaseUntil(MongoBookClaims claims) {
         new BookStates(database()).create(1342);
         String claimId = claims.claim(1342).orElseThrow();

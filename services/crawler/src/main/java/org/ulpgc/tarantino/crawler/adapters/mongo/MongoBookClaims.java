@@ -35,8 +35,8 @@ import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.set;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.setThenUnset;
 
 /**
- * “Claim a book”, “Renew a book”, “Finish a download”, “Fail a download” and “Retry a {@code FAILED} book” (SPEC §5.1),
- * each a single conditional write.
+ * “Claim a book”, “Renew a book”, “Finish a download” and “Fail a download” (SPEC §5.1), each a single conditional
+ * write.
  */
 public class MongoBookClaims implements BookClaims {
 
@@ -97,17 +97,6 @@ public class MongoBookClaims implements BookClaims {
                 .projection(Projections.include(STATUS));
         return Optional.ofNullable(states.findOneAndUpdate(downloading(bookId, claimId), change, endState))
                 .map(state -> BookStatus.valueOf(state.getString(STATUS)));
-    }
-
-    /** “Retry a {@code FAILED} book”: back to {@code QUEUED} with no attempts; false if the book was not {@code FAILED}. */
-    public boolean retry(int bookId) {
-        Document change = new Document(STATUS, BookStatus.QUEUED.name())
-                .append(ATTEMPTS, 0)
-                .append(LAST_ERROR, null)
-                .append(ENQUEUED_AT, NOW)
-                .append(UPDATED_AT, NOW);
-        Bson failed = Filters.and(Filters.eq(ID, bookId), Filters.eq(STATUS, BookStatus.FAILED.name()));
-        return states.updateOne(failed, set(change)).getMatchedCount() == 1;
     }
 
     private Document queuedOrFailed(BookErrorCode reason) {
