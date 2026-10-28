@@ -13,7 +13,7 @@
     <artifactId>bench</artifactId>
 
     <properties>
-        <exec.mainClass>org.ulpgc.tarantino.bench.load.SearchLoadGenerator</exec.mainClass>
+        <exec.mainClass>org.ulpgc.tarantino.bench.Bench</exec.mainClass>
     </properties>
 
     <dependencies>
