@@ -192,8 +192,11 @@ public class ApiChecker {
         assertPostProblem(operationalUrl + "/index/update/999999", 404, "BOOK_NOT_FOUND", null);
     }
 
+    private record BookStatusCheck(int bookId, String statusUrl) {}
+
     public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
         LOGGER.info("Ensuring all sample books are published");
+        List<BookStatusCheck> pendingChecks = new ArrayList<>();
         for (int bookId : sampleIds) {
             CheckedClient.Response ingestResponse = client.post(operationalUrl + "/ingest/" + bookId, "");
             assertTrue(ingestResponse.status() == 200 || ingestResponse.status() == 202);
@@ -201,13 +204,16 @@ public class ApiChecker {
                 String location = ingestResponse.header("Location");
                 assertTrue(location != null && !location.isBlank());
                 String statusUrl = operationalUrl + (location.startsWith("/") ? location : "/" + location);
-                waitForPublished(bookId, statusUrl);
+                pendingChecks.add(new BookStatusCheck(bookId, statusUrl));
             } else {
                 String bookStatus = ingestResponse.json().get("status").asText();
                 if (!"PUBLISHED".equals(bookStatus)) {
-                    waitForPublished(bookId, operationalUrl + "/ingest/status/" + bookId);
+                    pendingChecks.add(new BookStatusCheck(bookId, operationalUrl + "/ingest/status/" + bookId));
                 }
             }
+        }
+        for (BookStatusCheck pendingCheck : pendingChecks) {
+            waitForPublished(pendingCheck.bookId(), pendingCheck.statusUrl());
         }
         waitForSnapshotRefresh(sampleIds);
     }
@@ -341,6 +347,9 @@ public class ApiChecker {
 
         assertProblem(frontEndUrl + "/books/0", 400, "INVALID_PARAMETER", "book_id");
         assertProblem(frontEndUrl + "/books/-5", 400, "INVALID_PARAMETER", "book_id");
+        assertProblem(frontEndUrl + "/books/01", 400, "INVALID_PARAMETER", "book_id");
+        assertProblem(frontEndUrl + "/books/2147483648", 400, "INVALID_PARAMETER", "book_id");
+        assertProblem(frontEndUrl + "/books/abc", 400, "INVALID_PARAMETER", "book_id");
     }
 
     public void checkFiltersSummary() throws IOException, InterruptedException {
