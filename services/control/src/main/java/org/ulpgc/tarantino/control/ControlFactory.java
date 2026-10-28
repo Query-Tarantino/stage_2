@@ -13,9 +13,11 @@ import org.ulpgc.tarantino.control.adapters.mongo.MongoBatchLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoDownloadLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoIndexingBooks;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoLostMessages;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoOutdatedBooks;
 import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
 import org.ulpgc.tarantino.control.commands.DeleteAbandonedPostingsCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
+import org.ulpgc.tarantino.control.commands.ReindexOutdatedBooksCommand;
 import org.ulpgc.tarantino.control.commands.ReleaseExpiredDownloadsCommand;
 import org.ulpgc.tarantino.control.commands.RequeueLostMessagesCommand;
 import org.ulpgc.tarantino.control.commands.ResolveIndexingBooksCommand;
@@ -47,7 +49,8 @@ public final class ControlFactory {
                 abandonExpiredBatches(connections)::execute,
                 resolveIndexingBooks(connections)::execute,
                 requeueLostMessages(config, connections)::execute,
-                deleteAbandonedPostings(config, connections)::execute), Clock.systemUTC());
+                deleteAbandonedPostings(config, connections)::execute,
+                reindexOutdatedBooks(connections)::execute), Clock.systemUTC());
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
@@ -80,6 +83,11 @@ public final class ControlFactory {
 
     private static DeleteAbandonedPostingsCommand deleteAbandonedPostings(TarantinoConfig config, Connections connections) {
         return new DeleteAbandonedPostingsCommand(new MongoAbandonedBatches(connections.database(), config.gc()));
+    }
+
+    private static ReindexOutdatedBooksCommand reindexOutdatedBooks(Connections connections) {
+        return new ReindexOutdatedBooksCommand(new MongoOutdatedBooks(connections.database()), indexQueue(connections),
+                new TransitionLog(), Clock.systemUTC());
     }
 
     private static DownloadQueue downloadQueue(Connections connections) {
