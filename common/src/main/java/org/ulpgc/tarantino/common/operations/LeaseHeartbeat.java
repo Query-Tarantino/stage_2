@@ -13,9 +13,9 @@ import java.util.function.BooleanSupplier;
  * Renews a lease every {@code TARANTINO_HEARTBEAT_SECONDS} on a thread of its own, with the “Renew” write of SPEC §5.1
  * that each service passes it. Only a renewal that does not match loses the lease; one that throws, as when Mongo does
  * not answer, is retried on the next beat. The job checks {@link #lost()} before each of its writes and closes it
- * when it ends.
+ * when it ends; it sees it as a {@link Lease}.
  */
-public final class LeaseHeartbeat implements AutoCloseable {
+public final class LeaseHeartbeat implements Lease {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LeaseHeartbeat.class);
     private static final String THREAD_NAME = "lease-heartbeat";
@@ -38,7 +38,7 @@ public final class LeaseHeartbeat implements AutoCloseable {
         return heartbeat;
     }
 
-    /** Whether a renewal did not match: the job stops without writing anything else. */
+    @Override
     public boolean lost() {
         return lost;
     }
