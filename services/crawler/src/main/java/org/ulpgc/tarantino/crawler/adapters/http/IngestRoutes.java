@@ -12,26 +12,31 @@ import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.model.ProblemCode;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
+import org.ulpgc.tarantino.crawler.model.book.IngestList;
 import org.ulpgc.tarantino.crawler.ports.BookStateReader;
+import org.ulpgc.tarantino.crawler.ports.DownloadedBooks;
 import org.ulpgc.tarantino.crawler.ports.IngestRequests;
 import org.ulpgc.tarantino.crawler.ports.TaskQueue;
 
 import java.time.Clock;
 
-/** The routes of {@code crawler}, behind nginx's port 8081 (SPEC §6.1 and §6.2). */
+/** The routes of {@code crawler}, behind nginx's port 8081 (SPEC §6.1, §6.2 and §6.5). */
 public class IngestRoutes {
 
     private static final String BOOK_STATUS = "/ingest/status/";
 
     private final BookStateReader states;
     private final IngestRequests requests;
+    private final DownloadedBooks downloadedBooks;
     private final TaskQueue downloadQueue;
     private final TransitionLog log;
     private final Clock clock;
 
-    public IngestRoutes(BookStateReader states, IngestRequests requests, TaskQueue downloadQueue, TransitionLog log, Clock clock) {
+    public IngestRoutes(BookStateReader states, IngestRequests requests, DownloadedBooks downloadedBooks, TaskQueue downloadQueue,
+                        TransitionLog log, Clock clock) {
         this.states = states;
         this.requests = requests;
+        this.downloadedBooks = downloadedBooks;
         this.downloadQueue = downloadQueue;
         this.log = log;
         this.clock = clock;
@@ -40,6 +45,7 @@ public class IngestRoutes {
     public void register(Javalin app) {
         app.post("/ingest/{" + BookIds.PARAMETER + "}", this::ingest);
         app.get(BOOK_STATUS + "{" + BookIds.PARAMETER + "}", this::status);
+        app.get("/ingest/list", context -> context.json(IngestList.of(downloadedBooks.downloaded())));
     }
 
     /**

@@ -50,8 +50,8 @@ class IngestRoutesTest {
     @BeforeEach
     void start() throws IOException {
         TarantinoConfig config = TarantinoConfig.from(Map.of("TARANTINO_PORT", String.valueOf(freePort())), TarantinoService.CRAWLER);
-        IngestRoutes routes = new IngestRoutes(bookId -> Optional.ofNullable(states.get(bookId)), new FakeRequests(), this::enqueue,
-                new TransitionLog(), Clock.fixed(NOW, ZoneOffset.UTC));
+        IngestRoutes routes = new IngestRoutes(bookId -> Optional.ofNullable(states.get(bookId)), new FakeRequests(),
+                () -> List.of(5, 17, 1342), this::enqueue, new TransitionLog(), Clock.fixed(NOW, ZoneOffset.UTC));
         app = TarantinoServer.start(config, List.of(), routes::register);
     }
 
@@ -135,6 +135,14 @@ class IngestRoutesTest {
 
         assertEquals(404, response.statusCode());
         assertTrue(response.body().contains("\"code\":\"BOOK_NOT_FOUND\""));
+    }
+
+    @Test
+    void listsTheDownloadedBooksWithTheirCount() throws IOException, InterruptedException {
+        HttpResponse<String> response = send("GET", "/ingest/list");
+
+        assertEquals(200, response.statusCode());
+        assertEquals("{\"count\":3,\"books\":[5,17,1342]}", response.body());
     }
 
     @ParameterizedTest
