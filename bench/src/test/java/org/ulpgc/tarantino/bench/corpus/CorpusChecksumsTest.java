@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -51,6 +52,15 @@ class CorpusChecksumsTest {
         CorpusChecksums checksums = CorpusChecksums.of(new CorpusCache(cache));
 
         assertEquals(checksums, CorpusChecksums.parse(checksums.render()));
+    }
+
+    @Test
+    void namesTheBooksThatChangedOrThatOnlyOneSideHas() {
+        CorpusChecksums expected = new CorpusChecksums(Map.of(84, SHA256_OF_EMPTY, 1342, SHA256_OF_ABC, 2701, SHA256_OF_ABC));
+        CorpusChecksums cached = new CorpusChecksums(Map.of(84, SHA256_OF_EMPTY, 1342, SHA256_OF_EMPTY, 11, SHA256_OF_ABC));
+
+        assertEquals(List.of(11, 1342, 2701), cached.booksDifferingFrom(expected));
+        assertEquals(List.of(), expected.booksDifferingFrom(expected));
     }
 
     @Test

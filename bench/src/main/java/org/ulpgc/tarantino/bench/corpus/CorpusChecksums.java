@@ -8,8 +8,10 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The id and SHA-256 of each text of the corpus, as {@code workload/corpus.sha256} keeps them (SPEC §9): one
@@ -49,6 +51,15 @@ public record CorpusChecksums(Map<Integer, String> sha256ByBookId) {
 
     public List<Integer> bookIds() {
         return List.copyOf(sha256ByBookId.keySet());
+    }
+
+    /** The books whose text differs from {@code expected} or that only one of the two has, by ascending id. */
+    public List<Integer> booksDifferingFrom(CorpusChecksums expected) {
+        return Stream.concat(sha256ByBookId.keySet().stream(), expected.sha256ByBookId.keySet().stream())
+                .distinct()
+                .filter(bookId -> !Objects.equals(sha256ByBookId.get(bookId), expected.sha256ByBookId.get(bookId)))
+                .sorted()
+                .toList();
     }
 
     private static byte[] bytes(Path text) {
