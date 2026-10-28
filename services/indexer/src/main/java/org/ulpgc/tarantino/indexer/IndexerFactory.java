@@ -19,6 +19,7 @@ import org.ulpgc.tarantino.indexer.adapters.hazelcast.HazelcastIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.http.BookRoutes;
 import org.ulpgc.tarantino.indexer.adapters.http.IndexRoutes;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoBatchStore;
+import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexStatus;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexWriter;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoRebuilds;
 import org.ulpgc.tarantino.indexer.commands.BatchCollector;
@@ -47,7 +48,7 @@ public final class IndexerFactory {
     }
 
     public static Consumer<Javalin> routes(Connections connections) {
-        IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()));
+        IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()), new MongoIndexStatus(connections.database()));
         BookRoutes books = new BookRoutes(new BookStates(connections.database())::state,
                 task -> new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_INDEX).offer(task),
                 Clock.systemUTC());
