@@ -11,6 +11,7 @@ x-tarantino-environment: &tarantino-environment
   TARANTINO_TMP_MAX_AGE_SECONDS: ${TARANTINO_TMP_MAX_AGE_SECONDS:-600}
   TARANTINO_CLEANUP_SECONDS: ${TARANTINO_CLEANUP_SECONDS:-3600}
   TARANTINO_SNAPSHOT_SECONDS: ${TARANTINO_SNAPSHOT_SECONDS:-5}
+  JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xmx512m -XX:+ExitOnOutOfMemoryError}
 
 x-healthcheck-timing: &healthcheck-timing
   interval: 5s
@@ -44,6 +45,7 @@ services:
       TARANTINO_DATALAKE: /data/datalake
       TARANTINO_PARALLEL_DOWNLOADS: ${TARANTINO_PARALLEL_DOWNLOADS:-8}
       TARANTINO_MAX_ATTEMPTS: ${TARANTINO_MAX_ATTEMPTS:-3}
+      TARANTINO_CRASH_AT: ${CRAWLER_CRASH_AT:-}
     volumes:
       - datalake:/data/datalake
     healthcheck:
@@ -61,6 +63,7 @@ services:
       TARANTINO_DATALAKE: /data/datalake
       TARANTINO_WORKLOAD: /app/workload
       TARANTINO_INDEX_BATCH: ${TARANTINO_INDEX_BATCH:-100}
+      TARANTINO_CRASH_AT: ${INDEXER_CRASH_AT:-}
     volumes:
       - datalake:/data/datalake
       - ./workload:/app/workload:ro
@@ -77,6 +80,7 @@ services:
     environment:
       <<: *tarantino-environment
       TARANTINO_WORKLOAD: /app/workload
+      TARANTINO_CORS_ORIGIN: ${TARANTINO_CORS_ORIGIN:-*}
     volumes:
       - ./workload:/app/workload:ro
     healthcheck:
@@ -110,6 +114,18 @@ services:
     ports:
       - "8080:8080"
       - "8081:8081"
+    restart: "no"
+
+  bench:
+    image: eclipse-temurin:25-jre
+    profiles: ["tools"]
+    entrypoint: ["java", "-jar", "/app/bench/bench-1.0-SNAPSHOT.jar"]
+    environment:
+      <<: *tarantino-environment
+    volumes:
+      - ./bench/target:/app/bench:ro
+      - ./workload:/app/workload:ro
+      - ./benchmarks/runs:/app/benchmarks/runs
     restart: "no"
 
 volumes:

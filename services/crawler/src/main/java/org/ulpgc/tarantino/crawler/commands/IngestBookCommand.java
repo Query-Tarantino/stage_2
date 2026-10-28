@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.crawler.commands;
 
 import org.ulpgc.tarantino.common.model.BookErrorCode;
+import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.crawler.model.book.GutenbergText;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
@@ -11,7 +12,7 @@ import java.util.Optional;
 
 /**
  * Ingests a book: looks it up in the datalake and, if it is not there, downloads, splits and stores it. A book is
- * in the datalake once its body exists (SPEC §4.6).
+ * in the datalake once its body exists (SPEC §4.6). Nothing is written once the book's lease is lost (SPEC §5.1).
  */
 public class IngestBookCommand {
 
@@ -23,8 +24,14 @@ public class IngestBookCommand {
         this.datalake = datalake;
     }
 
-    public IngestResult execute(int bookId) {
-        return stored(bookId).orElseGet(() -> store(download(bookId)));
+    /** The ingested book, or empty if the lease was lost before writing it to the datalake. */
+    public Optional<IngestResult> execute(int bookId, Lease lease) {
+        Optional<IngestResult> stored = stored(bookId);
+        if (stored.isPresent()) {
+            return stored;
+        }
+        DownloadResult downloaded = download(bookId);
+        return lease.lost() ? Optional.empty() : Optional.of(store(downloaded));
     }
 
     /** The book, if the datalake already holds it: it is not downloaded again. */
