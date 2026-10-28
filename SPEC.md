@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.3 · October 28, 2026
+Version 1.4 · October 28, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -112,7 +112,7 @@ stage_2/
 - Pinned image versions, never `latest`: `mongo:7.0`, as in Stage 1; `hazelcast/hazelcast` with `HZ_CLUSTERNAME=tarantino`; `nginx`; and for the four services one shared `Dockerfile` on `eclipse-temurin:25-jre`, which copies the service jar and adds `curl` for the healthcheck, because the image does not ship it.
 - Addresses: `TARANTINO_MONGO_URI=mongodb://mongo:27017/tarantino` and `TARANTINO_HAZELCAST=hazelcast:5701`.
 - Volumes: the `datalake` volume at `/data/datalake` in `crawler`, `indexer` and `control`, with `TARANTINO_DATALAKE=/data/datalake`; `./workload`, read-only, at `/app/workload` in `indexer`, `query` and `control`, with `TARANTINO_WORKLOAD=/app/workload`. When the local mirror is used, `docker-compose.mirror.yml` mounts `benchmarks/mirror/` read-only in `crawler` and `control` and points `TARANTINO_MIRROR` to that path; without it, `crawler` downloads over HTTP.
-- The timing variables (§4.7) are defined once in a shared block and reach every service with the same values. The same block sets `JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xmx512m}`, so every JVM has a fixed heap, which `manifest.json` records (§9).
+- The timing variables (§4.7) are defined once in a shared block and reach every service with the same values. The same block sets `JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xmx512m -XX:+ExitOnOutOfMemoryError}`, so every JVM has a fixed heap, which `manifest.json` records (§9), and a JVM that runs out of memory exits. Without that flag an `OutOfMemoryError` only kills the thread that threw it: an indexer lost its batch loop that way while `/health` kept answering `UP`.
 - `crawler` gets `TARANTINO_CRASH_AT: ${CRAWLER_CRASH_AT:-}` and `indexer` gets `TARANTINO_CRASH_AT: ${INDEXER_CRASH_AT:-}`, outside the shared block, because the point must belong to the service that starts (§4.7). A recovery script sets one with `CRAWLER_CRASH_AT=after-claim docker compose up -d --scale crawler=N crawler` and removes it by running the same command without the variable. It always passes `--scale`, or Compose goes back to one replica.
 - `query` gets `TARANTINO_CORS_ORIGIN: ${TARANTINO_CORS_ORIGIN:-*}`.
 - `bench` runs `bench/target/bench-1.0-SNAPSHOT.jar` on `eclipse-temurin:25-jre`, with `./workload` read-only at `/app/workload` and `./benchmarks/runs` at `/app/benchmarks/runs`. It reaches Mongo through `TARANTINO_MONGO_URI` and nginx at `http://nginx:8080` and `http://nginx:8081`. Scripts launch it with `docker compose run --rm bench <command>`.
@@ -611,7 +611,7 @@ Each row is an F3 test with its script in `scripts/recovery/<nn>-<row>.sh` (Reco
 - `indexer`, after “Open a batch” and before “Claim its books”: as `after-dequeue`, plus an empty batch that `control` abandons with no books to release.
 - `indexer`, after “Claim its books” and before the first postings `bulkWrite`: as `during-batch-write`.
 
-If Mongo or Hazelcast fail halfway through a job outside these tests, the service does the same as after a crash: it drops the job without marking anything, the leases expire and `control` redoes it.
+If Mongo or Hazelcast fail halfway through a job outside these tests, the service does the same as after a crash: it drops the job without marking anything, the leases expire and `control` redoes it. A JVM that runs out of memory exits (§2.4), so it also recovers like a crash at that point.
 
 **Recovery scripts.** There are 14, one per row and service: the `after-dequeue` row is split into `crawler` and `indexer`. Scripts 09 to 12 seed `TARANTINO_CANDIDATES=mirror`, so there is work in flight when the failure arrives; the rest seed `sample_ids.txt`.
 
