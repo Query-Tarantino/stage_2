@@ -6,6 +6,7 @@ import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
+import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.crawler.ports.BookClaims;
@@ -13,13 +14,16 @@ import org.ulpgc.tarantino.crawler.ports.TaskQueue;
 
 import java.time.Clock;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * One message of {@code books-to-download} (SPEC §5.1): it claims the book, ingests it and, once the download is
  * finished, enqueues it in {@code books-to-index}. A failed download goes back to {@code books-to-download} only if
  * “Fail a download” leaves it {@code QUEUED}. A message whose claim fails is a duplicate or stale and is dropped.
- * It passes the crawler's crash points of SPEC §8 on the way.
+ * While it holds the book, a heartbeat renews its lease with “Renew a book”. It passes the crawler's crash points of
+ * SPEC §8 on the way.
  */
 public class DownloadBookCommand {
 
@@ -32,9 +36,11 @@ public class DownloadBookCommand {
     private final TransitionLog log;
     private final Clock clock;
     private final Consumer<CrashPoint> crashPoints;
+    private final Function<BooleanSupplier, Lease> heartbeats;
 
     public DownloadBookCommand(BookClaims claims, IngestBookCommand ingest, TaskQueue downloadQueue, TaskQueue indexQueue,
-                               TransitionLog log, Clock clock, Consumer<CrashPoint> crashPoints) {
+                               TransitionLog log, Clock clock, Consumer<CrashPoint> crashPoints,
+                               Function<BooleanSupplier, Lease> heartbeats) {
         this.claims = claims;
         this.ingest = ingest;
         this.downloadQueue = downloadQueue;
@@ -42,6 +48,7 @@ public class DownloadBookCommand {
         this.log = log;
         this.clock = clock;
         this.crashPoints = crashPoints;
+        this.heartbeats = heartbeats;
     }
 
     public void execute(BookTask task) {
@@ -51,13 +58,19 @@ public class DownloadBookCommand {
         }
         log.write(Transition.book(task.bookId(), BookStatus.QUEUED, BookStatus.DOWNLOADING).fromMessageEnqueuedAt(task.enqueuedAt()));
         crashPoints.accept(CrashPoint.AFTER_CLAIM);
-        IngestResult result = ingest.execute(task.bookId());
+        try (Lease lease = heartbeats.apply(() -> claims.renew(task.bookId(), claim.get()))) {
+            download(task.bookId(), claim.get());
+        }
+    }
+
+    private void download(int bookId, String claimId) {
+        IngestResult result = ingest.execute(bookId);
         if (!result.succeeded()) {
-            fail(task.bookId(), claim.get(), result.failure());
+            fail(bookId, claimId, result.failure());
             return;
         }
         crashPoints.accept(CrashPoint.AFTER_DATALAKE_WRITE);
-        finish(task.bookId(), claim.get());
+        finish(bookId, claimId);
     }
 
     private void finish(int bookId, String claimId) {

@@ -61,7 +61,7 @@ class DownloadWorkerTest {
         DownloadBookCommand download = new DownloadBookCommand(new RecordingClaims(),
                 new IngestBookCommand(bookId -> "", new BatchBasedDatalakeAdapter(datalake)), task -> {
         }, task -> {
-        }, new TransitionLog(), Clock.systemUTC(), crashPoints);
+        }, new TransitionLog(), Clock.systemUTC(), crashPoints, new RecordedLease()::start);
         return new DownloadWorker(oneMessageThenStop(), download, crashPoints);
     }
 
@@ -82,6 +82,11 @@ class DownloadWorkerTest {
         public Optional<String> claim(int bookId) {
             claimedBooks.add(bookId);
             return Optional.empty();
+        }
+
+        @Override
+        public boolean renew(int bookId, String claimId) {
+            return false;
         }
 
         @Override

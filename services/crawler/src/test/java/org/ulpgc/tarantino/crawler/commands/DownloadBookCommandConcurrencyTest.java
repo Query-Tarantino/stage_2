@@ -112,7 +112,7 @@ class DownloadBookCommandConcurrencyTest {
         IngestBookCommand ingest = new IngestBookCommand(downloader, new BatchBasedDatalakeAdapter(datalake));
         return new DownloadBookCommand(claims, ingest, downloads::offer, indexing::offer, new TransitionLog(), Clock.systemUTC(),
                 point -> {
-                });
+                }, renewal -> new RecordedLease().start(renewal));
     }
 
     private static Void execute(DownloadBookCommand command) {
@@ -154,6 +154,11 @@ class DownloadBookCommandConcurrencyTest {
             } finally {
                 bothTriedToClaim.countDown();
             }
+        }
+
+        @Override
+        public boolean renew(int bookId, String claimId) {
+            return claims.renew(bookId, claimId);
         }
 
         @Override

@@ -43,6 +43,7 @@ class DownloadBookCommandTest {
     private final List<BookTask> downloadQueue = new ArrayList<>();
     private final List<BookTask> indexQueue = new ArrayList<>();
     private final List<CrashPoint> reachedPoints = new ArrayList<>();
+    private final RecordedLease lease = new RecordedLease();
 
     @Test
     void storesAClaimedBookAndEnqueuesItForIndexing() {
@@ -62,6 +63,18 @@ class DownloadBookCommandTest {
         assertFalse(Files.exists(datalake.resolve("1/1342.body.txt")));
         assertEquals(List.of(), indexQueue);
         assertEquals(List.of(), reachedPoints);
+        assertEquals(0, lease.started());
+    }
+
+    @Test
+    void renewsTheLeaseWithItsOwnClaimAndClosesItOnceTheDownloadEnds() {
+        claims.queued.add(1342);
+
+        command(bookId -> RAW).execute(TASK);
+
+        assertTrue(lease.renew());
+        assertEquals(List.of("claim-1342"), claims.renewals);
+        assertTrue(lease.closed());
     }
 
     @Test
@@ -107,6 +120,7 @@ class DownloadBookCommandTest {
 
         assertEquals(List.of(), claims.failures);
         assertEquals(List.of(), downloadQueue);
+        assertTrue(lease.closed());
     }
 
     @Test
@@ -165,7 +179,7 @@ class DownloadBookCommandTest {
     private DownloadBookCommand command(BookDownloader downloader, Consumer<CrashPoint> crashPoints) {
         IngestBookCommand ingest = new IngestBookCommand(downloader, new BatchBasedDatalakeAdapter(datalake));
         return new DownloadBookCommand(claims, ingest, downloadQueue::add, indexQueue::add, new TransitionLog(),
-                Clock.fixed(NOW, ZoneOffset.UTC), crashPoints);
+                Clock.fixed(NOW, ZoneOffset.UTC), crashPoints, lease::start);
     }
 
     private static BookDownloader failingWith(BookErrorCode reason) {
@@ -190,6 +204,7 @@ class DownloadBookCommandTest {
         private final Set<Integer> queued = new HashSet<>();
         private final Set<Integer> finished = new HashSet<>();
         private final List<BookErrorCode> failures = new ArrayList<>();
+        private final List<String> renewals = new ArrayList<>();
         private BookStatus failedDownloadsEnd = BookStatus.QUEUED;
         private boolean leaseLost;
         private boolean mongoDown;
@@ -197,6 +212,12 @@ class DownloadBookCommandTest {
         @Override
         public Optional<String> claim(int bookId) {
             return queued.remove(bookId) ? Optional.of("claim-" + bookId) : Optional.empty();
+        }
+
+        @Override
+        public boolean renew(int bookId, String claimId) {
+            renewals.add(claimId);
+            return !leaseLost;
         }
 
         @Override

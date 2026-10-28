@@ -11,6 +11,9 @@ public interface BookClaims {
     /** “Claim a book”: the new {@code claim_id}, or empty if the book was not {@code QUEUED}. */
     Optional<String> claim(int bookId);
 
+    /** “Renew a book”: false if the lease was lost. */
+    boolean renew(int bookId, String claimId);
+
     /** “Finish a download”: false if the lease was lost. */
     boolean finish(int bookId, String claimId);
 

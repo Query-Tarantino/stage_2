@@ -65,6 +65,7 @@ public class MongoBookClaims implements BookClaims {
     }
 
     /** “Renew a book”: one more lease from now; false if the lease was lost. */
+    @Override
     public boolean renew(int bookId, String claimId) {
         Document change = new Document(LEASE_UNTIL, nowPlus(lease));
         return states.updateOne(downloading(bookId, claimId), set(change)).getMatchedCount() == 1;
