@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.query.adapters.http;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import org.ulpgc.tarantino.common.http.BookIds;
 import org.ulpgc.tarantino.common.http.ProblemException;
 import org.ulpgc.tarantino.common.model.ProblemCode;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
@@ -14,11 +15,9 @@ import org.ulpgc.tarantino.query.ports.MetadataReader;
 
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /** Javalin HTTP routes for /search, /books/{book_id} and /search/filters (SPEC §6.3, §6.4). */
 public class SearchRoutes {
-    private static final Pattern POSITIVE_INTEGER = Pattern.compile("^[1-9][0-9]*$");
 
     private final SnapshotRefresher snapshots;
     private final SearchCommand search;
@@ -78,7 +77,7 @@ public class SearchRoutes {
     }
 
     private void book(Context context) {
-        int bookId = parseBookId(context.pathParam("book_id"));
+        int bookId = BookIds.parse(context.pathParam("book_id"));
         Snapshot snapshot = snapshot();
         if (!snapshot.bookIds().contains(bookId)) {
             throw new ProblemException(
@@ -92,19 +91,6 @@ public class SearchRoutes {
 
     private void filters(Context context) {
         context.json(snapshot().filtersSummary());
-    }
-
-    private static int parseBookId(String idParam) {
-        if (idParam == null || !POSITIVE_INTEGER.matcher(idParam).matches()) {
-            throw new ProblemException(
-                    ProblemCode.INVALID_PARAMETER, "book_id", "book_id must be a positive integer");
-        }
-        try {
-            return Integer.parseInt(idParam);
-        } catch (NumberFormatException exception) {
-            throw new ProblemException(
-                    ProblemCode.INVALID_PARAMETER, "book_id", "book_id must be a positive integer");
-        }
     }
 
     private Snapshot snapshot() {
