@@ -68,7 +68,7 @@ public record Snapshot(
             return FiltersSummary.empty();
         }
         Map<String, Integer> languageCounts = filters.stream()
-                .flatMap(filter -> filter.languages().stream())
+                .flatMap(filter -> filter.languages().stream().distinct())
                 .collect(Collectors.groupingBy(code -> code, Collectors.summingInt(code -> 1)));
         List<LanguageFilter> languages = languageCounts.entrySet().stream()
                 .sorted(Comparator.comparingInt(Map.Entry<String, Integer>::getValue).reversed()

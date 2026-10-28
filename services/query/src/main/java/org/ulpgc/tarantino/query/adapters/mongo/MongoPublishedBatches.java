@@ -49,6 +49,9 @@ public class MongoPublishedBatches implements PublishedBatches {
 
     @Override
     public Map<String, List<Integer>> bookIds(int generation, Collection<String> batchIds) {
+        if (batchIds.isEmpty()) {
+            return Map.of();
+        }
         Map<String, List<Integer>> books = new HashMap<>();
         batches(generation).find(Filters.and(Filters.in(ID, batchIds.stream().map(ObjectId::new).toList()), PUBLISHED))
                 .projection(Projections.include(BOOK_IDS))
