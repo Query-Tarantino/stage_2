@@ -10,8 +10,10 @@ import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookState;
 import org.ulpgc.tarantino.common.model.BookStatus;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -64,6 +66,29 @@ class BookStatesTest {
     @Test
     void hasNoStateForABookWithoutDocument() {
         assertEquals(Optional.empty(), states().state(84));
+    }
+
+    @Test
+    void onlyOlderBooksThatDidNotFailAndTargetBooksNotYetPublishedBlockTheSwitch() {
+        collection().insertMany(List.of(
+                indexedIn(1, BookStatus.FAILED, 1),
+                new Document(MongoFields.ID, 2).append(MongoFields.STATUS, BookStatus.QUEUED.name()),
+                indexedIn(3, BookStatus.PUBLISHED, 1),
+                indexedIn(4, BookStatus.DOWNLOADED, 1),
+                indexedIn(5, BookStatus.DOWNLOADED, 2),
+                indexedIn(6, BookStatus.INDEXING, 2),
+                indexedIn(7, BookStatus.PUBLISHED, 2)));
+
+        Set<Integer> blocking = collection().find(BookStates.blockingSwitchTo(2))
+                .map(state -> state.getInteger(MongoFields.ID))
+                .into(new HashSet<>());
+
+        assertEquals(Set.of(3, 4, 5, 6), blocking);
+    }
+
+    private static Document indexedIn(int bookId, BookStatus status, int generation) {
+        return new Document(MongoFields.ID, bookId).append(MongoFields.STATUS, status.name())
+                .append(MongoFields.GENERATION, generation);
     }
 
     private BookStates states() {
