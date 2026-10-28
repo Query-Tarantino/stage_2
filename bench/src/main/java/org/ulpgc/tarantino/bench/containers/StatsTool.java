@@ -30,11 +30,15 @@ public final class StatsTool {
     }
 
     public static void main(String[] args) {
-        if (args.length != 1) {
+        System.exit(run(List.of(args)));
+    }
+
+    public static int run(List<String> args) {
+        if (args.size() != 1) {
             LOGGER.error(USAGE);
-            System.exit(WRONG_USAGE);
+            return WRONG_USAGE;
         }
-        Path csv = Path.of(args[0]).resolve(FILE_NAME);
+        Path csv = Path.of(args.getFirst()).resolve(FILE_NAME);
         Process dockerStats = start();
         Runtime.getRuntime().addShutdownHook(new Thread(dockerStats::destroy));
         try (BufferedReader samples = new BufferedReader(new InputStreamReader(dockerStats.getInputStream(), StandardCharsets.UTF_8))) {
@@ -42,7 +46,7 @@ public final class StatsTool {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        System.exit(DONE);
+        return DONE;
     }
 
     private static Process start() {

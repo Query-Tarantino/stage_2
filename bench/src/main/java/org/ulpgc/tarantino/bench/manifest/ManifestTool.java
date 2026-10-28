@@ -33,7 +33,11 @@ public final class ManifestTool {
     }
 
     public static void main(String[] args) {
-        System.exit(run(List.of(args), new ProcessCommandRunner(), System.out));
+        System.exit(run(List.of(args)));
+    }
+
+    public static int run(List<String> args) {
+        return run(args, new ProcessCommandRunner(), System.out);
     }
 
     static int run(List<String> args, CommandRunner runner, PrintStream runIdOutput) {

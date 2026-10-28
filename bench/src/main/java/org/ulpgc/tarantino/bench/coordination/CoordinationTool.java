@@ -31,7 +31,7 @@ public final class CoordinationTool {
         System.exit(run(List.of(args)));
     }
 
-    static int run(List<String> args) {
+    public static int run(List<String> args) {
         if (args.size() != 1) {
             LOGGER.error(USAGE);
             return WRONG_USAGE;

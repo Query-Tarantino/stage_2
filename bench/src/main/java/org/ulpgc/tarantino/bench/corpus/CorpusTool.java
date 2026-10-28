@@ -33,7 +33,7 @@ public final class CorpusTool {
         System.exit(run(List.of(args)));
     }
 
-    static int run(List<String> args) {
+    public static int run(List<String> args) {
         if (args.size() == 3 && args.getFirst().equals("generate")) {
             return generate(Path.of(args.get(1)), Path.of(args.get(2)));
         }
