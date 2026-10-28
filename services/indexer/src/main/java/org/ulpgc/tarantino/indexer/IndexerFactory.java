@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.indexer;
 import com.hazelcast.core.HazelcastInstance;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
+import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.Replica;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
@@ -32,7 +33,7 @@ public final class IndexerFactory {
         Tokenizer tokenizer = tokenizer(config);
         IndexBatchCommand index = new IndexBatchCommand(new MongoBatchStore(connections.database(), config.lease(), Replica.name()),
                 datalakeReader(config), new HeaderParser(tokenizer), tokenizer, new MongoIndexWriter(connections.database()),
-                new BatchPublishedTopic(client)::publish, new TransitionLog());
+                new BatchPublishedTopic(client)::publish, new TransitionLog(), new CrashPoints(config.crashAt()));
         return new IndexWorker(collector, index);
     }
 

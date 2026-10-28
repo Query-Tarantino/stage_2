@@ -2,9 +2,11 @@ package org.ulpgc.tarantino.indexer.commands;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BatchPublished;
 import org.ulpgc.tarantino.common.model.BatchStatus;
 import org.ulpgc.tarantino.common.model.BookStatus;
+import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
@@ -31,7 +33,8 @@ import java.util.stream.Gatherers;
  * Indexes one batch (SPEC §5.1): opens it in the write generation, claims its books, writes their metadata and
  * postings and publishes it. Until it is published nothing it wrote is visible; if its lease is lost first, it marks
  * no book and announces nothing, and {@code control} abandons it. The postings go in {@code bulkWrite}s of
- * {@value #POSTINGS_PER_WRITE} terms, so a crash between two of them leaves the batch half-written (SPEC §8).
+ * {@value #POSTINGS_PER_WRITE} terms, so a crash between two of them leaves the batch half-written. It stops at the
+ * indexer's crash points of SPEC §8.
  */
 public class IndexBatchCommand {
 
@@ -45,9 +48,10 @@ public class IndexBatchCommand {
     private final IndexWriter writer;
     private final BatchAnnouncer announcer;
     private final TransitionLog log;
+    private final CrashPoints crashPoints;
 
     public IndexBatchCommand(BatchStore batches, DatalakeReader datalake, HeaderParser headerParser, Tokenizer tokenizer,
-                             IndexWriter writer, BatchAnnouncer announcer, TransitionLog log) {
+                             IndexWriter writer, BatchAnnouncer announcer, TransitionLog log, CrashPoints crashPoints) {
         this.batches = batches;
         this.datalake = datalake;
         this.headerParser = headerParser;
@@ -55,10 +59,15 @@ public class IndexBatchCommand {
         this.writer = writer;
         this.announcer = announcer;
         this.log = log;
+        this.crashPoints = crashPoints;
     }
 
-    /** {@code books} maps each book of the batch to the {@code enqueued_at} of its message. */
+    /**
+     * {@code books} maps each book of the batch to the {@code enqueued_at} of its message. Those messages are already
+     * out of {@code books-to-index}, so the {@code after-dequeue} point comes first.
+     */
     public void execute(Map<Integer, Instant> books) {
+        crashPoints.hit(CrashPoint.INDEXER_AFTER_DEQUEUE);
         Batch batch = batches.open(batches.writeGeneration());
         log.write(Transition.batch(batch.batchId(), null, BatchStatus.WRITING, batch.generation()));
         List<Integer> claimed = batches.claim(batch, books.keySet());
@@ -100,6 +109,7 @@ public class IndexBatchCommand {
                 .toList();
         for (List<TermPostings> chunk : postingsChunks) {
             writer.writePostings(batch, chunk);
+            crashPoints.hit(CrashPoint.DURING_BATCH_WRITE);
         }
     }
 
@@ -110,9 +120,11 @@ public class IndexBatchCommand {
             return;
         }
         log.write(Transition.batch(batch.batchId(), BatchStatus.WRITING, BatchStatus.PUBLISHED, batch.generation()));
+        crashPoints.hit(CrashPoint.AFTER_PUBLISH);
         batches.markPublished(batch);
         bookIds.forEach(bookId -> log.write(Transition.book(bookId, BookStatus.INDEXING, BookStatus.PUBLISHED)
                 .inBatch(batch.batchId(), batch.generation())));
+        crashPoints.hit(CrashPoint.AFTER_MARK);
         announcer.announce(new BatchPublished(batch.batchId(), batch.generation(), bookIds.size(), publishedAt.get()));
     }
 }

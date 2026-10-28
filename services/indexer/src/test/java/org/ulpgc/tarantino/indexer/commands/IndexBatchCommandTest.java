@@ -1,7 +1,9 @@
 package org.ulpgc.tarantino.indexer.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BatchPublished;
+import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
@@ -33,6 +35,13 @@ class IndexBatchCommandTest {
     private static final String BATCH_ID = "6716f0c2a1b2c3d4e5f60718";
     private static final int LETTERS = 26;
 
+    private final List<String> steps = new ArrayList<>();
+    private final CrashPoints crashPoints = new CrashPoints(Optional.empty()) {
+        @Override
+        public void hit(CrashPoint point) {
+            steps.add(point.point());
+        }
+    };
     private final FakeBatchStore batches = new FakeBatchStore();
     private final RecordingWriter writer = new RecordingWriter();
     private final List<BatchPublished> announced = new ArrayList<>();
@@ -99,6 +108,16 @@ class IndexBatchCommandTest {
     }
 
     @Test
+    void reachesEachCrashPointBetweenTheRightSteps() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().execute(books(1342));
+
+        assertEquals(List.of("after-dequeue", "open", "metadata", "postings", "during-batch-write", "publish",
+                "after-publish", "mark", "after-mark", "announce"), steps);
+    }
+
+    @Test
     void neitherMarksNorAnnouncesABatchThatLostItsLease() {
         store(1342, "Title: Pride and Prejudice", "pride");
         batches.leaseLost = true;
@@ -129,10 +148,15 @@ class IndexBatchCommandTest {
     private IndexBatchCommand command() {
         Tokenizer tokenizer = new Tokenizer(Set.of("and"));
         return new IndexBatchCommand(batches, bookId -> Optional.ofNullable(datalake.get(bookId)), new HeaderParser(tokenizer),
-                tokenizer, writer, announced::add, new TransitionLog());
+                tokenizer, writer, this::announce, new TransitionLog(), crashPoints);
     }
 
-    private static final class FakeBatchStore implements BatchStore {
+    private void announce(BatchPublished batch) {
+        steps.add("announce");
+        announced.add(batch);
+    }
+
+    private final class FakeBatchStore implements BatchStore {
 
         private final Set<Integer> downloaded = new HashSet<>();
         private final Set<Integer> indexing = new HashSet<>();
@@ -148,6 +172,7 @@ class IndexBatchCommandTest {
 
         @Override
         public Batch open(int generation) {
+            steps.add("open");
             return new Batch(BATCH_ID, "claim", generation);
         }
 
@@ -167,6 +192,7 @@ class IndexBatchCommandTest {
 
         @Override
         public Optional<Instant> publish(Batch batch, List<Integer> bookIds) {
+            steps.add("publish");
             if (leaseLost) {
                 return Optional.empty();
             }
@@ -176,11 +202,12 @@ class IndexBatchCommandTest {
 
         @Override
         public void markPublished(Batch batch) {
+            steps.add("mark");
             marked.addAll(indexing);
         }
     }
 
-    private static final class RecordingWriter implements IndexWriter {
+    private final class RecordingWriter implements IndexWriter {
 
         private final List<BookMetadata> metadata = new ArrayList<>();
         private final List<TermPostings> postings = new ArrayList<>();
@@ -188,11 +215,13 @@ class IndexBatchCommandTest {
 
         @Override
         public void writeMetadata(int generation, List<BookMetadata> books) {
+            steps.add("metadata");
             metadata.addAll(books);
         }
 
         @Override
         public void writePostings(Batch batch, List<TermPostings> batchPostings) {
+            steps.add("postings");
             postings.addAll(batchPostings);
             postingsChunkSizes.add(batchPostings.size());
         }
