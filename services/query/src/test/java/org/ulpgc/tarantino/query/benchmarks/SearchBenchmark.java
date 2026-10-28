@@ -37,8 +37,8 @@ import java.util.stream.IntStream;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 10, time = 200, timeUnit = TimeUnit.MILLISECONDS)
 @Fork(value = 3, jvmArgs = {"-Xmx1g"})
 public class SearchBenchmark {
 
