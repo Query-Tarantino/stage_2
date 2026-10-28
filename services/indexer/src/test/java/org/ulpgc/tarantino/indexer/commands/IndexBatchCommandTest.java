@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -29,6 +31,7 @@ class IndexBatchCommandTest {
     private static final Instant ENQUEUED_AT = Instant.parse("2026-10-21T10:05:00Z");
     private static final Instant PUBLISHED_AT = Instant.parse("2026-10-21T10:05:32Z");
     private static final String BATCH_ID = "6716f0c2a1b2c3d4e5f60718";
+    private static final int LETTERS = 26;
 
     private final FakeBatchStore batches = new FakeBatchStore();
     private final RecordingWriter writer = new RecordingWriter();
@@ -84,6 +87,18 @@ class IndexBatchCommandTest {
     }
 
     @Test
+    void writesThePostingsInChunksOfAThousandTerms() {
+        store(1342, "Title: Pride and Prejudice", IntStream.range(0, 2_500)
+                .mapToObj(IndexBatchCommandTest::distinctWord)
+                .collect(Collectors.joining(" ")));
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1_000, 1_000, 500), writer.postingsChunkSizes);
+        assertEquals(2_500, writer.postings.size());
+    }
+
+    @Test
     void neitherMarksNorAnnouncesABatchThatLostItsLease() {
         store(1342, "Title: Pride and Prejudice", "pride");
         batches.leaseLost = true;
@@ -97,6 +112,12 @@ class IndexBatchCommandTest {
     private void store(int bookId, String header, String body) {
         datalake.put(bookId, new BookText(bookId, header, body));
         batches.downloaded.add(bookId);
+    }
+
+    private static String distinctWord(int index) {
+        return Integer.toString(index, LETTERS).chars()
+                .mapToObj(digit -> String.valueOf((char) ('a' + Character.digit(digit, LETTERS))))
+                .collect(Collectors.joining("", "w", ""));
     }
 
     private static Map<Integer, Instant> books(Integer... bookIds) {
@@ -163,6 +184,7 @@ class IndexBatchCommandTest {
 
         private final List<BookMetadata> metadata = new ArrayList<>();
         private final List<TermPostings> postings = new ArrayList<>();
+        private final List<Integer> postingsChunkSizes = new ArrayList<>();
 
         @Override
         public void writeMetadata(int generation, List<BookMetadata> books) {
@@ -172,6 +194,7 @@ class IndexBatchCommandTest {
         @Override
         public void writePostings(Batch batch, List<TermPostings> batchPostings) {
             postings.addAll(batchPostings);
+            postingsChunkSizes.add(batchPostings.size());
         }
     }
 }

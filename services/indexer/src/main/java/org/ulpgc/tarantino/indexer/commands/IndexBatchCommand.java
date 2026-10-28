@@ -13,6 +13,7 @@ import org.ulpgc.tarantino.indexer.model.book.BookText;
 import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import org.ulpgc.tarantino.indexer.model.book.ParsedBook;
 import org.ulpgc.tarantino.indexer.model.terms.BatchPostings;
+import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
 import org.ulpgc.tarantino.indexer.ports.BatchAnnouncer;
 import org.ulpgc.tarantino.indexer.ports.BatchStore;
 import org.ulpgc.tarantino.indexer.ports.IndexWriter;
@@ -24,15 +25,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Gatherers;
 
 /**
  * Indexes one batch (SPEC §5.1): opens it in the write generation, claims its books, writes their metadata and
  * postings and publishes it. Until it is published nothing it wrote is visible; if its lease is lost first, it marks
- * no book and announces nothing, and {@code control} abandons it.
+ * no book and announces nothing, and {@code control} abandons it. The postings go in {@code bulkWrite}s of
+ * {@value #POSTINGS_PER_WRITE} terms, so a crash between two of them leaves the batch half-written (SPEC §8).
  */
 public class IndexBatchCommand {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexBatchCommand.class);
+    private static final int POSTINGS_PER_WRITE = 1_000;
 
     private final BatchStore batches;
     private final DatalakeReader datalake;
@@ -89,8 +93,14 @@ public class IndexBatchCommand {
 
     private void write(Batch batch, List<ParsedBook> books) {
         writer.writeMetadata(batch.generation(), books.stream().map(ParsedBook::metadata).toList());
-        writer.writePostings(batch, BatchPostings.of(books.stream()
-                .collect(Collectors.toMap(book -> book.metadata().bookId(), ParsedBook::frequencies))));
+        List<List<TermPostings>> postingsChunks = BatchPostings.of(books.stream()
+                        .collect(Collectors.toMap(book -> book.metadata().bookId(), ParsedBook::frequencies)))
+                .stream()
+                .gather(Gatherers.windowFixed(POSTINGS_PER_WRITE))
+                .toList();
+        for (List<TermPostings> chunk : postingsChunks) {
+            writer.writePostings(batch, chunk);
+        }
     }
 
     private void publish(Batch batch, List<Integer> bookIds) {
