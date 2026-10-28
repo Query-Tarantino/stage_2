@@ -59,12 +59,17 @@ public class DownloadBookCommand {
         log.write(Transition.book(task.bookId(), BookStatus.QUEUED, BookStatus.DOWNLOADING).fromMessageEnqueuedAt(task.enqueuedAt()));
         crashPoints.accept(CrashPoint.AFTER_CLAIM);
         try (Lease lease = heartbeats.apply(() -> claims.renew(task.bookId(), claim.get()))) {
-            download(task.bookId(), claim.get());
+            download(task.bookId(), claim.get(), lease);
         }
     }
 
-    private void download(int bookId, String claimId) {
-        IngestResult result = ingest.execute(bookId);
+    private void download(int bookId, String claimId, Lease lease) {
+        Optional<IngestResult> ingested = ingest.execute(bookId, lease);
+        if (ingested.isEmpty()) {
+            LOGGER.warn("Book {} lost its lease before reaching the datalake and is dropped", bookId);
+            return;
+        }
+        IngestResult result = ingested.get();
         if (!result.succeeded()) {
             fail(bookId, claimId, result.failure());
             return;

@@ -134,6 +134,21 @@ class DownloadBookCommandTest {
     }
 
     @Test
+    void dropsABookWhoseLeaseIsLostBeforeItReachesTheDatalake() {
+        claims.queued.add(1342);
+        lease.loseAfterChecks(0);
+
+        command(bookId -> RAW).execute(TASK);
+
+        assertFalse(Files.exists(datalake.resolve("1/1342.header.txt")));
+        assertEquals(Set.of(), claims.finished);
+        assertEquals(List.of(), claims.failures);
+        assertEquals(List.of(), indexQueue);
+        assertEquals(List.of(), downloadQueue);
+        assertTrue(lease.closed());
+    }
+
+    @Test
     void passesTheCrashPointsOfAFinishedDownloadInOrder() {
         claims.queued.add(1342);
 
