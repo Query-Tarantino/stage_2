@@ -3,7 +3,6 @@ package org.ulpgc.tarantino.control.adapters.mongo;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Projections;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -12,7 +11,6 @@ import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.control.model.GenerationBatch;
 import org.ulpgc.tarantino.control.ports.BatchLeases;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ABANDONED_AT;
@@ -33,22 +31,13 @@ public class MongoBatchLeases implements BatchLeases {
 
     @Override
     public List<GenerationBatch> expired() {
-        return ExistingGenerations.withBatches(database).stream()
-                .flatMap(generation -> expiredIn(generation).stream())
-                .toList();
+        return ExistingGenerations.batchesMatching(database, writingWithLeasePassed());
     }
 
     @Override
     public boolean abandon(GenerationBatch batch) {
         Bson expiredBatch = Filters.and(Filters.eq(ID, new ObjectId(batch.batchId())), writingWithLeasePassed());
         return batches(batch.generation()).updateOne(expiredBatch, abandonPipeline()).getModifiedCount() == 1;
-    }
-
-    private List<GenerationBatch> expiredIn(int generation) {
-        return batches(generation).find(writingWithLeasePassed())
-                .projection(Projections.include(ID))
-                .map(batch -> new GenerationBatch(generation, batch.getObjectId(ID).toHexString()))
-                .into(new ArrayList<>());
     }
 
     private static List<Document> abandonPipeline() {
