@@ -9,7 +9,6 @@ import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
 import org.ulpgc.tarantino.indexer.model.book.BookMetadata;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
-import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
 import org.ulpgc.tarantino.indexer.ports.BatchStore;
 import org.ulpgc.tarantino.indexer.ports.IndexWriter;
@@ -146,9 +145,8 @@ class IndexBatchCommandTest {
     }
 
     private IndexBatchCommand command() {
-        Tokenizer tokenizer = new Tokenizer(Set.of("and"));
-        return new IndexBatchCommand(batches, bookId -> Optional.ofNullable(datalake.get(bookId)), new HeaderParser(tokenizer),
-                tokenizer, writer, this::announce, new TransitionLog(), crashPoints);
+        BookReader reader = new BookReader(bookId -> Optional.ofNullable(datalake.get(bookId)), new Tokenizer(Set.of("and")));
+        return new IndexBatchCommand(batches, reader, writer, this::announce, new TransitionLog(), crashPoints);
     }
 
     private void announce(BatchPublished batch) {

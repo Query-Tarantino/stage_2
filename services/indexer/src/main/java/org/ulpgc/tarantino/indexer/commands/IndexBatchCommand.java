@@ -9,17 +9,13 @@ import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
-import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
-import org.ulpgc.tarantino.indexer.model.book.BookText;
-import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import org.ulpgc.tarantino.indexer.model.book.ParsedBook;
 import org.ulpgc.tarantino.indexer.model.terms.BatchPostings;
 import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
 import org.ulpgc.tarantino.indexer.ports.BatchAnnouncer;
 import org.ulpgc.tarantino.indexer.ports.BatchStore;
 import org.ulpgc.tarantino.indexer.ports.IndexWriter;
-import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,20 +38,16 @@ public class IndexBatchCommand {
     private static final int POSTINGS_PER_WRITE = 1_000;
 
     private final BatchStore batches;
-    private final DatalakeReader datalake;
-    private final HeaderParser headerParser;
-    private final Tokenizer tokenizer;
+    private final BookReader reader;
     private final IndexWriter writer;
     private final BatchAnnouncer announcer;
     private final TransitionLog log;
     private final CrashPoints crashPoints;
 
-    public IndexBatchCommand(BatchStore batches, DatalakeReader datalake, HeaderParser headerParser, Tokenizer tokenizer,
-                             IndexWriter writer, BatchAnnouncer announcer, TransitionLog log, CrashPoints crashPoints) {
+    public IndexBatchCommand(BatchStore batches, BookReader reader, IndexWriter writer, BatchAnnouncer announcer, TransitionLog log,
+                             CrashPoints crashPoints) {
         this.batches = batches;
-        this.datalake = datalake;
-        this.headerParser = headerParser;
-        this.tokenizer = tokenizer;
+        this.reader = reader;
         this.writer = writer;
         this.announcer = announcer;
         this.log = log;
@@ -86,12 +78,11 @@ public class IndexBatchCommand {
     }
 
     private Optional<ParsedBook> parse(Batch batch, int bookId) {
-        Optional<BookText> text = datalake.bookText(bookId);
-        if (text.isEmpty()) {
+        Optional<ParsedBook> book = reader.read(bookId);
+        if (book.isEmpty()) {
             failAtIndexing(batch, bookId);
-            return Optional.empty();
         }
-        return text.map(book -> new ParsedBook(headerParser.metadata(book), tokenizer.frequencies(book.body())));
+        return book;
     }
 
     private void failAtIndexing(Batch batch, int bookId) {

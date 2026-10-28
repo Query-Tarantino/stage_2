@@ -14,9 +14,9 @@ import org.ulpgc.tarantino.indexer.adapters.hazelcast.HazelcastIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoBatchStore;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexWriter;
 import org.ulpgc.tarantino.indexer.commands.BatchCollector;
+import org.ulpgc.tarantino.indexer.commands.BookReader;
 import org.ulpgc.tarantino.indexer.commands.IndexBatchCommand;
 import org.ulpgc.tarantino.indexer.commands.IndexWorker;
-import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 
 import java.time.Clock;
@@ -30,9 +30,8 @@ public final class IndexerFactory {
         HazelcastInstance client = connections.hazelcast().client();
         BatchCollector collector = new BatchCollector(new HazelcastIndexQueue(client), config.indexBatch(), config.batchTimeout(),
                 Clock.systemUTC());
-        Tokenizer tokenizer = tokenizer(config);
         IndexBatchCommand index = new IndexBatchCommand(new MongoBatchStore(connections.database(), config.lease(), Replica.name()),
-                datalakeReader(config), new HeaderParser(tokenizer), tokenizer, new MongoIndexWriter(connections.database()),
+                new BookReader(datalakeReader(config), tokenizer(config)), new MongoIndexWriter(connections.database()),
                 new BatchPublishedTopic(client)::publish, new TransitionLog(), new CrashPoints(config.crashAt()));
         return new IndexWorker(collector, index);
     }
