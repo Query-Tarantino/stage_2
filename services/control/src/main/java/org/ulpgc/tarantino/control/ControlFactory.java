@@ -7,7 +7,9 @@ import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoBatchLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoDownloadLeases;
+import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
 import org.ulpgc.tarantino.control.commands.ReleaseExpiredDownloadsCommand;
 import org.ulpgc.tarantino.control.commands.SeedCommand;
@@ -32,7 +34,8 @@ public final class ControlFactory {
 
     /** The steps of the reconciliation in the order of SPEC §5.3. */
     public static ReconcileCommand reconcileCommand(TarantinoConfig config, Connections connections) {
-        return new ReconcileCommand(List.of(releaseExpiredDownloads(config, connections)::execute), Clock.systemUTC());
+        return new ReconcileCommand(List.of(releaseExpiredDownloads(config, connections)::execute,
+                abandonExpiredBatches(connections)::execute), Clock.systemUTC());
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
@@ -46,6 +49,10 @@ public final class ControlFactory {
     private static ReleaseExpiredDownloadsCommand releaseExpiredDownloads(TarantinoConfig config, Connections connections) {
         return new ReleaseExpiredDownloadsCommand(new MongoDownloadLeases(connections.database(), config.maxAttempts()),
                 downloadQueue(connections), new TransitionLog(), Clock.systemUTC());
+    }
+
+    private static AbandonExpiredBatchesCommand abandonExpiredBatches(Connections connections) {
+        return new AbandonExpiredBatchesCommand(new MongoBatchLeases(connections.database()), new TransitionLog());
     }
 
     private static DownloadQueue downloadQueue(Connections connections) {
