@@ -1,8 +1,10 @@
 package org.ulpgc.tarantino.indexer;
 
 import com.hazelcast.core.HazelcastInstance;
+import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
+import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.LeaseHeartbeat;
 import org.ulpgc.tarantino.common.operations.Replica;
@@ -12,6 +14,7 @@ import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.adapters.datalake.batch.BatchBasedDatalakeReader;
 import org.ulpgc.tarantino.indexer.adapters.hazelcast.HazelcastIndexQueue;
+import org.ulpgc.tarantino.indexer.adapters.http.BookRoutes;
 import org.ulpgc.tarantino.indexer.adapters.http.IndexRoutes;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoBatchStore;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexWriter;
@@ -23,6 +26,7 @@ import org.ulpgc.tarantino.indexer.commands.IndexWorker;
 import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 
 import java.time.Clock;
+import java.util.function.Consumer;
 
 public final class IndexerFactory {
 
@@ -40,8 +44,13 @@ public final class IndexerFactory {
         return new IndexWorker(collector, index);
     }
 
-    public static IndexRoutes indexRoutes(Connections connections) {
-        return new IndexRoutes(new MongoRebuilds(connections.database()));
+    public static Consumer<Javalin> routes(Connections connections) {
+        IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()));
+        BookRoutes books = new BookRoutes(new BookStates(connections.database())::state);
+        return app -> {
+            index.register(app);
+            books.register(app);
+        };
     }
 
     public static DatalakeReader datalakeReader(TarantinoConfig config) {
