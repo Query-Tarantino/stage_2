@@ -4,6 +4,7 @@ import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
+import java.time.Duration;
 import java.util.List;
 
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.NOW;
@@ -17,5 +18,11 @@ final class ServerTime {
     /** {@code {$expr: {$lte: ["$field", "$$NOW"]}}}: the date in the field has already passed. */
     static Bson passed(String field) {
         return Filters.expr(new Document("$lte", List.of("$" + field, NOW)));
+    }
+
+    /** {@code {$expr: {$lte: ["$field", {$subtract: ["$$NOW", millis]}]}}}: the date in the field is at least that old. */
+    static Bson olderThan(String field, Duration age) {
+        Document nowMinusAge = new Document("$subtract", List.of(NOW, age.toMillis()));
+        return Filters.expr(new Document("$lte", List.of("$" + field, nowMinusAge)));
     }
 }

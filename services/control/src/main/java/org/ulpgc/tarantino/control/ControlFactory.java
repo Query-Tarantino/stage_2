@@ -7,12 +7,15 @@ import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
+import org.ulpgc.tarantino.control.adapters.hazelcast.HazelcastQueueSizes;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoBatchLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoDownloadLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoIndexingBooks;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoLostMessages;
 import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
 import org.ulpgc.tarantino.control.commands.ReleaseExpiredDownloadsCommand;
+import org.ulpgc.tarantino.control.commands.RequeueLostMessagesCommand;
 import org.ulpgc.tarantino.control.commands.ResolveIndexingBooksCommand;
 import org.ulpgc.tarantino.control.commands.SeedCommand;
 import org.ulpgc.tarantino.control.ports.DownloadQueue;
@@ -40,7 +43,8 @@ public final class ControlFactory {
         return new ReconcileCommand(List.of(
                 releaseExpiredDownloads(config, connections)::execute,
                 abandonExpiredBatches(connections)::execute,
-                resolveIndexingBooks(connections)::execute), Clock.systemUTC());
+                resolveIndexingBooks(connections)::execute,
+                requeueLostMessages(config, connections)::execute), Clock.systemUTC());
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
@@ -63,6 +67,12 @@ public final class ControlFactory {
     private static ResolveIndexingBooksCommand resolveIndexingBooks(Connections connections) {
         return new ResolveIndexingBooksCommand(new MongoIndexingBooks(connections.database()), indexQueue(connections),
                 new TransitionLog(), Clock.systemUTC());
+    }
+
+    private static RequeueLostMessagesCommand requeueLostMessages(TarantinoConfig config, Connections connections) {
+        return new RequeueLostMessagesCommand(new HazelcastQueueSizes(connections.hazelcast().client()),
+                new MongoLostMessages(connections.database(), config.requeue()), downloadQueue(connections),
+                indexQueue(connections), new TransitionLog(), Clock.systemUTC());
     }
 
     private static DownloadQueue downloadQueue(Connections connections) {
