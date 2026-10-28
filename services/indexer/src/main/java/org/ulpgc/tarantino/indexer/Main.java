@@ -13,8 +13,7 @@ public class Main {
     public static void main(String[] args) {
         TarantinoConfig config = TarantinoConfig.fromEnvironment(TarantinoService.INDEXER);
         Connections connections = Connections.open(config);
-        Startup.start(config, connections, List.of(), routes -> {
-        });
+        Startup.start(config, connections, List.of(), IndexerFactory.indexRoutes(connections)::register);
         Startup.retry("create the book state indexes", () -> MongoIndexes.ensureStateIndexes(connections.database()));
         Thread.ofPlatform().name("index-batches").start(IndexerFactory.indexWorker(config, connections));
     }

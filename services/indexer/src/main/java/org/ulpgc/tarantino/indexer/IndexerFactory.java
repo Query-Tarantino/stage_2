@@ -12,8 +12,10 @@ import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.adapters.datalake.batch.BatchBasedDatalakeReader;
 import org.ulpgc.tarantino.indexer.adapters.hazelcast.HazelcastIndexQueue;
+import org.ulpgc.tarantino.indexer.adapters.http.IndexRoutes;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoBatchStore;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexWriter;
+import org.ulpgc.tarantino.indexer.adapters.mongo.MongoRebuilds;
 import org.ulpgc.tarantino.indexer.commands.BatchCollector;
 import org.ulpgc.tarantino.indexer.commands.BookReader;
 import org.ulpgc.tarantino.indexer.commands.IndexBatchCommand;
@@ -36,6 +38,10 @@ public final class IndexerFactory {
                 new BatchPublishedTopic(client)::publish, new TransitionLog(), new CrashPoints(config.crashAt()),
                 renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal));
         return new IndexWorker(collector, index);
+    }
+
+    public static IndexRoutes indexRoutes(Connections connections) {
+        return new IndexRoutes(new MongoRebuilds(connections.database()));
     }
 
     public static DatalakeReader datalakeReader(TarantinoConfig config) {
