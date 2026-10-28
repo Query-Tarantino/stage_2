@@ -13,10 +13,12 @@ import org.ulpgc.tarantino.control.adapters.mongo.MongoBatchLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoDownloadLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoIndexingBooks;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoLostMessages;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoOldGenerations;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoOutdatedBooks;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoRebuilds;
 import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
 import org.ulpgc.tarantino.control.commands.DeleteAbandonedPostingsCommand;
+import org.ulpgc.tarantino.control.commands.DropOldGenerationsCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
 import org.ulpgc.tarantino.control.commands.ReindexOutdatedBooksCommand;
 import org.ulpgc.tarantino.control.commands.ReleaseExpiredDownloadsCommand;
@@ -53,7 +55,8 @@ public final class ControlFactory {
                 requeueLostMessages(config, connections)::execute,
                 deleteAbandonedPostings(config, connections)::execute,
                 reindexOutdatedBooks(connections)::execute,
-                switchGeneration(connections)::execute), Clock.systemUTC());
+                switchGeneration(connections)::execute,
+                dropOldGenerations(config, connections)::execute), Clock.systemUTC());
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
@@ -95,6 +98,10 @@ public final class ControlFactory {
 
     private static SwitchGenerationCommand switchGeneration(Connections connections) {
         return new SwitchGenerationCommand(new MongoRebuilds(connections.database()));
+    }
+
+    private static DropOldGenerationsCommand dropOldGenerations(TarantinoConfig config, Connections connections) {
+        return new DropOldGenerationsCommand(new MongoOldGenerations(connections.database(), config.gc()));
     }
 
     private static DownloadQueue downloadQueue(Connections connections) {

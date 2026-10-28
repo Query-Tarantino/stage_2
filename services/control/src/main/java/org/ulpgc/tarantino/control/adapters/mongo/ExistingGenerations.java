@@ -17,22 +17,31 @@ final class ExistingGenerations {
     private ExistingGenerations() {
     }
 
-    /** The generations that have a {@code batches_g<k>} collection, ascending. */
-    private static List<Integer> withBatches(MongoDatabase database) {
-        List<String> collections = database.listCollectionNames().into(new ArrayList<>());
-        return collections.stream()
-                .flatMapToInt(collection -> MongoCollections.generationOf(collection).stream())
-                .filter(generation -> collections.contains(MongoCollections.batches(generation)))
-                .distinct()
-                .sorted()
-                .boxed()
-                .toList();
+    /** The generations that have any of their collections, ascending. */
+    static List<Integer> all(MongoDatabase database) {
+        return generationsOf(database.listCollectionNames().into(new ArrayList<>()));
     }
 
     /** The batches that match the filter in every {@code batches_g<k>}, by ascending generation. */
     static List<GenerationBatch> batchesMatching(MongoDatabase database, Bson filter) {
         return withBatches(database).stream()
                 .flatMap(generation -> batchesMatching(database, generation, filter).stream())
+                .toList();
+    }
+
+    private static List<Integer> withBatches(MongoDatabase database) {
+        List<String> collections = database.listCollectionNames().into(new ArrayList<>());
+        return generationsOf(collections).stream()
+                .filter(generation -> collections.contains(MongoCollections.batches(generation)))
+                .toList();
+    }
+
+    private static List<Integer> generationsOf(List<String> collections) {
+        return collections.stream()
+                .flatMapToInt(collection -> MongoCollections.generationOf(collection).stream())
+                .distinct()
+                .sorted()
+                .boxed()
                 .toList();
     }
 
