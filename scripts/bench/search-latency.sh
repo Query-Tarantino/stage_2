@@ -65,13 +65,13 @@ save_service_logs() {
 
 start_docker_stats() {
     local stats_file=$1
-    echo "timestamp,container,cpu_percent,mem_usage,mem_limit,mem_percent,net_in,net_out,block_in,block_out,pids" > "$stats_file"
+    echo "timestamp,container,cpu_percent,mem_usage,mem_percent,net_io,block_io,pids" > "$stats_file"
     (
         while true; do
             local current_time
             current_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
             if command -v docker >/dev/null 2>&1; then
-                docker stats --no-stream --format "${current_time},{{.Container}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}},{{.NetIO}},{{.BlockIO}},{{.PIDs}}" 2>/dev/null >> "$stats_file" || true
+                docker stats --no-stream --format "${current_time},{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}},{{.NetIO}},{{.BlockIO}},{{.PIDs}}" 2>/dev/null >> "$stats_file" || true
             fi
             sleep 1
         done
