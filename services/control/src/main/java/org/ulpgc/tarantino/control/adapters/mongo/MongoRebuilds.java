@@ -6,13 +6,12 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.RebuildStatus;
+import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.mongo.IndexState;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.control.ports.Rebuilds;
 
-import java.util.List;
 import java.util.OptionalInt;
 
 import static org.ulpgc.tarantino.common.mongo.MongoFields.GENERATION;
@@ -49,7 +48,7 @@ public class MongoRebuilds implements Rebuilds {
 
     @Override
     public boolean readyToSwitch(int target) {
-        return states.find(Filters.or(pendingBelow(target), pendingInTarget(target)))
+        return states.find(BookStates.blockingSwitchTo(target))
                 .projection(Projections.include(ID))
                 .first() == null;
     }
@@ -70,14 +69,5 @@ public class MongoRebuilds implements Rebuilds {
 
     private static Bson running() {
         return Filters.and(Filters.eq(ID, MongoCollections.REBUILD), Filters.eq(STATUS, RebuildStatus.RUNNING.name()));
-    }
-
-    private static Bson pendingBelow(int target) {
-        return Filters.and(Filters.lt(GENERATION, target), Filters.ne(STATUS, BookStatus.FAILED.name()));
-    }
-
-    private static Bson pendingInTarget(int target) {
-        return Filters.and(Filters.eq(GENERATION, target),
-                Filters.in(STATUS, List.of(BookStatus.DOWNLOADED.name(), BookStatus.INDEXING.name())));
     }
 }
