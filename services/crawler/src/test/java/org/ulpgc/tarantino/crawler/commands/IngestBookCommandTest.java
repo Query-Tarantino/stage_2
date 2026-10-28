@@ -26,20 +26,29 @@ class IngestBookCommandTest {
     };
 
     private final InMemoryDatalake datalake = new InMemoryDatalake();
+    private final RecordedLease lease = new RecordedLease();
 
     @Test
     void downloadsSplitsAndStoresNewBooks() {
-        IngestResult result = new IngestBookCommand(bookId -> RAW, datalake).execute(5);
+        IngestResult result = new IngestBookCommand(bookId -> RAW, datalake).execute(5, lease).orElseThrow();
 
         assertEquals(IngestResult.success(5, InMemoryDatalake.paths(5)), result);
         assertEquals(new BookText(5, "Title: T", "body"), datalake.books.get(5));
     }
 
     @Test
+    void writesNothingOnceTheLeaseIsLostDuringTheDownload() {
+        lease.loseAfterChecks(0);
+
+        assertEquals(Optional.empty(), new IngestBookCommand(bookId -> RAW, datalake).execute(5, lease));
+        assertFalse(datalake.books.containsKey(5));
+    }
+
+    @Test
     void reusesBooksAlreadyInTheDatalakeWithoutDownloading() {
         datalake.save(new BookText(5, "header", "body"));
 
-        assertEquals(IngestResult.success(5, InMemoryDatalake.paths(5)), new IngestBookCommand(UNREACHABLE, datalake).execute(5));
+        assertEquals(IngestResult.success(5, InMemoryDatalake.paths(5)), new IngestBookCommand(UNREACHABLE, datalake).execute(5, lease).orElseThrow());
     }
 
     @Test
@@ -48,13 +57,13 @@ class IngestBookCommandTest {
             throw new DownloadException(BookErrorCode.NOT_FOUND, "missing");
         };
 
-        assertEquals(IngestResult.failure(5, BookErrorCode.NOT_FOUND), new IngestBookCommand(missing, datalake).execute(5));
+        assertEquals(IngestResult.failure(5, BookErrorCode.NOT_FOUND), new IngestBookCommand(missing, datalake).execute(5, lease).orElseThrow());
         assertFalse(datalake.books.containsKey(5));
     }
 
     @Test
     void reportsBooksWithoutMarkersAsMissingMarkers() {
-        assertEquals(IngestResult.failure(5, BookErrorCode.MISSING_MARKERS), new IngestBookCommand(bookId -> "no markers", datalake).execute(5));
+        assertEquals(IngestResult.failure(5, BookErrorCode.MISSING_MARKERS), new IngestBookCommand(bookId -> "no markers", datalake).execute(5, lease).orElseThrow());
     }
 
     @Test
@@ -86,7 +95,7 @@ class IngestBookCommandTest {
             }
         };
 
-        assertEquals(IngestResult.failure(5, BookErrorCode.STORAGE_ERROR), new IngestBookCommand(bookId -> RAW, broken).execute(5));
+        assertEquals(IngestResult.failure(5, BookErrorCode.STORAGE_ERROR), new IngestBookCommand(bookId -> RAW, broken).execute(5, lease).orElseThrow());
     }
 
     private static class InMemoryDatalake implements DatalakeStorage {
