@@ -18,6 +18,7 @@ import org.ulpgc.tarantino.common.mongo.TwoAtOnce;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +34,7 @@ class MongoBookClaimsTest {
     private static final Duration LEASE = Duration.ofSeconds(60);
     private static final int MAX_ATTEMPTS = 3;
     private static final Instant OLD_ENQUEUED_AT = Instant.parse("2026-10-21T10:00:00Z");
+    private static final Instant OLD_LEASE_UNTIL = Instant.parse("2026-10-21T10:01:00Z");
 
     @RegisterExtension
     final TemporaryMongoDatabase mongo = new TemporaryMongoDatabase();
@@ -49,6 +51,30 @@ class MongoBookClaimsTest {
         assertEquals(BookStatus.DOWNLOADING.name(), state.getString(MongoFields.STATUS));
         assertEquals(1, state.getInteger(MongoFields.ATTEMPTS));
         assertNotNull(state.getDate(MongoFields.LEASE_UNTIL));
+    }
+
+    @Test
+    void onlyTheHolderOfTheClaimRenewsTheLeaseWhenAStaleWorkerTriesAtOnce() throws Exception {
+        MongoBookClaims claims = claims();
+        String claimId = claimedWithAnOldLeaseUntil(claims);
+        List<String> claimIds = new ArrayList<>(List.of(claimId, "stale-claim"));
+
+        List<Boolean> outcomes = TwoAtOnce.call(() -> claims.renew(1342, takeOne(claimIds)));
+
+        assertEquals(1, outcomes.stream().filter(Boolean::booleanValue).count());
+        assertTrue(state().getDate(MongoFields.LEASE_UNTIL).toInstant().isAfter(OLD_LEASE_UNTIL));
+        assertEquals(claimId, state().getString(MongoFields.CLAIM_ID));
+    }
+
+    @Test
+    void doesNotRenewAFinishedDownload() {
+        MongoBookClaims claims = claims();
+        new BookStates(database()).create(1342);
+        String claimId = claims.claim(1342).orElseThrow();
+        claims.finish(1342, claimId);
+
+        assertFalse(claims.renew(1342, claimId));
+        assertFalse(state().containsKey(MongoFields.LEASE_UNTIL));
     }
 
     @Test
@@ -145,6 +171,17 @@ class MongoBookClaimsTest {
 
         assertFalse(claims().retry(1342));
         assertEquals(BookStatus.QUEUED.name(), state().getString(MongoFields.STATUS));
+    }
+
+    private String claimedWithAnOldLeaseUntil(MongoBookClaims claims) {
+        new BookStates(database()).create(1342);
+        String claimId = claims.claim(1342).orElseThrow();
+        collection().updateOne(Filters.eq(MongoFields.ID, 1342), Updates.set(MongoFields.LEASE_UNTIL, Date.from(OLD_LEASE_UNTIL)));
+        return claimId;
+    }
+
+    private static synchronized String takeOne(List<String> claimIds) {
+        return claimIds.removeFirst();
     }
 
     private String claimedWithAnOldEnqueuedAt(MongoBookClaims claims) {
