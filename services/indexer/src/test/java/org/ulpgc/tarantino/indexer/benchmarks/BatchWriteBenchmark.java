@@ -4,7 +4,9 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.types.ObjectId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
@@ -12,6 +14,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Warmup;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.common.mongo.MongoIndexes;
@@ -40,9 +43,14 @@ import java.util.stream.Gatherers;
  * iteration so that it does not keep growing.
  */
 @State(Scope.Benchmark)
+@Warmup(iterations = BenchmarkProtocol.WARMUP_ITERATIONS, time = BatchWriteBenchmark.ITERATION_SECONDS)
+@Measurement(iterations = BenchmarkProtocol.MEASUREMENT_ITERATIONS, time = BatchWriteBenchmark.ITERATION_SECONDS)
+@Fork(value = BenchmarkProtocol.FORKS, jvmArgs = BenchmarkProtocol.FIXED_HEAP)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class BatchWriteBenchmark {
+
+    static final int ITERATION_SECONDS = 10;
 
     private static final int GENERATION = 1;
     private static final String CLAIM_ID = "benchmark";
