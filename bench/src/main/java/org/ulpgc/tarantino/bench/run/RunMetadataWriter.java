@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.common.mongo.MongoDatabases;
+import org.ulpgc.tarantino.common.mongo.MongoFields;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,15 +21,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class RunMetadataWriter {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(RunMetadataWriter.class);
 
     public static String sha256(Path file) throws IOException {
@@ -68,6 +66,7 @@ public class RunMetadataWriter {
         String secondColumn = tokens[1];
         String expectedHash;
         Path targetPath;
+
         if (firstColumn.matches("^[a-fA-F0-9]{64}$")) {
             expectedHash = firstColumn.toLowerCase(Locale.ROOT);
             targetPath = resolveCorpusFilePath(secondColumn);
@@ -179,21 +178,22 @@ public class RunMetadataWriter {
     }
 
     static int resolveDistinctTerms(String mongoUri, int generation) {
-        if (mongoUri != null && !mongoUri.isBlank()) {
+        if (mongoUri != null && !mongoUri.isBlank() && !mongoUri.contains("://mongo:")) {
             try {
                 MongoDatabase database = MongoDatabases.database(mongoUri);
                 return database.getCollection(MongoCollections.postings(generation))
-                        .distinct("term", String.class)
+                        .distinct(MongoFields.TERM, String.class)
                         .into(new HashSet<>())
                         .size();
             } catch (Exception exception) {
+                LOGGER.debug("Direct Mongo connection unavailable, falling back to Docker: {}", exception.getMessage());
             }
         }
         return resolveDistinctTermsFromDocker(generation);
     }
 
     static int resolveDistinctTermsFromDocker(int generation) {
-        String evalScript = "db.postings_g" + generation + ".distinct('term').length";
+        String evalScript = "db.postings_g" + generation + ".distinct('" + MongoFields.TERM + "').length";
         return runCommand("docker", "compose", "exec", "-T", "mongo", "mongosh", "tarantino", "--quiet", "--eval", evalScript)
                 .map(output -> Arrays.stream(output.split("\\R"))
                         .map(String::trim)
@@ -243,7 +243,6 @@ public class RunMetadataWriter {
             String threadsSeries,
             String replicasSeries) throws IOException {
         Files.createDirectories(runDir);
-
         ObjectNode root = TarantinoJson.mapper().createObjectNode();
         root.put("run_id", runId);
         root.put("experiment", experiment);
