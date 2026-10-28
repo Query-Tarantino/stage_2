@@ -134,11 +134,14 @@ export_explain() {
 
 run_jmh() {
     local run_dir=$1
+    local abs_run_dir
+    abs_run_dir="$(cd "$run_dir" && pwd)"
     echo "Running JMH SearchBenchmark..."
-    mvn -f services/query/pom.xml test-compile exec:exec \
+    mvn -DskipTests install
+    mvn -f services/query/pom.xml exec:exec \
         -Dexec.executable=java \
         -Dexec.classpathScope=test \
-        -Dexec.args="-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark ${run_dir}"
+        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark ${abs_run_dir}"
     if [[ -f "${run_dir}/jmh/query.json" ]]; then
         echo "Converting JMH JSON to CSV..."
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.jmh.JmhCsvConverter "${run_dir}/jmh/query.json" "${run_dir}/jmh/query.csv"
