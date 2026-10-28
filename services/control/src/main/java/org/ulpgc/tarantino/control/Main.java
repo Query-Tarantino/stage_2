@@ -21,12 +21,12 @@ public class Main {
     public static void main(String[] args) {
         TarantinoConfig config = TarantinoConfig.fromEnvironment(TarantinoService.CONTROL);
         Connections connections = Connections.open(config);
-        Startup.start(config, connections, List.of(), routes -> {
-        });
+        ReconcileCommand reconcile = ControlFactory.reconcileCommand(config, connections);
+        Startup.start(config, connections, List.of(), ControlFactory.statusRoutes(connections, reconcile)::register);
         Startup.retry("create the book state indexes", () -> MongoIndexes.ensureStateIndexes(connections.database()));
         List<Integer> candidates = ControlFactory.candidates(config);
         Startup.retry("seed the candidates", () -> seed(connections, candidates));
-        reconcileOnOneThread(config, ControlFactory.reconcileCommand(config, connections));
+        reconcileOnOneThread(config, reconcile);
     }
 
     /** The first reconciliation right after seeding and then one every TARANTINO_RECONCILE_SECONDS (SPEC §5.3). */

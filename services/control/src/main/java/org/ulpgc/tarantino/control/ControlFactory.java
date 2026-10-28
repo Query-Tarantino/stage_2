@@ -8,6 +8,7 @@ import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
 import org.ulpgc.tarantino.control.adapters.hazelcast.HazelcastQueueSizes;
+import org.ulpgc.tarantino.control.adapters.http.ControlStatusRoutes;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoAbandonedBatches;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoBatchLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoDownloadLeases;
@@ -16,7 +17,9 @@ import org.ulpgc.tarantino.control.adapters.mongo.MongoLostMessages;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoOldGenerations;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoOutdatedBooks;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoRebuilds;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoStatusCounts;
 import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
+import org.ulpgc.tarantino.control.commands.ControlStatusCommand;
 import org.ulpgc.tarantino.control.commands.DeleteAbandonedPostingsCommand;
 import org.ulpgc.tarantino.control.commands.DropOldGenerationsCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
@@ -57,6 +60,11 @@ public final class ControlFactory {
                 reindexOutdatedBooks(connections)::execute,
                 switchGeneration(connections)::execute,
                 dropOldGenerations(config, connections)::execute), Clock.systemUTC());
+    }
+
+    public static ControlStatusRoutes statusRoutes(Connections connections, ReconcileCommand reconcile) {
+        return new ControlStatusRoutes(new ControlStatusCommand(new MongoStatusCounts(connections.database()),
+                new HazelcastQueueSizes(connections.hazelcast().client()), reconcile::lastReconciliation));
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
