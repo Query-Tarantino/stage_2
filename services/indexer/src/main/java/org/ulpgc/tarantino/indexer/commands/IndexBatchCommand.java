@@ -39,7 +39,8 @@ import java.util.stream.Gatherers;
 public class IndexBatchCommand {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IndexBatchCommand.class);
-    private static final int POSTINGS_PER_WRITE = 1_000;
+    /** Terms per postings {@code bulkWrite}, which the batch-writing benchmark also uses. */
+    public static final int POSTINGS_PER_WRITE = 1_000;
 
     private final BatchStore batches;
     private final BookReader reader;
