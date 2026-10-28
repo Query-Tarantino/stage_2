@@ -88,6 +88,9 @@ class RunMetadataWriterTest {
         JsonNode docker = root.get("docker");
         assertTrue(docker.has("version"));
         assertTrue(docker.has("resources"));
+        JsonNode dockerResources = docker.get("resources");
+        assertTrue(dockerResources.has("cpus") && dockerResources.get("cpus").asInt() > 0);
+        assertTrue(dockerResources.has("memory_mb") && dockerResources.get("memory_mb").asLong() > 0);
 
         JsonNode jvm = root.get("jvm");
         assertTrue(jvm.has("version"));
@@ -134,5 +137,20 @@ class RunMetadataWriterTest {
         assertEquals(List.of(1, 8, 32), RunMetadataWriter.parseIntegerSeries("1 8 32", List.of()));
         assertEquals(List.of(2, 4), RunMetadataWriter.parseIntegerSeries("2, 4", List.of()));
         assertEquals(List.of(10), RunMetadataWriter.parseIntegerSeries("", List.of(10)));
+    }
+
+    @Test
+    void shouldParseDockerResourcesFromOutput() {
+        RunMetadataWriter.DockerResources resources = RunMetadataWriter.parseDockerResources("8,16777216000");
+        assertEquals(8, resources.cpus());
+        assertEquals(16000, resources.memoryMb());
+
+        RunMetadataWriter.DockerResources fallbackOnEmpty = RunMetadataWriter.parseDockerResources("");
+        assertTrue(fallbackOnEmpty.cpus() > 0);
+        assertTrue(fallbackOnEmpty.memoryMb() > 0);
+
+        RunMetadataWriter.DockerResources fallbackOnInvalid = RunMetadataWriter.parseDockerResources("invalid,data");
+        assertTrue(fallbackOnInvalid.cpus() > 0);
+        assertTrue(fallbackOnInvalid.memoryMb() > 0);
     }
 }

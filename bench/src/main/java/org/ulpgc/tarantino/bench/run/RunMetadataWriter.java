@@ -179,18 +179,57 @@ public class RunMetadataWriter {
     }
 
     static int resolveDistinctTerms(String mongoUri, int generation) {
-        if (mongoUri == null || mongoUri.isBlank()) {
-            return 0;
+        if (mongoUri != null && !mongoUri.isBlank()) {
+            try {
+                MongoDatabase database = MongoDatabases.database(mongoUri);
+                return database.getCollection(MongoCollections.postings(generation))
+                        .distinct("term", String.class)
+                        .into(new HashSet<>())
+                        .size();
+            } catch (Exception exception) {
+            }
         }
-        try {
-            MongoDatabase database = MongoDatabases.database(mongoUri);
-            return database.getCollection(MongoCollections.postings(generation))
-                    .distinct("term", String.class)
-                    .into(new HashSet<>())
-                    .size();
-        } catch (Exception exception) {
-            return 0;
+        return resolveDistinctTermsFromDocker(generation);
+    }
+
+    static int resolveDistinctTermsFromDocker(int generation) {
+        String evalScript = "db.postings_g" + generation + ".distinct('term').length";
+        return runCommand("docker", "compose", "exec", "-T", "mongo", "mongosh", "tarantino", "--quiet", "--eval", evalScript)
+                .map(output -> Arrays.stream(output.split("\\R"))
+                        .map(String::trim)
+                        .filter(line -> line.matches("^[0-9]+$"))
+                        .findFirst()
+                        .map(Integer::parseInt)
+                        .orElse(0))
+                .orElse(0);
+    }
+
+    public record DockerResources(int cpus, long memoryMb) {}
+
+    public static DockerResources resolveDockerResources() {
+        return runCommand("docker", "info", "--format", "{{.NCPU}},{{.MemTotal}}")
+                .map(RunMetadataWriter::parseDockerResources)
+                .orElseGet(() -> new DockerResources(Runtime.getRuntime().availableProcessors(), resolveTotalMemoryMb()));
+    }
+
+    public static DockerResources parseDockerResources(String output) {
+        int fallbackCpus = Runtime.getRuntime().availableProcessors();
+        long fallbackMemoryMb = resolveTotalMemoryMb();
+        if (output == null || output.isBlank()) {
+            return new DockerResources(fallbackCpus, fallbackMemoryMb);
         }
+        String[] parts = output.trim().split(",");
+        if (parts.length >= 2) {
+            try {
+                int cpus = Integer.parseInt(parts[0].trim());
+                long memoryBytes = Long.parseLong(parts[1].trim());
+                long memoryMb = memoryBytes / (1024L * 1024L);
+                return new DockerResources(cpus, memoryMb);
+            } catch (NumberFormatException exception) {
+                return new DockerResources(fallbackCpus, fallbackMemoryMb);
+            }
+        }
+        return new DockerResources(fallbackCpus, fallbackMemoryMb);
     }
 
     public static void writeManifest(
@@ -228,9 +267,10 @@ public class RunMetadataWriter {
 
         ObjectNode dockerNode = root.putObject("docker");
         dockerNode.put("version", resolveDockerVersion());
-        ObjectNode dockerResources = dockerNode.putObject("resources");
-        dockerResources.put("cpus", Runtime.getRuntime().availableProcessors());
-        dockerResources.put("memory_mb", resolveTotalMemoryMb());
+        DockerResources dockerResources = resolveDockerResources();
+        ObjectNode dockerResourcesNode = dockerNode.putObject("resources");
+        dockerResourcesNode.put("cpus", dockerResources.cpus());
+        dockerResourcesNode.put("memory_mb", dockerResources.memoryMb());
 
         ObjectNode jvmNode = root.putObject("jvm");
         jvmNode.put("version", System.getProperty("java.version"));
