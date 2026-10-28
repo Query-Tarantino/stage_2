@@ -6,6 +6,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookState;
 import org.ulpgc.tarantino.common.model.BookStatus;
@@ -14,6 +15,7 @@ import java.util.Optional;
 
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ATTEMPTS;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ENQUEUED_AT;
+import static org.ulpgc.tarantino.common.mongo.MongoFields.GENERATION;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.LAST_ERROR;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.STATUS;
@@ -37,6 +39,18 @@ public class BookStates {
                 .append(ENQUEUED_AT, ifNull(ENQUEUED_AT, NOW))
                 .append(UPDATED_AT, ifNull(UPDATED_AT, NOW));
         return collection.updateOne(Filters.eq(ID, bookId), set(fields), new UpdateOptions().upsert(true)).getUpsertedId() != null;
+    }
+
+    /**
+     * The books that block the switch to {@code targetGeneration} (SPEC §5.4, step 4): those of an older generation
+     * that did not fail, and those of the target still waiting for a batch or inside one. A book never indexed has no
+     * {@code generation} and blocks nothing. {@code books_pending} counts them and {@code control} switches when none is left.
+     */
+    public static Bson blockingSwitchTo(int targetGeneration) {
+        return Filters.or(
+                Filters.and(Filters.lt(GENERATION, targetGeneration), Filters.ne(STATUS, BookStatus.FAILED.name())),
+                Filters.and(Filters.eq(GENERATION, targetGeneration),
+                        Filters.in(STATUS, BookStatus.DOWNLOADED.name(), BookStatus.INDEXING.name())));
     }
 
     /** The state that {@code /ingest/status} and {@code /index/status} return (SPEC §6.2), if the book has a document. */
