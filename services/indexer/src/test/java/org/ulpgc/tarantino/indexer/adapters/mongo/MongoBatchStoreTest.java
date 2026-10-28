@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -15,6 +16,7 @@ import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.common.mongo.MongoFields;
 import org.ulpgc.tarantino.common.mongo.TemporaryMongoDatabase;
 import org.ulpgc.tarantino.common.mongo.TwoAtOnce;
+import org.ulpgc.tarantino.common.mongo.UpdatePipelines;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
 
 import java.time.Duration;
@@ -25,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -111,6 +114,69 @@ class MongoBatchStoreTest {
         Thread.sleep(50);
 
         assertEquals(Optional.empty(), store.publish(batch, List.of(1342)));
+    }
+
+    @Test
+    void renewsTheLeaseOfItsOwnWritingBatchOnly() throws InterruptedException {
+        MongoBatchStore store = store(LEASE);
+        Batch batch = store.open(1);
+        Date openedLease = batchDocument(batch).getDate(MongoFields.LEASE_UNTIL);
+        Thread.sleep(20);
+
+        assertTrue(store.renew(batch));
+        assertFalse(store.renew(new Batch(batch.batchId(), "another claim", 1)));
+        assertTrue(batchDocument(batch).getDate(MongoFields.LEASE_UNTIL).after(openedLease));
+    }
+
+    @Test
+    void renewingAndAbandoningAnExpiredBatchAtOnceNeverBothMatch() throws Exception {
+        Batch batch = store(Duration.ofMillis(1)).open(1);
+        Thread.sleep(50);
+        MongoBatchStore store = store(LEASE);
+        AtomicInteger claimants = new AtomicInteger();
+
+        List<BatchStatus> winners = TwoAtOnce.call(() -> claimants.getAndIncrement() == 0
+                        ? matched(store.renew(batch), BatchStatus.WRITING)
+                        : matched(abandonAsControlDoes(batch), BatchStatus.ABANDONED))
+                .stream().flatMap(Optional::stream).toList();
+
+        assertEquals(1, winners.size());
+        assertEquals(winners.getFirst().name(), batchDocument(batch).getString(MongoFields.STATUS));
+    }
+
+    @Test
+    void publishingAndAbandoningAtTheLeaseBoundaryNeverBothMatch() throws Exception {
+        MongoBatchStore store = store(Duration.ofMillis(5));
+        downloaded(1342);
+        Batch batch = store.open(1);
+        store.claim(batch, List.of(1342));
+        AtomicInteger claimants = new AtomicInteger();
+
+        List<BatchStatus> winners = TwoAtOnce.call(() -> claimants.getAndIncrement() == 0
+                        ? matched(store.publish(batch, List.of(1342)).isPresent(), BatchStatus.PUBLISHED)
+                        : matched(abandonAsControlDoes(batch), BatchStatus.ABANDONED))
+                .stream().flatMap(Optional::stream).toList();
+
+        assertTrue(winners.size() <= 1);
+        winners.forEach(winner -> assertEquals(winner.name(), batchDocument(batch).getString(MongoFields.STATUS)));
+    }
+
+    private static Optional<BatchStatus> matched(boolean matched, BatchStatus status) {
+        return matched ? Optional.of(status) : Optional.empty();
+    }
+
+    private boolean abandonAsControlDoes(Batch batch) {
+        Bson expiredWriting = Filters.and(Filters.eq(MongoFields.ID, new ObjectId(batch.batchId())),
+                Filters.eq(MongoFields.STATUS, BatchStatus.WRITING.name()),
+                Filters.expr(new Document("$lte", List.of("$" + MongoFields.LEASE_UNTIL, UpdatePipelines.NOW))));
+        Document change = new Document(MongoFields.STATUS, BatchStatus.ABANDONED.name())
+                .append(MongoFields.ABANDONED_AT, UpdatePipelines.NOW);
+        return batches().updateOne(expiredWriting, UpdatePipelines.setThenUnset(change, MongoFields.LEASE_UNTIL))
+                .getMatchedCount() == 1;
+    }
+
+    private Document batchDocument(Batch batch) {
+        return batches().find(Filters.eq(MongoFields.ID, new ObjectId(batch.batchId()))).first();
     }
 
     private MongoBatchStore store(Duration lease) {

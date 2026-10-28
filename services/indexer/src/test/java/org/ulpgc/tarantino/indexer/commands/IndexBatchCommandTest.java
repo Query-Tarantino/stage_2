@@ -183,6 +183,11 @@ class IndexBatchCommandTest {
         }
 
         @Override
+        public boolean renew(Batch batch) {
+            return !leaseLost;
+        }
+
+        @Override
         public boolean failAtIndexing(Batch batch, int bookId) {
             failed.add(bookId);
             return indexing.remove(bookId);
