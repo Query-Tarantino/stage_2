@@ -22,8 +22,8 @@ import java.util.function.Function;
  * One message of {@code books-to-download} (SPEC §5.1): it claims the book, ingests it and, once the download is
  * finished, enqueues it in {@code books-to-index}. A failed download goes back to {@code books-to-download} only if
  * “Fail a download” leaves it {@code QUEUED}. A message whose claim fails is a duplicate or stale and is dropped.
- * While it holds the book, a heartbeat renews its lease with “Renew a book”. It passes the crawler's crash points of
- * SPEC §8 on the way.
+ * While it holds the book, a heartbeat renews its lease with “Renew a book”, and once the lease is lost the book is
+ * dropped before its next write. It passes the crawler's crash points of SPEC §8 on the way.
  */
 public class DownloadBookCommand {
 
@@ -66,20 +66,20 @@ public class DownloadBookCommand {
     private void download(int bookId, String claimId, Lease lease) {
         Optional<IngestResult> ingested = ingest.execute(bookId, lease);
         if (ingested.isEmpty()) {
-            LOGGER.warn("Book {} lost its lease before reaching the datalake and is dropped", bookId);
+            logDropped(bookId);
             return;
         }
         IngestResult result = ingested.get();
         if (!result.succeeded()) {
-            fail(bookId, claimId, result.failure());
+            fail(bookId, claimId, result.failure(), lease);
             return;
         }
         crashPoints.accept(CrashPoint.AFTER_DATALAKE_WRITE);
-        finish(bookId, claimId);
+        finish(bookId, claimId, lease);
     }
 
-    private void finish(int bookId, String claimId) {
-        if (!claims.finish(bookId, claimId)) {
+    private void finish(int bookId, String claimId, Lease lease) {
+        if (dropped(bookId, lease) || !claims.finish(bookId, claimId)) {
             return;
         }
         log.write(Transition.book(bookId, BookStatus.DOWNLOADING, BookStatus.DOWNLOADED));
@@ -87,7 +87,10 @@ public class DownloadBookCommand {
         indexQueue.enqueue(new BookTask(bookId, clock.instant()));
     }
 
-    private void fail(int bookId, String claimId, BookErrorCode reason) {
+    private void fail(int bookId, String claimId, BookErrorCode reason, Lease lease) {
+        if (dropped(bookId, lease)) {
+            return;
+        }
         Optional<BookStatus> outcome = claims.fail(bookId, claimId, reason);
         if (outcome.isEmpty()) {
             return;
@@ -97,5 +100,17 @@ public class DownloadBookCommand {
         if (outcome.get() == BookStatus.QUEUED) {
             downloadQueue.enqueue(new BookTask(bookId, clock.instant()));
         }
+    }
+
+    private static boolean dropped(int bookId, Lease lease) {
+        if (!lease.lost()) {
+            return false;
+        }
+        logDropped(bookId);
+        return true;
+    }
+
+    private static void logDropped(int bookId) {
+        LOGGER.warn("Book {} lost its lease and is dropped without writing anything else", bookId);
     }
 }
