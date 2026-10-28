@@ -24,22 +24,20 @@ import org.ulpgc.tarantino.indexer.commands.BookReader;
 import org.ulpgc.tarantino.indexer.commands.IndexBatchCommand;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
 import org.ulpgc.tarantino.indexer.model.book.BookMetadata;
-import org.ulpgc.tarantino.indexer.model.book.BookText;
 import org.ulpgc.tarantino.indexer.model.book.ParsedBook;
 import org.ulpgc.tarantino.indexer.model.terms.BatchPostings;
 import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Gatherers;
 
 /**
  * Writing a batch's metadata and postings to MongoDB, as the indexer does between opening and publishing it (SPEC §5.1),
- * for batches of 1, 10 and 100 books of the corpus. Each write is a new batch, and the generation is emptied before every
+ * for batches of 1, 10, 100 and 1000 books of the corpus. The books are read and parsed one at a time, so only their
+ * metadata and term frequencies stay in memory. Each write is a new batch, and the generation is emptied before every
  * iteration so that it does not keep growing.
  */
 @State(Scope.Benchmark)
@@ -55,7 +53,7 @@ public class BatchWriteBenchmark {
     private static final int GENERATION = 1;
     private static final String CLAIM_ID = "benchmark";
 
-    @Param({"1", "10", "100"})
+    @Param({"1", "10", "100", "1000"})
     public int books;
 
     private MongoDatabase database;
@@ -67,10 +65,8 @@ public class BatchWriteBenchmark {
     public void parseTheBatch() {
         database = MongoDatabases.database(new TemporaryMongoDatabase().uri());
         writer = new MongoIndexWriter(database);
-        Map<Integer, BookText> texts = BenchmarkBooks.firstBooks(books).stream()
-                .collect(Collectors.toMap(BookText::bookId, Function.identity()));
-        BookReader reader = new BookReader(bookId -> Optional.ofNullable(texts.get(bookId)), BenchmarkBooks.tokenizer());
-        List<ParsedBook> parsed = texts.keySet().stream().map(reader::read).flatMap(Optional::stream).toList();
+        BookReader reader = new BookReader(bookId -> Optional.of(BenchmarkBooks.book(bookId)), BenchmarkBooks.tokenizer());
+        List<ParsedBook> parsed = BenchmarkBooks.firstBookIds(books).stream().map(reader::read).flatMap(Optional::stream).toList();
         metadata = parsed.stream().map(ParsedBook::metadata).toList();
         postingsChunks = BatchPostings.of(parsed.stream()
                         .collect(Collectors.toMap(book -> book.metadata().bookId(), ParsedBook::frequencies)))

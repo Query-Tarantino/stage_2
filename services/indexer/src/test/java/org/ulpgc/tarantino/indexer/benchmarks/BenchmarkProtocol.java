@@ -10,7 +10,7 @@ final class BenchmarkProtocol {
     static final int WARMUP_ITERATIONS = 5;
     static final int MEASUREMENT_ITERATIONS = 10;
     static final int FORKS = 3;
-    static final String FIXED_HEAP = "-Xmx1g";
+    static final String FIXED_HEAP = "-Xmx4g";
 
     private BenchmarkProtocol() {
     }

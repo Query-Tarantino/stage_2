@@ -40,14 +40,13 @@ final class BenchmarkBooks {
     }
 
     /** The first {@code count} books of {@code workload/book_ids.txt} that the mirror holds, in that order. */
-    static List<BookText> firstBooks(int count) {
+    static List<Integer> firstBookIds(int count) {
         return read(CONFIG.workload().resolve("book_ids.txt")).lines()
                 .map(String::strip)
                 .filter(line -> !line.isEmpty())
                 .map(Integer::valueOf)
                 .filter(bookId -> Files.exists(mirrorFile(bookId)))
                 .limit(count)
-                .map(BenchmarkBooks::book)
                 .toList();
     }
 
