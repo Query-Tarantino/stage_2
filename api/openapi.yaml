@@ -726,7 +726,7 @@ components:
             author:
               type: string
             language:
-              type: string
+              $ref: "#/components/schemas/LanguageCode"
             year:
               $ref: "#/components/schemas/Year"
         total:
@@ -969,7 +969,7 @@ components:
             enum: [mongo, hazelcast, snapshot]
 
     Problem:
-      description: Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500`.
+      description: "Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500` and on nginx's own `404` for an unknown path."
       type: object
       additionalProperties: false
       required: [type, title, status]
