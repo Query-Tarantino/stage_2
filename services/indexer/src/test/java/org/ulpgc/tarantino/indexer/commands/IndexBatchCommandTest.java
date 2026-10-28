@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BatchPublished;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
+import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
@@ -22,10 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IndexBatchCommandTest {
 
@@ -41,6 +44,20 @@ class IndexBatchCommandTest {
             steps.add(point.point());
         }
     };
+    private final Lease lease = new Lease() {
+        @Override
+        public boolean lost() {
+            return steps.contains(leaseLostAfterStep);
+        }
+
+        @Override
+        public void close() {
+            leaseClosed = true;
+        }
+    };
+    private String leaseLostAfterStep = "never";
+    private boolean leaseClosed;
+    private BooleanSupplier renewal;
     private final FakeBatchStore batches = new FakeBatchStore();
     private final RecordingWriter writer = new RecordingWriter();
     private final List<BatchPublished> announced = new ArrayList<>();
@@ -96,9 +113,7 @@ class IndexBatchCommandTest {
 
     @Test
     void writesThePostingsInChunksOfAThousandTerms() {
-        store(1342, "Title: Pride and Prejudice", IntStream.range(0, 2_500)
-                .mapToObj(IndexBatchCommandTest::distinctWord)
-                .collect(Collectors.joining(" ")));
+        store(1342, "Title: Pride and Prejudice", distinctWords(2_500));
 
         command().execute(books(1342));
 
@@ -117,6 +132,53 @@ class IndexBatchCommandTest {
     }
 
     @Test
+    void renewsTheLeaseOfItsOwnBatchUntilItEnds() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().execute(books(1342));
+
+        assertTrue(renewal.getAsBoolean());
+        assertEquals(List.of(BATCH_ID), batches.renewed);
+        assertTrue(leaseClosed);
+    }
+
+    @Test
+    void writesNothingOnceItsLeaseIsLostBeforeTheFirstWrite() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        leaseLostAfterStep = "open";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(), writer.metadata);
+        assertEquals(List.of(), writer.postings);
+        assertEquals(Map.of(), batches.published);
+    }
+
+    @Test
+    void stopsWritingTheBatchOnceItsLeaseIsLost() {
+        store(1342, "Title: Pride and Prejudice", distinctWords(2_500));
+        leaseLostAfterStep = "postings";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1_000), writer.postingsChunkSizes);
+        assertEquals(Map.of(), batches.published);
+        assertEquals(List.of(), announced);
+    }
+
+    @Test
+    void neverPublishesABatchWhoseLeaseWasLostAfterItsLastWrite() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        leaseLostAfterStep = "postings";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1), writer.postingsChunkSizes);
+        assertEquals(Map.of(), batches.published);
+        assertEquals(Set.of(), batches.marked);
+    }
+
+    @Test
     void neitherMarksNorAnnouncesABatchThatLostItsLease() {
         store(1342, "Title: Pride and Prejudice", "pride");
         batches.leaseLost = true;
@@ -130,6 +192,10 @@ class IndexBatchCommandTest {
     private void store(int bookId, String header, String body) {
         datalake.put(bookId, new BookText(bookId, header, body));
         batches.downloaded.add(bookId);
+    }
+
+    private static String distinctWords(int count) {
+        return IntStream.range(0, count).mapToObj(IndexBatchCommandTest::distinctWord).collect(Collectors.joining(" "));
     }
 
     private static String distinctWord(int index) {
@@ -146,7 +212,10 @@ class IndexBatchCommandTest {
 
     private IndexBatchCommand command() {
         BookReader reader = new BookReader(bookId -> Optional.ofNullable(datalake.get(bookId)), new Tokenizer(Set.of("and")));
-        return new IndexBatchCommand(batches, reader, writer, this::announce, new TransitionLog(), crashPoints);
+        return new IndexBatchCommand(batches, reader, writer, this::announce, new TransitionLog(), crashPoints, renewal -> {
+            this.renewal = renewal;
+            return lease;
+        });
     }
 
     private void announce(BatchPublished batch) {
@@ -161,6 +230,7 @@ class IndexBatchCommandTest {
         private final List<Integer> failed = new ArrayList<>();
         private final Map<String, List<Integer>> published = new HashMap<>();
         private final Set<Integer> marked = new HashSet<>();
+        private final List<String> renewed = new ArrayList<>();
         private boolean leaseLost;
 
         @Override
@@ -184,6 +254,7 @@ class IndexBatchCommandTest {
 
         @Override
         public boolean renew(Batch batch) {
+            renewed.add(batch.batchId());
             return !leaseLost;
         }
 

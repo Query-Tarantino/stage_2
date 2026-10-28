@@ -4,6 +4,7 @@ import com.hazelcast.core.HazelcastInstance;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
+import org.ulpgc.tarantino.common.operations.LeaseHeartbeat;
 import org.ulpgc.tarantino.common.operations.Replica;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
@@ -32,7 +33,8 @@ public final class IndexerFactory {
                 Clock.systemUTC());
         IndexBatchCommand index = new IndexBatchCommand(new MongoBatchStore(connections.database(), config.lease(), Replica.name()),
                 new BookReader(datalakeReader(config), tokenizer(config)), new MongoIndexWriter(connections.database()),
-                new BatchPublishedTopic(client)::publish, new TransitionLog(), new CrashPoints(config.crashAt()));
+                new BatchPublishedTopic(client)::publish, new TransitionLog(), new CrashPoints(config.crashAt()),
+                renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal));
         return new IndexWorker(collector, index);
     }
 

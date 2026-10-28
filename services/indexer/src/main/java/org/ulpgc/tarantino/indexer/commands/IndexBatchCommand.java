@@ -7,6 +7,7 @@ import org.ulpgc.tarantino.common.model.BatchPublished;
 import org.ulpgc.tarantino.common.model.BatchStatus;
 import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
+import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
@@ -22,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Gatherers;
 
@@ -30,7 +33,8 @@ import java.util.stream.Gatherers;
  * postings and publishes it. Until it is published nothing it wrote is visible; if its lease is lost first, it marks
  * no book and announces nothing, and {@code control} abandons it. The postings go in {@code bulkWrite}s of
  * {@value #POSTINGS_PER_WRITE} terms, so a crash between two of them leaves the batch half-written. It stops at the
- * indexer's crash points of SPEC §8.
+ * indexer's crash points of SPEC §8. A heartbeat renews the batch's lease while it is open; once the lease is lost, it
+ * writes nothing else and does not publish.
  */
 public class IndexBatchCommand {
 
@@ -43,15 +47,18 @@ public class IndexBatchCommand {
     private final BatchAnnouncer announcer;
     private final TransitionLog log;
     private final CrashPoints crashPoints;
+    private final Function<BooleanSupplier, Lease> heartbeats;
 
+    /** {@code heartbeats} starts renewing a lease with its “Renew” write, which answers whether it matched. */
     public IndexBatchCommand(BatchStore batches, BookReader reader, IndexWriter writer, BatchAnnouncer announcer, TransitionLog log,
-                             CrashPoints crashPoints) {
+                             CrashPoints crashPoints, Function<BooleanSupplier, Lease> heartbeats) {
         this.batches = batches;
         this.reader = reader;
         this.writer = writer;
         this.announcer = announcer;
         this.log = log;
         this.crashPoints = crashPoints;
+        this.heartbeats = heartbeats;
     }
 
     /**
@@ -62,6 +69,12 @@ public class IndexBatchCommand {
         crashPoints.hit(CrashPoint.INDEXER_AFTER_DEQUEUE);
         Batch batch = batches.open(batches.writeGeneration());
         log.write(Transition.batch(batch.batchId(), null, BatchStatus.WRITING, batch.generation()));
+        try (Lease lease = heartbeats.apply(() -> batches.renew(batch))) {
+            index(batch, books, lease);
+        }
+    }
+
+    private void index(Batch batch, Map<Integer, Instant> books, Lease lease) {
         List<Integer> claimed = batches.claim(batch, books.keySet());
         claimed.forEach(bookId -> log.write(Transition.book(bookId, BookStatus.DOWNLOADED, BookStatus.INDEXING)
                 .inBatch(batch.batchId(), batch.generation()).fromMessageEnqueuedAt(books.get(bookId))));
@@ -73,7 +86,11 @@ public class IndexBatchCommand {
             LOGGER.info("Batch {} has no books to index; it is left to expire", batch.batchId());
             return;
         }
-        write(batch, parsed);
+        boolean written = write(batch, parsed, lease);
+        if (!written || lease.lost()) {
+            LOGGER.warn("Batch {} lost its lease while writing; control abandons it", batch.batchId());
+            return;
+        }
         publish(batch, parsed.stream().map(book -> book.metadata().bookId()).toList());
     }
 
@@ -91,7 +108,11 @@ public class IndexBatchCommand {
         }
     }
 
-    private void write(Batch batch, List<ParsedBook> books) {
+    /** Writes the batch's metadata and postings; false as soon as its lease is lost before one of the writes. */
+    private boolean write(Batch batch, List<ParsedBook> books, Lease lease) {
+        if (lease.lost()) {
+            return false;
+        }
         writer.writeMetadata(batch.generation(), books.stream().map(ParsedBook::metadata).toList());
         List<List<TermPostings>> postingsChunks = BatchPostings.of(books.stream()
                         .collect(Collectors.toMap(book -> book.metadata().bookId(), ParsedBook::frequencies)))
@@ -99,9 +120,13 @@ public class IndexBatchCommand {
                 .gather(Gatherers.windowFixed(POSTINGS_PER_WRITE))
                 .toList();
         for (List<TermPostings> chunk : postingsChunks) {
+            if (lease.lost()) {
+                return false;
+            }
             writer.writePostings(batch, chunk);
             crashPoints.hit(CrashPoint.DURING_BATCH_WRITE);
         }
+        return true;
     }
 
     private void publish(Batch batch, List<Integer> bookIds) {
