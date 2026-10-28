@@ -15,8 +15,7 @@ public class Main {
     public static void main(String[] args) {
         TarantinoConfig config = TarantinoConfig.fromEnvironment(TarantinoService.CRAWLER);
         Connections connections = Connections.open(config);
-        Startup.start(config, connections, List.of(), routes -> {
-        });
+        Startup.start(config, connections, List.of(), CrawlerFactory.routes(connections));
         Startup.retry("create the book state indexes", () -> MongoIndexes.ensureStateIndexes(connections.database()));
         DownloadWorker worker = CrawlerFactory.downloadWorker(config, connections);
         IntStream.range(0, config.parallelDownloads())

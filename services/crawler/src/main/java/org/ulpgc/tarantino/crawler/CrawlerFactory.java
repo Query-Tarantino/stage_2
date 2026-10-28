@@ -1,10 +1,12 @@
 package org.ulpgc.tarantino.crawler;
 
 import com.hazelcast.core.HazelcastInstance;
+import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
 import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.LeaseHeartbeat;
@@ -13,6 +15,7 @@ import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.GutenbergHttpDownloader;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.LocalMirrorDownloader;
+import org.ulpgc.tarantino.crawler.adapters.http.IngestRoutes;
 import org.ulpgc.tarantino.crawler.adapters.mongo.MongoBookClaims;
 import org.ulpgc.tarantino.crawler.commands.DownloadBookCommand;
 import org.ulpgc.tarantino.crawler.commands.DownloadWorker;
@@ -40,6 +43,10 @@ public final class CrawlerFactory {
         DownloadBookCommand download = new DownloadBookCommand(claims, ingestCommand(config), downloads::offer, indexing::offer,
                 new TransitionLog(), Clock.systemUTC(), crashPoints, heartbeats);
         return new DownloadWorker(downloads::poll, download, crashPoints);
+    }
+
+    public static Consumer<Javalin> routes(Connections connections) {
+        return new IngestRoutes(new BookStates(connections.database())::state)::register;
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {
