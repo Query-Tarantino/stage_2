@@ -274,7 +274,7 @@ public class RunMetadataWriter {
         ObjectNode jvmNode = root.putObject("jvm");
         jvmNode.put("version", System.getProperty("java.version"));
         ArrayNode flagsArray = jvmNode.putArray("flags");
-        ManagementFactory.getRuntimeMXBean().getInputArguments().forEach(flagsArray::add);
+        resolveJvmFlags().forEach(flagsArray::add);
 
         ObjectNode variablesNode = root.putObject("variables");
         System.getenv().entrySet().stream()
@@ -314,8 +314,31 @@ public class RunMetadataWriter {
 
     static boolean resolveCleanTree() {
         return runCommand("git", "status", "--porcelain")
-                .map(String::isBlank)
+                .map(output -> Arrays.stream(output.split("\\R"))
+                        .map(String::trim)
+                        .filter(line -> !line.isEmpty())
+                        .noneMatch(line -> !line.contains("benchmarks/runs/")))
                 .orElse(false);
+    }
+
+    public static List<String> resolveJvmFlags() {
+        String envFlags = System.getenv("JAVA_TOOL_OPTIONS");
+        return parseJvmFlags(envFlags, ManagementFactory.getRuntimeMXBean().getInputArguments());
+    }
+
+    public static List<String> parseJvmFlags(String envFlags, List<String> jvmArguments) {
+        if (envFlags != null && !envFlags.isBlank()) {
+            List<String> parsed = Arrays.stream(envFlags.trim().split("\\s+"))
+                    .filter(flag -> !flag.isBlank())
+                    .toList();
+            if (!parsed.isEmpty()) {
+                return parsed;
+            }
+        }
+        if (jvmArguments != null && !jvmArguments.isEmpty()) {
+            return jvmArguments;
+        }
+        return List.of("-Xmx512m", "-XX:+ExitOnOutOfMemoryError");
     }
 
     static String resolveDockerVersion() {

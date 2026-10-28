@@ -153,4 +153,20 @@ class RunMetadataWriterTest {
         assertTrue(fallbackOnInvalid.cpus() > 0);
         assertTrue(fallbackOnInvalid.memoryMb() > 0);
     }
+
+    @Test
+    void shouldResolveJvmFlagsCorrectly() {
+        List<String> fromEnv = RunMetadataWriter.parseJvmFlags("-Xmx1g -XX:+UseG1GC", List.of());
+        assertEquals(List.of("-Xmx1g", "-XX:+UseG1GC"), fromEnv);
+
+        List<String> fromArgs = RunMetadataWriter.parseJvmFlags("", List.of("-Xms256m"));
+        assertEquals(List.of("-Xms256m"), fromArgs);
+
+        List<String> fallback = RunMetadataWriter.parseJvmFlags(null, List.of());
+        assertEquals(List.of("-Xmx512m", "-XX:+ExitOnOutOfMemoryError"), fallback);
+
+        List<String> liveFlags = RunMetadataWriter.resolveJvmFlags();
+        assertNotNull(liveFlags);
+        assertTrue(!liveFlags.isEmpty());
+    }
 }
