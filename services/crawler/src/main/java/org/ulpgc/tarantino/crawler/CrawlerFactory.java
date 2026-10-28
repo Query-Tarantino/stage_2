@@ -17,6 +17,7 @@ import org.ulpgc.tarantino.crawler.adapters.gutenberg.GutenbergHttpDownloader;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.LocalMirrorDownloader;
 import org.ulpgc.tarantino.crawler.adapters.http.IngestRoutes;
 import org.ulpgc.tarantino.crawler.adapters.mongo.MongoBookClaims;
+import org.ulpgc.tarantino.crawler.adapters.mongo.MongoIngestRequests;
 import org.ulpgc.tarantino.crawler.commands.DownloadBookCommand;
 import org.ulpgc.tarantino.crawler.commands.DownloadWorker;
 import org.ulpgc.tarantino.crawler.commands.IngestBookCommand;
@@ -46,7 +47,9 @@ public final class CrawlerFactory {
     }
 
     public static Consumer<Javalin> routes(Connections connections) {
-        return new IngestRoutes(new BookStates(connections.database())::state)::register;
+        BookTaskQueue downloads = new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD);
+        return new IngestRoutes(new BookStates(connections.database())::state, new MongoIngestRequests(connections.database()),
+                downloads::offer, new TransitionLog(), Clock.systemUTC())::register;
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {
