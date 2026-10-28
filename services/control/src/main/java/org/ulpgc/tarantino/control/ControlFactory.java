@@ -105,11 +105,16 @@ public final class ControlFactory {
     }
 
     private static DownloadQueue downloadQueue(Connections connections) {
-        return new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD)::offer;
+        return task -> bookTasks(connections, HazelcastContracts.BOOKS_TO_DOWNLOAD).offer(task);
     }
 
     private static IndexQueue indexQueue(Connections connections) {
-        return new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_INDEX)::offer;
+        return task -> bookTasks(connections, HazelcastContracts.BOOKS_TO_INDEX).offer(task);
+    }
+
+    /** Looked up on every message, so the commands can be built before the Hazelcast client connects. */
+    private static BookTaskQueue bookTasks(Connections connections, String queue) {
+        return new BookTaskQueue(connections.hazelcast().client(), queue);
     }
 
     private static List<Integer> ids(Path file) {

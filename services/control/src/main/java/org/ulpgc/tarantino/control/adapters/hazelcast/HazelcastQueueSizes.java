@@ -1,28 +1,28 @@
 package org.ulpgc.tarantino.control.adapters.hazelcast;
 
-import com.hazelcast.collection.IQueue;
 import com.hazelcast.core.HazelcastInstance;
 import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
 import org.ulpgc.tarantino.control.ports.QueueSizes;
 
-/** The sizes of both queues of SPEC §4.2, for step 4 of SPEC §5.3 and {@code GET /control/status} (SPEC §6.5). */
+/**
+ * The sizes of both queues of SPEC §4.2, for step 4 of SPEC §5.3 and {@code GET /control/status} (SPEC §6.5). It looks
+ * the queues up on every call, so it can be built before the client connects.
+ */
 public class HazelcastQueueSizes implements QueueSizes {
 
-    private final IQueue<String> downloads;
-    private final IQueue<String> index;
+    private final HazelcastInstance client;
 
     public HazelcastQueueSizes(HazelcastInstance client) {
-        this.downloads = client.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD);
-        this.index = client.getQueue(HazelcastContracts.BOOKS_TO_INDEX);
+        this.client = client;
     }
 
     @Override
     public int downloads() {
-        return downloads.size();
+        return client.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).size();
     }
 
     @Override
     public int index() {
-        return index.size();
+        return client.getQueue(HazelcastContracts.BOOKS_TO_INDEX).size();
     }
 }
