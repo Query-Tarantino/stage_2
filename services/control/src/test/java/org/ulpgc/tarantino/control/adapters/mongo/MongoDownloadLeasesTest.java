@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
@@ -48,6 +49,17 @@ class MongoDownloadLeasesTest {
         assertEquals(BookErrorCode.LEASE_EXPIRED.name(), state.getString(MongoFields.LAST_ERROR));
         assertFalse(state.containsKey(MongoFields.CLAIM_ID));
         assertFalse(state.containsKey(MongoFields.LEASE_UNTIL));
+    }
+
+    @Test
+    void eitherTheReleaseOrTheWorkersRenewalAtOnceWins() throws Exception {
+        DownloadLease lease = downloading(1342, 1, EXPIRED);
+
+        List<Boolean> outcomes = TwoAtOnce.call(() -> leases().release(lease).isPresent(), () -> renewed(lease));
+
+        assertEquals(1, outcomes.stream().filter(Boolean::booleanValue).count());
+        BookStatus winnerLeft = outcomes.getFirst() ? BookStatus.QUEUED : BookStatus.DOWNLOADING;
+        assertEquals(winnerLeft.name(), state(1342).getString(MongoFields.STATUS));
     }
 
     @Test
@@ -106,6 +118,12 @@ class MongoDownloadLeasesTest {
                 .append(MongoFields.LEASE_UNTIL, nowPlus(leaseLeft))
                 .append(MongoFields.ENQUEUED_AT, nowPlus(LONG_AGO))));
         return new DownloadLease(bookId, claimId);
+    }
+
+    private boolean renewed(DownloadLease lease) {
+        Bson ownClaim = Filters.and(Filters.eq(MongoFields.ID, lease.bookId()),
+                Filters.eq(MongoFields.STATUS, BookStatus.DOWNLOADING.name()), Filters.eq(MongoFields.CLAIM_ID, lease.claimId()));
+        return states().updateOne(ownClaim, set(new Document(MongoFields.LEASE_UNTIL, nowPlus(ALIVE)))).getMatchedCount() == 1;
     }
 
     private MongoDownloadLeases leases() {
