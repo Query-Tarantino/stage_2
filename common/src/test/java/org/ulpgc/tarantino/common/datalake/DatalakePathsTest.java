@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,6 +39,16 @@ class DatalakePathsTest {
         assertNotEquals(first, second);
         assertEquals(body.getParent(), first.getParent());
         assertTrue(first.getFileName().toString().matches("1342\\.body\\.txt\\.[0-9a-f-]{36}\\.tmp"), first::toString);
+    }
+
+    @Test
+    void tellsTheTemporariesApartFromHeadersAndBodies() {
+        DatalakePaths paths = new DatalakePaths(root);
+
+        assertTrue(DatalakePaths.isTemporary(DatalakePaths.temporary(paths.body(1342))));
+        assertTrue(DatalakePaths.isTemporary(DatalakePaths.temporary(paths.header(1342))));
+        assertFalse(DatalakePaths.isTemporary(paths.header(1342)));
+        assertFalse(DatalakePaths.isTemporary(paths.body(1342)));
     }
 
     @Test
