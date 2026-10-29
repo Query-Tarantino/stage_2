@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.bench;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.bench.charts.ChartsTool;
 import org.ulpgc.tarantino.bench.containers.StatsTool;
 import org.ulpgc.tarantino.bench.coordination.CoordinationTool;
 import org.ulpgc.tarantino.bench.corpus.CorpusTool;
@@ -36,6 +37,7 @@ public final class Bench {
             Map.entry("manifest", ManifestTool::run),
             Map.entry("stats", StatsTool::run),
             Map.entry("coordination", CoordinationTool::run),
+            Map.entry("charts", ChartsTool::run),
             Map.entry("wait", RecoveryTool::waitFor),
             Map.entry("recovery", RecoveryTool::recovery),
             Map.entry("recovery-compare", RecoveryTool::compare)));

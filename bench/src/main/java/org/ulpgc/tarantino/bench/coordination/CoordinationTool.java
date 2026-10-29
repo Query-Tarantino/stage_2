@@ -16,8 +16,9 @@ public final class CoordinationTool {
 
     static final int DONE = 0;
     static final int WRONG_USAGE = 2;
-    static final String FILE_NAME = "coordination.csv";
-    static final String HEADER = "book_id,download_queue_wait_ms,download_ms,index_queue_wait_ms,indexing_ms,time_to_publication_ms";
+    public static final String FILE_NAME = "coordination.csv";
+    public static final List<String> PHASE_COLUMNS = List.of("download_queue_wait_ms", "download_ms", "index_queue_wait_ms", "indexing_ms");
+    static final String HEADER = "book_id," + String.join(",", PHASE_COLUMNS) + ",time_to_publication_ms";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CoordinationTool.class);
     private static final String LOGS = "logs";
