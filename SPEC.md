@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.4 · October 28, 2026
+Version 1.5 · October 29, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -635,9 +635,9 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 - Each script starts with `docker compose down -v` and brings the stack up with `docker-compose.mirror.yml`, `--env-file scripts/recovery/recovery.env` and `--scale crawler=N --scale indexer=N --scale query=N`. It causes the failure in its line of the table. At a crash point it waits for the container to exit with code 1, for at most 120 s or the run fails, and brings it back without the variable (§2.4). It ends with `docker compose run --rm bench recovery <nn> <run_id> <failed_at>`, where `failed_at` is the instant of the failure: the container's exit or the Docker command.
 - `scripts/recovery/recovery.env` shortens the timing and keeps the §4.7 invariants: `TARANTINO_LEASE_SECONDS=6`, `TARANTINO_HEARTBEAT_SECONDS=2`, `TARANTINO_RECONCILE_SECONDS=3`, `TARANTINO_BATCH_TIMEOUT_SECONDS=5`, `TARANTINO_REQUEUE_SECONDS=10`, `TARANTINO_GC_SECONDS=60`, `TARANTINO_TMP_MAX_AGE_SECONDS=60`, `TARANTINO_SNAPSHOT_SECONDS=2` and `TARANTINO_INDEX_BATCH=5`.
 - Waiting for a moment is Java, not shell: `bench wait DOWNLOADING`, `bench wait INDEXING` and `bench wait books-to-download` return as soon as `GET /control/status` shows that state or that queue above 0.
-- `bench recovery` polls `GET /control/status` every second until every seeded book is `PUBLISHED`. Then it checks that `GET /books/{book_id}` answers `200` for each one, that `/search` with the words of its title and `limit=100` returns it exactly once, and that no `book_id` is in two `PUBLISHED` batches of the current generation. In script 10 it also checks, once `TARANTINO_GC_SECONDS` have passed, that no posting of an `ABANDONED` batch is left. If a check fails, it polls again.
+- `bench recovery` polls `GET /control/status` every second until every seeded book is `PUBLISHED`. Then it checks that `GET /books/{book_id}` answers `200` for each one, that `/search` with the words of its title that its text contains and `limit=100` returns it exactly once, because only the text is indexed (§7) and some titles use words their text never does, and that no `book_id` is in two `PUBLISHED` batches of the current generation. In script 10 it also checks, once `TARANTINO_GC_SECONDS` have passed, that no posting of an `ABANDONED` batch is left. If a check fails, it polls again.
 - Script 14 launches `bench recovery 14` in the background and kills one `query` replica 20 s later. Once every book is `PUBLISHED`, `bench` queries `/search` every 100 ms for 60 s and fails on any status other than `200`.
-- The recovery time goes from `failed_at` to the end of the first pass where every check holds. `summary.csv` holds it as `recovery_seconds`.
+- The recovery time goes from `failed_at` to the end of the first pass that starts after `failed_at` and where every check holds, so the planned failure of script 14 never gives a negative time. `summary.csv` holds it as `recovery_seconds`.
 - `N` is 1, 2 and 3 for every script except 14, which needs a second replica and runs with 2 and 3: 41 runs. Each run keeps `checks.json` (§9), and `bench recovery-compare <nn>` fails if `books` or the `/search` answers differ between the runs of a script. The F3 gate is that all 41 runs pass and no comparison fails.
 - `bench recovery-chart` writes its own run, with `<experiment>` `recovery-summary`: `charts/recovery-seconds.png` holds the `recovery_seconds` of every recovery run, one bar per script and `N`, and `sources.txt` lists the `run_id` of each run it read.
 
