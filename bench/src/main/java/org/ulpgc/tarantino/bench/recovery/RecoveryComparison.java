@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -54,15 +54,19 @@ public class RecoveryComparison {
     }
 
     private List<Path> runsOf(String script) {
-        Pattern runName = Pattern.compile("\\d{8}-\\d{6}-recovery-" + Pattern.quote(script) + "-r\\d+-[0-9a-f]+");
         try (Stream<Path> runs = Files.list(runsDirectory)) {
-            return runs.filter(run -> runName.matcher(name(run)).matches())
+            return runs.filter(run -> isRunOf(script, name(run)))
                     .filter(run -> Files.exists(run.resolve(RecoveryChecks.FILE_NAME)))
                     .sorted()
                     .toList();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private static boolean isRunOf(String script, String runName) {
+        Matcher recoveryRun = RecoveryChecks.RUN_NAME.matcher(runName);
+        return recoveryRun.matches() && recoveryRun.group(1).equals(script);
     }
 
     private static JsonNode checks(Path run) {
