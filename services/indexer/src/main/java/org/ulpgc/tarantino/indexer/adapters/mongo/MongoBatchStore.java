@@ -103,6 +103,11 @@ public class MongoBatchStore implements BatchStore {
     }
 
     @Override
+    public boolean renew(Batch batch) {
+        return batches(batch).updateOne(writing(batch), set(new Document(LEASE_UNTIL, nowPlus(lease)))).getMatchedCount() == 1;
+    }
+
+    @Override
     public boolean failAtIndexing(Batch batch, int bookId) {
         Document change = new Document(STATUS, BookStatus.FAILED.name())
                 .append(LAST_ERROR, BookErrorCode.NOT_IN_DATALAKE.name())
@@ -116,8 +121,7 @@ public class MongoBatchStore implements BatchStore {
         Document change = new Document(STATUS, BatchStatus.PUBLISHED.name())
                 .append(PUBLISHED_AT, NOW)
                 .append(BOOK_IDS, new Document(LITERAL, bookIds));
-        Bson writingWithLease = Filters.and(Filters.eq(ID, id(batch)), Filters.eq(STATUS, BatchStatus.WRITING.name()),
-                Filters.eq(CLAIM_ID, batch.claimId()), Filters.expr(new Document("$gt", List.of("$" + LEASE_UNTIL, NOW))));
+        Bson writingWithLease = Filters.and(writing(batch), Filters.expr(new Document("$gt", List.of("$" + LEASE_UNTIL, NOW))));
         return Optional.ofNullable(batches(batch).findOneAndUpdate(writingWithLease, setThenUnset(change, LEASE_UNTIL),
                         new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)))
                 .map(published -> published.getDate(PUBLISHED_AT).toInstant());
@@ -131,6 +135,10 @@ public class MongoBatchStore implements BatchStore {
 
     private MongoCollection<Document> batches(Batch batch) {
         return database.getCollection(MongoCollections.batches(batch.generation()));
+    }
+
+    private static Bson writing(Batch batch) {
+        return Filters.and(Filters.eq(ID, id(batch)), Filters.eq(STATUS, BatchStatus.WRITING.name()), Filters.eq(CLAIM_ID, batch.claimId()));
     }
 
     private static Bson indexingIn(Batch batch) {

@@ -33,6 +33,11 @@ public final class DatalakePaths {
         return target.resolveSibling(target.getFileName() + "." + UUID.randomUUID() + TEMPORARY_SUFFIX);
     }
 
+    /** Whether the file is one of those temporaries, the only files {@code control} may delete (SPEC §4.6). */
+    public static boolean isTemporary(Path file) {
+        return file.getFileName().toString().endsWith(TEMPORARY_SUFFIX);
+    }
+
     /** Writes the content to a new temporary file and renames it over the final one with {@code ATOMIC_MOVE}. */
     public static void writeAtomically(Path target, String content) throws IOException {
         Path temporary = temporary(target);

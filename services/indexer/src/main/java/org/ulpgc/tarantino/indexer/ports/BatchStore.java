@@ -19,6 +19,9 @@ public interface BatchStore {
     /** “Claim its books”: the books that are now {@code INDEXING} in the batch, ascending. */
     List<Integer> claim(Batch batch, Collection<Integer> bookIds);
 
+    /** “Renew a batch”: false if the lease was lost, because the batch is no longer {@code WRITING} with its {@code claim_id}. */
+    boolean renew(Batch batch);
+
     /** “Fail at indexing” with {@code NOT_IN_DATALAKE}: false if the book is no longer in the batch. */
     boolean failAtIndexing(Batch batch, int bookId);
 
