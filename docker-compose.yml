@@ -119,6 +119,7 @@ services:
   bench:
     image: eclipse-temurin:25-jre
     profiles: ["tools"]
+    working_dir: /app
     entrypoint: ["java", "-jar", "/app/bench/bench-1.0-SNAPSHOT.jar"]
     environment:
       <<: *tarantino-environment
