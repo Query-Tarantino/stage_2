@@ -32,6 +32,7 @@ class MongoBatchLeasesTest {
 
     private static final Duration EXPIRED = Duration.ofSeconds(-1);
     private static final Duration ALIVE = Duration.ofSeconds(60);
+    private static final Duration ENDING = Duration.ofMillis(5);
 
     @RegisterExtension
     final TemporaryMongoDatabase mongo = new TemporaryMongoDatabase();
@@ -47,6 +48,18 @@ class MongoBatchLeasesTest {
         assertEquals(BatchStatus.ABANDONED.name(), abandoned.getString(MongoFields.STATUS));
         assertTrue(abandoned.containsKey(MongoFields.ABANDONED_AT));
         assertFalse(abandoned.containsKey(MongoFields.LEASE_UNTIL));
+    }
+
+    @Test
+    void neverBothAbandonsAndPublishesABatchWhoseLeaseIsEndingAtOnce() throws Exception {
+        GenerationBatch batch = opened(1, ENDING);
+
+        List<Boolean> outcomes = TwoAtOnce.call(() -> leases().abandon(batch), () -> publishedByItsIndexer(batch));
+
+        assertTrue(outcomes.stream().filter(Boolean::booleanValue).count() <= 1);
+        BatchStatus winnerLeft = outcomes.getFirst() ? BatchStatus.ABANDONED
+                : outcomes.getLast() ? BatchStatus.PUBLISHED : BatchStatus.WRITING;
+        assertEquals(winnerLeft.name(), batch(batch).getString(MongoFields.STATUS));
     }
 
     @Test
@@ -92,6 +105,15 @@ class MongoBatchLeasesTest {
         batches(batch.generation()).updateOne(byId(batch), setThenUnset(new Document(MongoFields.STATUS, BatchStatus.PUBLISHED.name())
                 .append(MongoFields.PUBLISHED_AT, NOW)
                 .append(MongoFields.BOOK_IDS, List.of(1342)), MongoFields.LEASE_UNTIL));
+    }
+
+    private boolean publishedByItsIndexer(GenerationBatch batch) {
+        Bson ownLiveBatch = Filters.and(byId(batch), Filters.eq(MongoFields.STATUS, BatchStatus.WRITING.name()),
+                Filters.eq(MongoFields.CLAIM_ID, "claim-" + batch.batchId()),
+                Filters.expr(new Document("$gt", List.of("$" + MongoFields.LEASE_UNTIL, NOW))));
+        return batches(batch.generation()).updateOne(ownLiveBatch, setThenUnset(new Document(MongoFields.STATUS, BatchStatus.PUBLISHED.name())
+                .append(MongoFields.PUBLISHED_AT, NOW)
+                .append(MongoFields.BOOK_IDS, List.of(1342)), MongoFields.LEASE_UNTIL)).getMatchedCount() == 1;
     }
 
     private MongoBatchLeases leases() {
