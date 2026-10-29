@@ -639,6 +639,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 - Script 14 launches `bench recovery 14` in the background and kills one `query` replica 20 s later. Once every book is `PUBLISHED`, `bench` queries `/search` every 100 ms for 60 s and fails on any status other than `200`.
 - The recovery time goes from `failed_at` to the end of the first pass where every check holds. `summary.csv` holds it as `recovery_seconds`.
 - `N` is 1, 2 and 3 for every script except 14, which needs a second replica and runs with 2 and 3: 41 runs. Each run keeps `checks.json` (§9), and `bench recovery-compare <nn>` fails if `books` or the `/search` answers differ between the runs of a script. The F3 gate is that all 41 runs pass and no comparison fails.
+- `bench recovery-chart` writes its own run, with `<experiment>` `recovery-summary`: `charts/recovery-seconds.png` holds the `recovery_seconds` of every recovery run, one bar per script and `N`, and `sources.txt` lists the `run_id` of each run it read.
 
 ## 9. Tests, benchmarks and runs
 
@@ -668,6 +669,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 | `checks.json` | Recovery runs only: `GET /control/status` and the `/search` answers to `workload/queries.txt` once recovered (§8) |
 | `explain/` | `explain("executionStats")` of each measured Mongo query |
 | `summary.csv` | The figures the report cites: metric, configuration, mean, standard deviation, 95 % CI, p50, p95, p99 and unit |
+| `charts/` | The run's XChart charts in PNG, each with its `run_id` in the footer |
 | `log.txt` | Full command output |
 
 ## 10. Stage 1
