@@ -58,7 +58,28 @@ class ChartsToolTest {
     }
 
     @Test
+    void drawsTheRecoveryTimeOfTheRunsNextToItsOwnRunAndListsThem() throws IOException {
+        Files.writeString(Files.createDirectories(runs.resolve("20261110-150000-recovery-04-r2-3f2a9c1")).resolve("checks.json"),
+                "{\"recovery_seconds\": 12.5}");
+        Path summary = Files.createDirectories(runs.resolve("20261111-090000-recovery-summary-3f2a9c1"));
+
+        assertEquals(ChartsTool.DONE, ChartsTool.recovery(List.of(summary.toString())));
+
+        assertTrue(Files.exists(summary.resolve("charts").resolve("recovery-seconds.png")));
+        assertEquals(List.of("20261110-150000-recovery-04-r2-3f2a9c1"), Files.readAllLines(summary.resolve("sources.txt")));
+    }
+
+    @Test
+    void failsWhenNoRecoveryRunHasItsChecks() throws IOException {
+        Path summary = Files.createDirectories(runs.resolve("20261111-090000-recovery-summary-3f2a9c1"));
+
+        assertEquals(ChartsTool.FAILED, ChartsTool.recovery(List.of(summary.toString())));
+        assertFalse(Files.exists(summary.resolve("sources.txt")));
+    }
+
+    @Test
     void answersWrongUsageWithoutTheRunDirectory() {
         assertEquals(ChartsTool.WRONG_USAGE, ChartsTool.run(List.of()));
+        assertEquals(ChartsTool.WRONG_USAGE, ChartsTool.recovery(List.of()));
     }
 }

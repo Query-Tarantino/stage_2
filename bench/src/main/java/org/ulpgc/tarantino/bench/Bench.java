@@ -40,7 +40,8 @@ public final class Bench {
             Map.entry("charts", ChartsTool::run),
             Map.entry("wait", RecoveryTool::waitFor),
             Map.entry("recovery", RecoveryTool::recovery),
-            Map.entry("recovery-compare", RecoveryTool::compare)));
+            Map.entry("recovery-compare", RecoveryTool::compare),
+            Map.entry("recovery-chart", ChartsTool::recovery)));
 
     private Bench() {
     }
