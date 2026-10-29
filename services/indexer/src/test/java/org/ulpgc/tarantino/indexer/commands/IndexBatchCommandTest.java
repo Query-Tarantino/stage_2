@@ -1,13 +1,15 @@
 package org.ulpgc.tarantino.indexer.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BatchPublished;
+import org.ulpgc.tarantino.common.operations.CrashPoints;
+import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
 import org.ulpgc.tarantino.indexer.model.book.BookMetadata;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
-import org.ulpgc.tarantino.indexer.model.book.HeaderParser;
 import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
 import org.ulpgc.tarantino.indexer.ports.BatchStore;
 import org.ulpgc.tarantino.indexer.ports.IndexWriter;
@@ -21,15 +23,41 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IndexBatchCommandTest {
 
     private static final Instant ENQUEUED_AT = Instant.parse("2026-10-21T10:05:00Z");
     private static final Instant PUBLISHED_AT = Instant.parse("2026-10-21T10:05:32Z");
     private static final String BATCH_ID = "6716f0c2a1b2c3d4e5f60718";
+    private static final int LETTERS = 26;
 
+    private final List<String> steps = new ArrayList<>();
+    private final CrashPoints crashPoints = new CrashPoints(Optional.empty()) {
+        @Override
+        public void hit(CrashPoint point) {
+            steps.add(point.point());
+        }
+    };
+    private final Lease lease = new Lease() {
+        @Override
+        public boolean lost() {
+            return steps.contains(leaseLostAfterStep);
+        }
+
+        @Override
+        public void close() {
+            leaseClosed = true;
+        }
+    };
+    private String leaseLostAfterStep = "never";
+    private boolean leaseClosed;
+    private BooleanSupplier renewal;
     private final FakeBatchStore batches = new FakeBatchStore();
     private final RecordingWriter writer = new RecordingWriter();
     private final List<BatchPublished> announced = new ArrayList<>();
@@ -84,6 +112,73 @@ class IndexBatchCommandTest {
     }
 
     @Test
+    void writesThePostingsInChunksOfAThousandTerms() {
+        store(1342, "Title: Pride and Prejudice", distinctWords(2_500));
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1_000, 1_000, 500), writer.postingsChunkSizes);
+        assertEquals(2_500, writer.postings.size());
+    }
+
+    @Test
+    void reachesEachCrashPointBetweenTheRightSteps() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().execute(books(1342));
+
+        assertEquals(List.of("after-dequeue", "open", "metadata", "postings", "during-batch-write", "publish",
+                "after-publish", "mark", "after-mark", "announce"), steps);
+    }
+
+    @Test
+    void renewsTheLeaseOfItsOwnBatchUntilItEnds() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().execute(books(1342));
+
+        assertTrue(renewal.getAsBoolean());
+        assertEquals(List.of(BATCH_ID), batches.renewed);
+        assertTrue(leaseClosed);
+    }
+
+    @Test
+    void writesNothingOnceItsLeaseIsLostBeforeTheFirstWrite() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        leaseLostAfterStep = "open";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(), writer.metadata);
+        assertEquals(List.of(), writer.postings);
+        assertEquals(Map.of(), batches.published);
+    }
+
+    @Test
+    void stopsWritingTheBatchOnceItsLeaseIsLost() {
+        store(1342, "Title: Pride and Prejudice", distinctWords(2_500));
+        leaseLostAfterStep = "postings";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1_000), writer.postingsChunkSizes);
+        assertEquals(Map.of(), batches.published);
+        assertEquals(List.of(), announced);
+    }
+
+    @Test
+    void neverPublishesABatchWhoseLeaseWasLostAfterItsLastWrite() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        leaseLostAfterStep = "postings";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1), writer.postingsChunkSizes);
+        assertEquals(Map.of(), batches.published);
+        assertEquals(Set.of(), batches.marked);
+    }
+
+    @Test
     void neitherMarksNorAnnouncesABatchThatLostItsLease() {
         store(1342, "Title: Pride and Prejudice", "pride");
         batches.leaseLost = true;
@@ -99,6 +194,16 @@ class IndexBatchCommandTest {
         batches.downloaded.add(bookId);
     }
 
+    private static String distinctWords(int count) {
+        return IntStream.range(0, count).mapToObj(IndexBatchCommandTest::distinctWord).collect(Collectors.joining(" "));
+    }
+
+    private static String distinctWord(int index) {
+        return Integer.toString(index, LETTERS).chars()
+                .mapToObj(digit -> String.valueOf((char) ('a' + Character.digit(digit, LETTERS))))
+                .collect(Collectors.joining("", "w", ""));
+    }
+
     private static Map<Integer, Instant> books(Integer... bookIds) {
         Map<Integer, Instant> books = new HashMap<>();
         List.of(bookIds).forEach(bookId -> books.put(bookId, ENQUEUED_AT));
@@ -106,18 +211,26 @@ class IndexBatchCommandTest {
     }
 
     private IndexBatchCommand command() {
-        Tokenizer tokenizer = new Tokenizer(Set.of("and"));
-        return new IndexBatchCommand(batches, bookId -> Optional.ofNullable(datalake.get(bookId)), new HeaderParser(tokenizer),
-                tokenizer, writer, announced::add, new TransitionLog());
+        BookReader reader = new BookReader(bookId -> Optional.ofNullable(datalake.get(bookId)), new Tokenizer(Set.of("and")));
+        return new IndexBatchCommand(batches, reader, writer, this::announce, new TransitionLog(), crashPoints, renewal -> {
+            this.renewal = renewal;
+            return lease;
+        });
     }
 
-    private static final class FakeBatchStore implements BatchStore {
+    private void announce(BatchPublished batch) {
+        steps.add("announce");
+        announced.add(batch);
+    }
+
+    private final class FakeBatchStore implements BatchStore {
 
         private final Set<Integer> downloaded = new HashSet<>();
         private final Set<Integer> indexing = new HashSet<>();
         private final List<Integer> failed = new ArrayList<>();
         private final Map<String, List<Integer>> published = new HashMap<>();
         private final Set<Integer> marked = new HashSet<>();
+        private final List<String> renewed = new ArrayList<>();
         private boolean leaseLost;
 
         @Override
@@ -127,6 +240,7 @@ class IndexBatchCommandTest {
 
         @Override
         public Batch open(int generation) {
+            steps.add("open");
             return new Batch(BATCH_ID, "claim", generation);
         }
 
@@ -139,6 +253,12 @@ class IndexBatchCommandTest {
         }
 
         @Override
+        public boolean renew(Batch batch) {
+            renewed.add(batch.batchId());
+            return !leaseLost;
+        }
+
+        @Override
         public boolean failAtIndexing(Batch batch, int bookId) {
             failed.add(bookId);
             return indexing.remove(bookId);
@@ -146,6 +266,7 @@ class IndexBatchCommandTest {
 
         @Override
         public Optional<Instant> publish(Batch batch, List<Integer> bookIds) {
+            steps.add("publish");
             if (leaseLost) {
                 return Optional.empty();
             }
@@ -155,23 +276,28 @@ class IndexBatchCommandTest {
 
         @Override
         public void markPublished(Batch batch) {
+            steps.add("mark");
             marked.addAll(indexing);
         }
     }
 
-    private static final class RecordingWriter implements IndexWriter {
+    private final class RecordingWriter implements IndexWriter {
 
         private final List<BookMetadata> metadata = new ArrayList<>();
         private final List<TermPostings> postings = new ArrayList<>();
+        private final List<Integer> postingsChunkSizes = new ArrayList<>();
 
         @Override
         public void writeMetadata(int generation, List<BookMetadata> books) {
+            steps.add("metadata");
             metadata.addAll(books);
         }
 
         @Override
         public void writePostings(Batch batch, List<TermPostings> batchPostings) {
+            steps.add("postings");
             postings.addAll(batchPostings);
+            postingsChunkSizes.add(batchPostings.size());
         }
     }
 }

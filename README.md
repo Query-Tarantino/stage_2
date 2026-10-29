@@ -43,6 +43,9 @@ Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` a
 mvn -DskipTests package
 docker compose -f docker-compose.yml -f docker-compose.mirror.yml up -d --build   # books from benchmarks/mirror
 curl 'http://localhost:8080/search?q=pride%20prejudice'
+curl http://localhost:8081/index/status                                           # generation, books indexed and rebuild in progress
+curl http://localhost:8081/index/status/1342                                      # state of one book
+curl -X POST http://localhost:8081/index/rebuild                                  # reindex every book into the next generation
 docker compose down -v                                                             # stop and delete the data
 ```
 
