@@ -24,6 +24,7 @@ import org.ulpgc.tarantino.crawler.commands.DownloadWorker;
 import org.ulpgc.tarantino.crawler.commands.IngestBookCommand;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
+import org.ulpgc.tarantino.crawler.ports.TaskQueue;
 
 import java.time.Clock;
 import java.util.function.BooleanSupplier;
@@ -47,10 +48,18 @@ public final class CrawlerFactory {
         return new DownloadWorker(downloads::poll, download, crashPoints);
     }
 
+    /**
+     * The routes, built before Hazelcast connects (SPEC §2.4): the queue is only looked up when {@code POST /ingest} uses
+     * it, so until Hazelcast answers that request is a {@code 503} instead of the crawler dying at startup.
+     */
     public static Consumer<Javalin> routes(Connections connections) {
-        BookTaskQueue downloads = new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD);
         return new IngestRoutes(new BookStates(connections.database())::state, new MongoIngestRequests(connections.database()),
-                new MongoDownloadedBooks(connections.database()), downloads::offer, new TransitionLog(), Clock.systemUTC())::register;
+                new MongoDownloadedBooks(connections.database()), downloadQueueOnEachUse(connections), new TransitionLog(),
+                Clock.systemUTC())::register;
+    }
+
+    private static TaskQueue downloadQueueOnEachUse(Connections connections) {
+        return task -> new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD).offer(task);
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {
