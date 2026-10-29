@@ -1,6 +1,5 @@
 package org.ulpgc.tarantino.bench.stats;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -70,18 +69,13 @@ public class SummaryStats {
     }
 
     public static List<Long> readLatencies(Path requestsCsv) throws IOException {
-        List<Long> latencies = new ArrayList<>();
-        try (BufferedReader reader = Files.newBufferedReader(requestsCsv, StandardCharsets.UTF_8)) {
-            String header = reader.readLine();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length >= 4 && "200".equals(parts[2].trim())) {
-                    latencies.add(Long.parseLong(parts[3].trim()));
-                }
-            }
+        try (var lines = Files.lines(requestsCsv, StandardCharsets.UTF_8)) {
+            return lines.skip(1)
+                    .map(line -> line.split(","))
+                    .filter(parts -> parts.length >= 4 && "200".equals(parts[2].trim()))
+                    .map(parts -> Long.parseLong(parts[3].trim()))
+                    .toList();
         }
-        return latencies;
     }
 
     public static void main(String[] args) {

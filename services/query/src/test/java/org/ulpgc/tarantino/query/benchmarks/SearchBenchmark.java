@@ -37,9 +37,9 @@ import java.util.stream.IntStream;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
-@Fork(value = 1, jvmArgs = {"-Xmx1g"})
+@Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 10, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+@Fork(value = 3, jvmArgs = {"-Xmx1g"})
 public class SearchBenchmark {
 
     private SearchCommand searchCommand;
@@ -119,10 +119,6 @@ public class SearchBenchmark {
 
         Options options = new OptionsBuilder()
                 .include(SearchBenchmark.class.getSimpleName())
-                .warmupIterations(5)
-                .measurementIterations(10)
-                .forks(1)
-                .jvmArgs("-Xmx1g")
                 .resultFormat(ResultFormatType.JSON)
                 .result(jsonResult.getAbsolutePath())
                 .build();

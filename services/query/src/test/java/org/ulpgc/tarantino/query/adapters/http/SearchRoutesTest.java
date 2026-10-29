@@ -142,8 +142,12 @@ class SearchRoutesTest {
         start();
         snapshots.refresh();
         assertEquals(400, get("/books/0").statusCode());
+        assertEquals(400, get("/books/-1").statusCode());
         assertEquals(400, get("/books/-5").statusCode());
+        assertEquals(400, get("/books/01").statusCode());
         assertEquals(400, get("/books/abc").statusCode());
+        assertEquals(400, get("/books/2147483648").statusCode());
+        assertEquals(400, get("/books/1e3").statusCode());
         assertEquals(400, get("/books/99999999999999999999").statusCode());
     }
 

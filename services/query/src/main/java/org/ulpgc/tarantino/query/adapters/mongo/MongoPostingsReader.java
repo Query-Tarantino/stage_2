@@ -27,6 +27,9 @@ public class MongoPostingsReader implements PostingsReader {
 
     @Override
     public List<TermPostings> postings(int generation, Collection<String> terms, Collection<String> batchIds) {
+        if (terms.isEmpty() || batchIds.isEmpty()) {
+            return List.of();
+        }
         return database.getCollection(MongoCollections.postings(generation))
                 .find(Filters.and(Filters.in(TERM, terms), Filters.in(BATCH_ID, batchIds.stream().map(ObjectId::new).toList())))
                 .projection(Projections.include(TERM, BOOK_IDS, TFS))

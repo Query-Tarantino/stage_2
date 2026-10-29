@@ -59,6 +59,11 @@ public class ExplainPlanExporter {
                 .explain(ExplainVerbosity.EXECUTION_STATS);
         Files.writeString(explainDir.resolve("metadata_filter_author.json"), authorFilterExplain.toJson(PRETTY));
 
+        Document langFilterExplain = metadata.find(Filters.eq(MongoFields.LANGUAGES, "en"))
+                .projection(Projections.include(MongoFields.ID))
+                .explain(ExplainVerbosity.EXECUTION_STATS);
+        Files.writeString(explainDir.resolve("metadata_filter_language.json"), langFilterExplain.toJson(PRETTY));
+
         Document langYearFilterExplain = metadata.find(Filters.and(
                 Filters.eq(MongoFields.LANGUAGES, "en"),
                 Filters.eq(MongoFields.YEAR, 1998)))

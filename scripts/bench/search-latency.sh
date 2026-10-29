@@ -18,50 +18,15 @@ readonly REPLICAS_CONFIG="${TARANTINO_REPLICAS_LIST:-1 2 3}"
 
 STATS_PID=""
 
-verify_corpus() {
-    if [[ ! -f "$CORPUS_SHA" ]]; then
-        echo "Error: Corpus checksum file $CORPUS_SHA not found" >&2
-        exit 1
-    fi
-    echo "Verifying corpus against $CORPUS_SHA..."
-    while read -r col1 col2; do
-        [[ -z "$col1" || "$col1" =~ ^# ]] && continue
-        local expected_hash="" file_path=""
-        if [[ "$col1" =~ ^[a-fA-F0-9]{64}$ ]]; then
-            expected_hash="$col1"
-            file_path="$col2"
-        elif [[ "$col2" =~ ^[a-fA-F0-9]{64}$ ]]; then
-            expected_hash="$col2"
-            local id="$col1"
-            if [[ -f "benchmarks/mirror/${id}/pg${id}.txt" ]]; then
-                file_path="benchmarks/mirror/${id}/pg${id}.txt"
-            elif [[ -f "benchmarks/cache/${id}.txt" ]]; then
-                file_path="benchmarks/cache/${id}.txt"
-            else
-                file_path="benchmarks/mirror/${id}/pg${id}.txt"
-            fi
-        else
-            continue
-        fi
-
-        if [[ ! -f "$file_path" ]]; then
-            echo "Error: Missing corpus file $file_path" >&2
-            exit 1
-        fi
-        local actual_hash
-        actual_hash=$(sha256sum "$file_path" | awk '{print $1}')
-        if [[ "$actual_hash" != "$expected_hash" ]]; then
-            echo "Error: SHA-256 mismatch for $file_path (expected $expected_hash, got $actual_hash)" >&2
-            exit 1
-        fi
-    done < "$CORPUS_SHA"
-    echo "Corpus checksums verified successfully"
-}
-
 ensure_bench_jar() {
     if [[ ! -f "$BENCH_JAR" ]]; then
         mvn -f bench/pom.xml package -DskipTests
     fi
+}
+
+verify_corpus() {
+    ensure_bench_jar
+    java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.run.RunMetadataWriter verify-corpus "$CORPUS_SHA"
 }
 
 init_run() {
@@ -76,74 +41,15 @@ init_run() {
 
 write_manifest() {
     local run_dir=$1 run_id=$2 command_invoked=$3 started_at=$4 finished_at=$5
-    local is_clean
-    is_clean=$(git diff --quiet && echo "true" || echo "false")
-    cat <<EOF > "${run_dir}/manifest.json"
-{
-  "run_id": "${run_id}",
-  "experiment": "search-latency",
-  "command": "${command_invoked}",
-  "started_at": "${started_at}",
-  "finished_at": "${finished_at}",
-  "commit": "$(git rev-parse HEAD 2>/dev/null || echo "unknown")",
-  "clean_tree": ${is_clean},
-  "host": {
-    "os": "$(uname -s 2>/dev/null || echo "unknown")",
-    "kernel": "$(uname -r 2>/dev/null || echo "unknown")",
-    "arch": "$(uname -m 2>/dev/null || echo "unknown")",
-    "cpus": $(nproc 2>/dev/null || echo 1),
-    "memory_mb": $(free -m 2>/dev/null | awk '/^Mem:/{print $2}' || echo 0)
-  },
-  "docker": {
-    "version": "$(docker --version 2>/dev/null || echo "unknown")"
-  },
-  "jvm": {
-    "version": "$(java -version 2>&1 | head -n 1 || echo "unknown")"
-  },
-  "variables": {
-    "TARANTINO_FRONTEND_URL": "${FRONTEND_URL}",
-    "TARANTINO_MONGO_URI": "${MONGO_URI}",
-    "baseline_clients": "${BASELINE_CLIENTS}",
-    "baseline_threads": "${BASELINE_THREADS}",
-    "baseline_replicas": "${BASELINE_REPLICAS}",
-    "clients_series": "${CLIENTS_CONFIG}",
-    "threads_series": "${THREADS_CONFIG}",
-    "replicas_series": "${REPLICAS_CONFIG}"
-  }
-}
-EOF
+    java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.run.RunMetadataWriter write-manifest \
+        "$run_dir" "$run_id" "search-latency" "$command_invoked" "$started_at" "$finished_at" \
+        "$CLIENTS_CONFIG" "$THREADS_CONFIG" "$REPLICAS_CONFIG"
 }
 
 generate_corpus_json() {
     local run_dir=$1
-    local combined_hash books_count terms_count ids_json
-    combined_hash=$(sha256sum "${CORPUS_SHA}" 2>/dev/null | awk '{print $1}' || echo "unknown")
-
-    local ids_list
-    ids_list=$(awk '{ if ($1 ~ /^[0-9]+$/) print $1; else if ($2 ~ /^[0-9]+$/) print $2; }' "${CORPUS_SHA}" 2>/dev/null)
-    if [[ -z "$ids_list" && -f "${WORKLOAD_DIR}/sample_ids.txt" ]]; then
-        ids_list=$(cat "${WORKLOAD_DIR}/sample_ids.txt" 2>/dev/null || true)
-    fi
-
-    books_count=$(echo "$ids_list" | grep -v '^$' | wc -l | tr -d ' ')
-    ids_json=$(echo "$ids_list" | grep -v '^$' | paste -sd, - | sed 's/,/, /g')
-
-    terms_count=0
-    if command -v docker >/dev/null 2>&1 && docker compose ps mongo 2>/dev/null | grep -q "mongo"; then
-        terms_count=$(docker compose exec -T mongo mongosh tarantino --quiet --eval 'db.postings_g1.distinct("term").length' 2>/dev/null | tr -d '\r\n ' || echo 0)
-    fi
-    if [[ -z "$terms_count" || ! "$terms_count" =~ ^[0-9]+$ ]]; then
-        terms_count=0
-    fi
-
-    cat <<EOF > "${run_dir}/corpus.json"
-{
-  "ids": [ ${ids_json} ],
-  "sha256": "${combined_hash}",
-  "books": ${books_count},
-  "terms": ${terms_count}
-}
-EOF
+    java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.run.RunMetadataWriter write-corpus \
+        "$run_dir" "$CORPUS_SHA" "$MONGO_URI" 1
 }
 
 save_service_logs() {
@@ -159,13 +65,13 @@ save_service_logs() {
 
 start_docker_stats() {
     local stats_file=$1
-    echo "timestamp,container,cpu_percent,mem_usage,mem_limit,mem_percent,net_in,net_out,block_in,block_out,pids" > "$stats_file"
+    echo "timestamp,container,cpu_percent,mem_usage,mem_percent,net_io,block_io,pids" > "$stats_file"
     (
         while true; do
             local current_time
             current_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
             if command -v docker >/dev/null 2>&1; then
-                docker stats --no-stream --format "${current_time},{{.Container}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}},{{.NetIO}},{{.BlockIO}},{{.PIDs}}" 2>/dev/null >> "$stats_file" || true
+                docker stats --no-stream --format "${current_time},{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}},{{.NetIO}},{{.BlockIO}},{{.PIDs}}" 2>/dev/null >> "$stats_file" || true
             fi
             sleep 1
         done
@@ -228,11 +134,14 @@ export_explain() {
 
 run_jmh() {
     local run_dir=$1
+    local abs_run_dir
+    abs_run_dir="$(cd "$run_dir" && pwd)"
     echo "Running JMH SearchBenchmark..."
-    mvn -f services/query/pom.xml test-compile exec:java \
-        -Dexec.mainClass="org.ulpgc.tarantino.query.benchmarks.SearchBenchmark" \
+    mvn -DskipTests install
+    mvn -f services/query/pom.xml exec:exec \
+        -Dexec.executable=java \
         -Dexec.classpathScope=test \
-        -Dexec.args="${run_dir}"
+        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark ${abs_run_dir}"
     if [[ -f "${run_dir}/jmh/query.json" ]]; then
         echo "Converting JMH JSON to CSV..."
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.jmh.JmhCsvConverter "${run_dir}/jmh/query.json" "${run_dir}/jmh/query.csv"
@@ -294,8 +203,8 @@ main() {
     local started_at finished_at run_dir run_id
     started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-    verify_corpus
     ensure_bench_jar
+    verify_corpus
     run_dir=$(init_run)
     run_id=$(basename "$run_dir")
 
