@@ -15,8 +15,9 @@ import java.util.function.Supplier;
 
 /**
  * {@code bench recovery} (SPEC §8): runs a pass of the checks every second until one holds entirely, and then reads
- * what {@code checks.json} keeps. The recovery time goes from the failure to the end of that pass. It gives up after
- * {@link #TIMEOUT}, so a run that never recovers fails instead of hanging.
+ * what {@code checks.json} keeps. The recovery time goes from the failure to the end of that pass, and only a pass that
+ * starts once the failure happened counts, because script 14 plans its failure after launching the checks. It gives up
+ * after {@link #TIMEOUT}, so a run that never recovers fails instead of hanging.
  */
 public class RecoveryCommand {
 
@@ -46,9 +47,10 @@ public class RecoveryCommand {
     public Optional<RecoveryChecks> awaitRecovery(Instant failedAt) {
         Instant deadline = clock.instant().plus(TIMEOUT);
         while (true) {
+            Instant passStart = clock.instant();
             List<String> failures = failuresOfOnePass();
             Instant passEnd = clock.instant();
-            if (failures.isEmpty()) {
+            if (failures.isEmpty() && !passStart.isBefore(failedAt)) {
                 return Optional.of(checks(failedAt, passEnd));
             }
             if (!passEnd.isBefore(deadline)) {
