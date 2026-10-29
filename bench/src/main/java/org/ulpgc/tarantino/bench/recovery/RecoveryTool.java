@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 /**
  * The recovery commands of {@code bench} (SPEC §8), run in the Compose {@code bench} service against nginx and MongoDB
  * with the timing of {@code control}: {@code wait <state|queue>}, {@code recovery <nn> <run_id> <failed_at>} and
- * {@code recovery-compare <nn>}.
+ * {@code recovery-compare <nn>}; and {@code instant [<seconds from now>]}, which gives the scripts their {@code failed_at}.
  */
 public final class RecoveryTool {
 
@@ -44,6 +44,16 @@ public final class RecoveryTool {
     private static final String SECONDS = "s";
 
     private RecoveryTool() {
+    }
+
+    public static int printInstant(List<String> args) {
+        Optional<Instant> instant = InstantCommand.instant(args, Clock.systemUTC());
+        if (instant.isEmpty()) {
+            LOGGER.error("Usage: bench instant [<whole seconds from now>]");
+            return WRONG_USAGE;
+        }
+        System.out.println(instant.get());
+        return DONE;
     }
 
     public static int waitFor(List<String> args) {

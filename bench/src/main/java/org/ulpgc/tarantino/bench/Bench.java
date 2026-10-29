@@ -38,6 +38,7 @@ public final class Bench {
             Map.entry("stats", StatsTool::run),
             Map.entry("coordination", CoordinationTool::run),
             Map.entry("charts", ChartsTool::run),
+            Map.entry("instant", RecoveryTool::printInstant),
             Map.entry("wait", RecoveryTool::waitFor),
             Map.entry("recovery", RecoveryTool::recovery),
             Map.entry("recovery-compare", RecoveryTool::compare),
