@@ -75,6 +75,18 @@ class RecoveryPassTest {
     }
 
     @Test
+    void searchesATitleOnlyWithTheWordsItsTextContains() {
+        stack.published(3, "John Kennedy Inaugural Address", List.of());
+        stack.results.put("inaugural address", List.of(3));
+        reads.notInText.put(3, Set.of("john", "kennedy"));
+        stack.published(5, "Kennedy", List.of());
+        reads.notInText.put(5, Set.of("kennedy"));
+
+        assertEquals(List.of(), pass(Optional.empty()).failures());
+        assertEquals(List.of("inaugural address@0"), stack.searched);
+    }
+
+    @Test
     void failsOnABookInTwoPublishedBatches() {
         stack.published(84, "Frankenstein", List.of(84));
         reads.duplicated.add(84);
@@ -149,6 +161,7 @@ class RecoveryPassTest {
 
         final List<Integer> seeded = new ArrayList<>();
         final List<Integer> duplicated = new ArrayList<>();
+        final Map<Integer, Set<String>> notInText = new HashMap<>();
         long abandonedPostings;
 
         @Override
@@ -159,6 +172,11 @@ class RecoveryPassTest {
         @Override
         public List<Integer> booksInTwoPublishedBatches() {
             return duplicated;
+        }
+
+        @Override
+        public List<String> termsInText(int bookId, List<String> terms) {
+            return terms.stream().filter(term -> !notInText.getOrDefault(bookId, Set.of()).contains(term)).toList();
         }
 
         @Override

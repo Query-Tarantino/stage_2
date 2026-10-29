@@ -64,7 +64,7 @@ public final class ManifestTool {
         GitState git = GitState.of(runner);
         RunContext run = runContext(experiment, git.commit(), runsDirectory);
         Manifest manifest = new Manifest(run.runId(), git, List.copyOf(command), Instant.now(), null,
-                HostInfo.of(runner, runsDirectory), DockerState.of(runner), ServiceConfiguration.ofRunningServices(runner), clientConcurrency);
+                HostInfo.of(runner, runsDirectory), DockerState.of(runner), ServiceConfiguration.ofComposeServices(runner), clientConcurrency);
         LOGGER.info("Started run {} in {}", manifest.runId(), manifest.writeTo(run.runDirectory()));
         return manifest;
     }

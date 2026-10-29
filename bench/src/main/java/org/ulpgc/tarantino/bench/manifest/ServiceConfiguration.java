@@ -15,7 +15,7 @@ import java.util.stream.StreamSupport;
  */
 public record ServiceConfiguration(int replicas, String javaVersion, String javaToolOptions, Map<String, String> tarantinoVariables) {
 
-    static final List<String> CONTAINER_IDS = List.of("docker", "compose", "ps", "--quiet");
+    static final List<String> CONTAINER_IDS = List.of("docker", "compose", "ps", "--all", "--quiet");
     static final List<String> INSPECT = List.of("docker", "inspect");
 
     private static final String SERVICE_LABEL = "com.docker.compose.service";
@@ -24,8 +24,8 @@ public record ServiceConfiguration(int replicas, String javaVersion, String java
     private static final String TARANTINO_PREFIX = "TARANTINO_";
     private static final String ASSIGNMENT = "=";
 
-    /** Each running service of the Compose project by name. */
-    public static Map<String, ServiceConfiguration> ofRunningServices(CommandRunner runner) {
+    /** Each service of the Compose project by name, stopped containers included, so a run opened after a crash still records the replica that went down. */
+    public static Map<String, ServiceConfiguration> ofComposeServices(CommandRunner runner) {
         List<String> containerIds = runner.output(CONTAINER_IDS).lines().filter(line -> !line.isBlank()).toList();
         if (containerIds.isEmpty()) {
             return Map.of();

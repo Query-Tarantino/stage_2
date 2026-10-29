@@ -15,8 +15,9 @@ import java.util.stream.StreamSupport;
 /**
  * One pass of the checks of SPEC §8; it answers what failed, nothing once the run recovered. Until every seeded book is
  * {@code PUBLISHED} it checks nothing else. Then each book must answer at {@code /books/{book_id}} and come back
- * exactly once among every page of {@code /search} with the words of its title, and no book may be in two published
- * batches. Script 10 also waits {@code TARANTINO_GC_SECONDS} and then wants no posting of an abandoned batch.
+ * exactly once among every page of {@code /search} with the words of its title that its text contains, because only the
+ * text is indexed (SPEC §7), and no book may be in two published batches. Script 10 also waits
+ * {@code TARANTINO_GC_SECONDS} and then wants no posting of an abandoned batch.
  */
 public class RecoveryPass {
 
@@ -68,7 +69,7 @@ public class RecoveryPass {
         if (!book.ok()) {
             return Optional.of("GET /books/" + bookId + " answered " + book.status());
         }
-        List<String> titleWords = tokenizer.distinctTerms(book.body().path("title").asText());
+        List<String> titleWords = reads.termsInText(bookId, tokenizer.distinctTerms(book.body().path("title").asText()));
         if (titleWords.isEmpty()) {
             return Optional.empty();
         }

@@ -54,6 +54,18 @@ class MongoRecoveryReadsTest {
     }
 
     @Test
+    void keepsTheTermsTheTextOfABookContainsInTheirOrder() {
+        MongoDatabase database = database();
+        Document published = batch("PUBLISHED", List.of(3, 84));
+        database.getCollection(MongoCollections.postings(1)).insertMany(List.of(
+                posting("inaugural", published, List.of(3)), posting("address", published, List.of(3, 84)),
+                posting("kennedy", published, List.of(84))));
+
+        assertEquals(List.of("inaugural", "address"),
+                new MongoRecoveryReads(database).termsInText(3, List.of("john", "kennedy", "inaugural", "address")));
+    }
+
+    @Test
     void hasNoAbandonedPostingsWithoutAbandonedBatches() {
         assertEquals(0, new MongoRecoveryReads(database()).postingsOfAbandonedBatches());
     }
@@ -69,6 +81,11 @@ class MongoRecoveryReadsTest {
     }
 
     private static Document posting(String term, Document batch) {
-        return new Document("term", term).append("batch_id", batch.get("_id")).append("book_ids", List.of(84)).append("tfs", List.of(1));
+        return posting(term, batch, List.of(84));
+    }
+
+    private static Document posting(String term, Document batch, List<Integer> bookIds) {
+        return new Document("term", term).append("batch_id", batch.get("_id")).append("book_ids", bookIds)
+                .append("tfs", bookIds.stream().map(bookId -> 1).toList());
     }
 }

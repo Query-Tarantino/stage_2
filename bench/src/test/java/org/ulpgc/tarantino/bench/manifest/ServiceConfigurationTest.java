@@ -27,7 +27,7 @@ class ServiceConfigurationTest {
         CommandRunner runner = GitAndDockerStateTest.answering(Map.of(
                 ServiceConfiguration.CONTAINER_IDS, "a1\nb2\nc3\n", INSPECT_ALL, inspected));
 
-        Map<String, ServiceConfiguration> services = ServiceConfiguration.ofRunningServices(runner);
+        Map<String, ServiceConfiguration> services = ServiceConfiguration.ofComposeServices(runner);
 
         assertEquals(List.of("crawler", "mongo"), List.copyOf(services.keySet()));
         assertEquals(new ServiceConfiguration(2, "jdk-25.0.1+8", "-Xmx512m -XX:+ExitOnOutOfMemoryError",
@@ -39,6 +39,6 @@ class ServiceConfigurationTest {
     void hasNoServicesWhenNothingRuns() {
         CommandRunner runner = GitAndDockerStateTest.answering(Map.of(ServiceConfiguration.CONTAINER_IDS, ""));
 
-        assertEquals(Map.of(), ServiceConfiguration.ofRunningServices(runner));
+        assertEquals(Map.of(), ServiceConfiguration.ofComposeServices(runner));
     }
 }

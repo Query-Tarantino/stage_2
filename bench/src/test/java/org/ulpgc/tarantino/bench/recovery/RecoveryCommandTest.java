@@ -50,6 +50,20 @@ class RecoveryCommandTest {
     }
 
     @Test
+    void onlyCountsAPassThatStartsOnceThePlannedFailureHappened() {
+        MovingClock beforeTheFailure = new MovingClock(FAILED_AT.minusSeconds(2));
+        Supplier<List<String>> alwaysHolds = () -> {
+            beforeTheFailure.advance(ONE_PASS);
+            return List.of();
+        };
+
+        RecoveryChecks checks = new RecoveryCommand(alwaysHolds, new AnsweringStack(), List.of(), beforeTheFailure, beforeTheFailure.pause())
+                .awaitRecovery(FAILED_AT).orElseThrow();
+
+        assertEquals(1.5, checks.recoverySeconds());
+    }
+
+    @Test
     void keepsPollingThroughAPassWhereSomethingDidNotAnswer() {
         Supplier<List<String>> unreachableOnce = new Supplier<>() {
             private boolean answered;

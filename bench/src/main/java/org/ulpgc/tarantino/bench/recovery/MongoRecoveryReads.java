@@ -13,12 +13,15 @@ import org.ulpgc.tarantino.common.mongo.IndexState;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.ulpgc.tarantino.common.mongo.MongoFields.BATCH_ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.BOOK_IDS;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.STATUS;
+import static org.ulpgc.tarantino.common.mongo.MongoFields.TERM;
 
 /** What {@code bench recovery} reads straight from MongoDB (SPEC §8). */
 public class MongoRecoveryReads implements RecoveryReads {
@@ -51,6 +54,14 @@ public class MongoRecoveryReads implements RecoveryReads {
                         Aggregates.sort(Sorts.ascending(ID))))
                 .map(book -> book.getInteger(ID))
                 .into(new ArrayList<>());
+    }
+
+    @Override
+    public List<String> termsInText(int bookId, List<String> terms) {
+        Set<String> inText = database.getCollection(MongoCollections.postings(indexState.currentGeneration()))
+                .distinct(TERM, Filters.and(Filters.in(TERM, terms), Filters.eq(BOOK_IDS, bookId)), String.class)
+                .into(new HashSet<>());
+        return terms.stream().filter(inText::contains).toList();
     }
 
     @Override
