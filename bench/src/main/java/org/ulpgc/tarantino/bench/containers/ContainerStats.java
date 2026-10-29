@@ -16,6 +16,7 @@ public record ContainerStats(Instant at, String container, double cpuPercent, lo
 
     public static final String CSV_HEADER = "instant,container,cpu_percent,memory_bytes";
 
+    private static final String CSV_SEPARATOR = ",";
     private static final Pattern PERCENT = Pattern.compile("([0-9.]+)%");
     private static final Pattern MEMORY_IN_USE = Pattern.compile("([0-9.]+)\\s*([A-Za-z]+)");
     private static final Map<String, Long> BYTES_PER_UNIT = Map.of(
@@ -38,6 +39,12 @@ public record ContainerStats(Instant at, String container, double cpuPercent, lo
         }
         long memoryBytes = Math.round(Double.parseDouble(memory.group(1)) * BYTES_PER_UNIT.get(memory.group(2)));
         return Optional.of(new ContainerStats(at, sample.path("Name").asText(), Double.parseDouble(cpu.group(1)), memoryBytes));
+    }
+
+    /** A row of {@code stats.csv} as {@link #csvRow()} writes it. */
+    public static ContainerStats fromCsvRow(String row) {
+        String[] columns = row.split(CSV_SEPARATOR);
+        return new ContainerStats(Instant.parse(columns[0]), columns[1], Double.parseDouble(columns[2]), Long.parseLong(columns[3]));
     }
 
     public String csvRow() {

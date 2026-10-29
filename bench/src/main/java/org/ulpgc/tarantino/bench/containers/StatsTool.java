@@ -20,7 +20,7 @@ public final class StatsTool {
 
     static final int DONE = 0;
     static final int WRONG_USAGE = 2;
-    static final String FILE_NAME = "stats.csv";
+    public static final String FILE_NAME = "stats.csv";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StatsTool.class);
     private static final List<String> DOCKER_STATS = List.of("docker", "stats", "--format", "{{json .}}");

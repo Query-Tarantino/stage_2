@@ -30,6 +30,13 @@ class ContainerStatsTest {
     }
 
     @Test
+    void readsBackTheRowItWrites() {
+        ContainerStats stats = new ContainerStats(AT, "stage_2-crawler-3", 47.5, 268_435_456L);
+
+        assertEquals(stats, ContainerStats.fromCsvRow(stats.csvRow()));
+    }
+
+    @Test
     void skipsWhatIsNotASample() {
         assertEquals(Optional.empty(), ContainerStats.parse("\u001B[2J\u001B[H", AT));
         assertEquals(Optional.empty(), ContainerStats.parse("{\"CPUPerc\":\"--\",\"MemUsage\":\"-- / --\",\"Name\":\"stage_2-crawler-1\"}", AT));

@@ -12,6 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChartsToolTest {
 
@@ -31,6 +32,21 @@ class ChartsToolTest {
         BufferedImage chart = ImageIO.read(run.resolve("charts").resolve("coordination.png").toFile());
         assertEquals(RunChart.WIDTH, chart.getWidth());
         assertEquals(RunChart.HEIGHT + RunChart.FOOTER_HEIGHT, chart.getHeight());
+    }
+
+    @Test
+    void drawsTheCpuAndTheMemoryOfARunWithItsStats() throws IOException {
+        Path run = Files.createDirectories(runs.resolve("20261110-153000-resource-usage-3f2a9c1"));
+        Files.write(run.resolve("stats.csv"), List.of(
+                "instant,container,cpu_percent,memory_bytes",
+                "2026-10-21T10:00:00Z,stage_2-indexer-1,12.50,268435456",
+                "2026-10-21T10:00:01Z,stage_2-indexer-1,112.47,536870912"));
+
+        assertEquals(ChartsTool.DONE, ChartsTool.run(List.of(run.toString())));
+
+        assertTrue(Files.exists(run.resolve("charts").resolve("cpu.png")));
+        assertTrue(Files.exists(run.resolve("charts").resolve("memory.png")));
+        assertFalse(Files.exists(run.resolve("charts").resolve("coordination.png")));
     }
 
     @Test

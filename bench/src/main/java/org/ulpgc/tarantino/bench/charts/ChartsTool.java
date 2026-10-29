@@ -2,6 +2,8 @@ package org.ulpgc.tarantino.bench.charts;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.bench.containers.ContainerStats;
+import org.ulpgc.tarantino.bench.containers.StatsTool;
 import org.ulpgc.tarantino.bench.coordination.CoordinationTool;
 
 import java.io.IOException;
@@ -31,9 +33,9 @@ public final class ChartsTool {
         }
         System.setProperty(HEADLESS, Boolean.TRUE.toString());
         Path runDirectory = Path.of(args.getFirst());
-        List<Path> charts = coordination(runDirectory).toList();
+        List<Path> charts = Stream.concat(coordination(runDirectory), resources(runDirectory)).toList();
         if (charts.isEmpty()) {
-            LOGGER.error("{} has no {} to draw", runDirectory, CoordinationTool.FILE_NAME);
+            LOGGER.error("{} has neither {} nor {} to draw", runDirectory, CoordinationTool.FILE_NAME, StatsTool.FILE_NAME);
             return FAILED;
         }
         charts.forEach(chart -> LOGGER.info("Wrote {}", chart));
@@ -46,6 +48,16 @@ public final class ChartsTool {
             return Stream.empty();
         }
         return Stream.of(RunChart.write(CoordinationChart.of(CoordinationChart.phases(lines(csv))), runDirectory, CoordinationChart.NAME));
+    }
+
+    private static Stream<Path> resources(Path runDirectory) {
+        Path csv = runDirectory.resolve(StatsTool.FILE_NAME);
+        if (!Files.exists(csv)) {
+            return Stream.empty();
+        }
+        List<ContainerStats> samples = ResourceCharts.samples(lines(csv));
+        return Stream.of(RunChart.write(ResourceCharts.cpu(samples), runDirectory, ResourceCharts.CPU),
+                RunChart.write(ResourceCharts.memory(samples), runDirectory, ResourceCharts.MEMORY));
     }
 
     private static List<String> lines(Path file) {
