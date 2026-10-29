@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public class RecoveryCommand {
 
     static final Duration POLL = Duration.ofSeconds(1);
-    static final Duration TIMEOUT = Duration.ofMinutes(15);
+    static final Duration TIMEOUT = Duration.ofMinutes(30);
     static final int DEFAULT_SEARCH_LIMIT = 20;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryCommand.class);
