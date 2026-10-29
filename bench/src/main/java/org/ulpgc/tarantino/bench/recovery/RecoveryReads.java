@@ -11,5 +11,8 @@ public interface RecoveryReads {
     /** The books in more than one {@code PUBLISHED} batch, by ascending id. */
     List<Integer> booksInTwoPublishedBatches();
 
+    /** Of {@code terms}, the ones the text of {@code bookId} contains, in the same order. */
+    List<String> termsInText(int bookId, List<String> terms);
+
     long postingsOfAbandonedBatches();
 }
