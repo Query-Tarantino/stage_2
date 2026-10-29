@@ -7,6 +7,7 @@ import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.common.mongo.MongoIndexes;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.common.startup.Startup;
+import org.ulpgc.tarantino.control.commands.CleanDatalakeCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
 
 import java.util.List;
@@ -26,13 +27,17 @@ public class Main {
         Startup.retry("create the book state indexes", () -> MongoIndexes.ensureStateIndexes(connections.database()));
         List<Integer> candidates = ControlFactory.candidates(config);
         Startup.retry("seed the candidates", () -> seed(connections, candidates));
-        reconcileOnOneThread(config, reconcile);
+        scheduleOnOneThread(config, reconcile, ControlFactory.cleanDatalakeCommand(config));
     }
 
-    /** The first reconciliation right after seeding and then one every TARANTINO_RECONCILE_SECONDS (SPEC §5.3). */
-    private static void reconcileOnOneThread(TarantinoConfig config, ReconcileCommand reconcile) {
+    /**
+     * The first reconciliation and datalake cleanup right after seeding, and then one every TARANTINO_RECONCILE_SECONDS
+     * and every TARANTINO_CLEANUP_SECONDS (SPEC §4.6 and §5.3), on one thread so they never overlap.
+     */
+    private static void scheduleOnOneThread(TarantinoConfig config, ReconcileCommand reconcile, CleanDatalakeCommand cleanDatalake) {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("reconciliation").factory());
         scheduler.scheduleWithFixedDelay(reconcile::execute, 0, config.reconcile().toMillis(), TimeUnit.MILLISECONDS);
+        scheduler.scheduleWithFixedDelay(cleanDatalake::execute, 0, config.cleanup().toMillis(), TimeUnit.MILLISECONDS);
     }
 
     private static void seed(Connections connections, List<Integer> candidates) {

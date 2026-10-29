@@ -7,6 +7,7 @@ import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
+import org.ulpgc.tarantino.control.adapters.datalake.FileDatalakeTemporaries;
 import org.ulpgc.tarantino.control.adapters.hazelcast.HazelcastQueueSizes;
 import org.ulpgc.tarantino.control.adapters.http.ControlStatusRoutes;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoAbandonedBatches;
@@ -19,6 +20,7 @@ import org.ulpgc.tarantino.control.adapters.mongo.MongoOutdatedBooks;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoRebuilds;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoStatusCounts;
 import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
+import org.ulpgc.tarantino.control.commands.CleanDatalakeCommand;
 import org.ulpgc.tarantino.control.commands.ControlStatusCommand;
 import org.ulpgc.tarantino.control.commands.DeleteAbandonedPostingsCommand;
 import org.ulpgc.tarantino.control.commands.DropOldGenerationsCommand;
@@ -60,6 +62,11 @@ public final class ControlFactory {
                 reindexOutdatedBooks(connections)::execute,
                 switchGeneration(connections)::execute,
                 dropOldGenerations(config, connections)::execute), Clock.systemUTC());
+    }
+
+    /** The datalake cleanup of SPEC §4.6, with the clock of the container, which is the host's. */
+    public static CleanDatalakeCommand cleanDatalakeCommand(TarantinoConfig config) {
+        return new CleanDatalakeCommand(new FileDatalakeTemporaries(config.datalake(), config.tmpMaxAge(), Clock.systemUTC()));
     }
 
     public static ControlStatusRoutes statusRoutes(Connections connections, ReconcileCommand reconcile) {
