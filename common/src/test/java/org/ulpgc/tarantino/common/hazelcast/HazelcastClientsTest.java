@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,14 +34,16 @@ class HazelcastClientsTest {
     }
 
     @Test
-    void retriesInTheBackgroundWithoutLimit() {
+    void keepsRetryingInTheBackgroundForYearsButNotForever() {
         ClientConfig config = HazelcastClients.config(List.of("hazelcast:5701"), HazelcastContracts.DEFAULT_CLUSTER);
 
         assertEquals(HazelcastContracts.DEFAULT_CLUSTER, config.getClusterName());
         assertEquals(List.of("hazelcast:5701"), config.getNetworkConfig().getAddresses());
         assertTrue(config.getConnectionStrategyConfig().isAsyncStart());
         assertEquals(ReconnectMode.ASYNC, config.getConnectionStrategyConfig().getReconnectMode());
-        assertEquals(-1, config.getConnectionStrategyConfig().getConnectionRetryConfig().getClusterConnectTimeoutMillis());
+        long connectTimeout = config.getConnectionStrategyConfig().getConnectionRetryConfig().getClusterConnectTimeoutMillis();
+        assertTrue(connectTimeout >= Duration.ofDays(365).toMillis());
+        assertTrue(connectTimeout < Long.MAX_VALUE / 2);
     }
 
     @Test
