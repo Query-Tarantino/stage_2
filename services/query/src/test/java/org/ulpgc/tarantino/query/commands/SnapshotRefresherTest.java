@@ -1,7 +1,10 @@
 package org.ulpgc.tarantino.query.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.query.model.SearchResult;
 import org.ulpgc.tarantino.query.model.Snapshot;
+import org.ulpgc.tarantino.query.model.Snapshot.BookFilter;
+import org.ulpgc.tarantino.query.ports.MetadataReader;
 import org.ulpgc.tarantino.query.ports.PublishedBatches;
 
 import java.util.ArrayList;
@@ -43,6 +46,35 @@ class SnapshotRefresherTest {
     }
 
     @Test
+    void readsFilterMetadataForNewlyPublishedBatches() {
+        MetadataReader metadata = new MetadataReader() {
+            @Override
+            public List<SearchResult> results(int generation, Collection<Integer> bookIds) {
+                return List.of();
+            }
+
+            @Override
+            public Map<Integer, BookFilter> filters(int generation, Collection<Integer> bookIds) {
+                return Map.of(
+                        1342, new BookFilter(List.of("en"), 1998),
+                        84, new BookFilter(List.of("en", "de"), 1818));
+            }
+        };
+        SnapshotRefresher customRefresher = new SnapshotRefresher(batches, metadata);
+        batches.publish(1, "a", List.of(1342, 84));
+
+        customRefresher.refresh();
+
+        Snapshot snapshot = customRefresher.current().orElseThrow();
+        assertEquals(2, snapshot.bookCount());
+        assertEquals(2, snapshot.filtersSummary().totalBooks());
+        assertEquals(1818, snapshot.filtersSummary().years().min());
+        assertEquals(1998, snapshot.filtersSummary().years().max());
+        assertEquals(2, snapshot.filtersSummary().languages().getFirst().books());
+        assertEquals("en", snapshot.filtersSummary().languages().getFirst().code());
+    }
+
+    @Test
     void swapsTheWholeSnapshotWhenTheGenerationChanges() {
         batches.publish(1, "a", List.of(1342, 84));
         refresher.refresh();
@@ -63,6 +95,25 @@ class SnapshotRefresherTest {
         refresher.refreshOrKeep();
 
         assertEquals(new Snapshot(1, Set.of("a"), Set.of(1342)), refresher.current().orElseThrow());
+    }
+
+    @Test
+    void picksUpBatchesWhenNotificationIsLostOrPublishedOutOfOrder() {
+        batches.publish(1, "batch-2", List.of(84));
+        refresher.refresh();
+        assertEquals(Set.of("batch-2"), refresher.current().orElseThrow().batchIds());
+
+        batches.publish(1, "batch-1", List.of(1342));
+        batches.publish(1, "batch-3", List.of(11));
+        batches.requested.clear();
+
+        refresher.refresh();
+
+        Snapshot snapshot = refresher.current().orElseThrow();
+        assertEquals(Set.of("batch-1", "batch-2", "batch-3"), snapshot.batchIds());
+        assertEquals(Set.of(84, 1342, 11), snapshot.bookIds());
+        assertEquals(1, batches.requested.size());
+        assertEquals(Set.of("batch-1", "batch-3"), Set.copyOf(batches.requested.getFirst()));
     }
 
     private static final class FakeBatches implements PublishedBatches {

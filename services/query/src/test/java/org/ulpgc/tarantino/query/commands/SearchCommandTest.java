@@ -9,6 +9,7 @@ import org.ulpgc.tarantino.query.model.Snapshot;
 import org.ulpgc.tarantino.query.model.TermPostings;
 import org.ulpgc.tarantino.query.ports.MetadataReader;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,55 @@ class SearchCommandTest {
         assertEquals(3, response.total());
         assertEquals(List.of(new SearchResult(84, "Title 84", null, "en", 1998)), response.results());
         assertEquals(new SearchResponse("pride prejudice", Map.of(), 3, 1, 1, response.results()), response);
+    }
+
+    @Test
+    void filtersSearchResultsByMetadata() {
+        MetadataReader filteringReader = new MetadataReader() {
+            @Override
+            public List<SearchResult> results(int generation, Collection<Integer> bookIds) {
+                return IN_REVERSE_ORDER.results(generation, bookIds);
+            }
+
+            @Override
+            public Set<Integer> matchingBookIds(int generation, Collection<String> authorTerms, String language, Integer year) {
+                return Set.of(1342);
+            }
+        };
+        SearchCommand command = new SearchCommand(
+                (generation, terms, batchIds) -> POSTINGS.stream().filter(posting -> terms.contains(posting.term())).toList(),
+                filteringReader, new Tokenizer(Set.of("the", "and")));
+        SearchQuery query = new SearchQuery("pride", "Austen", List.of("austen"), "en", 1998, 0, 20);
+
+        SearchResponse response = command.execute(SNAPSHOT, query);
+
+        assertEquals(1, response.total());
+        assertEquals(List.of(1342), ids(response));
+        assertEquals(Map.of("author", "Austen", "language", "en", "year", 1998), response.filters());
+    }
+
+    @Test
+    void findsNothingWhenFiltersMatchNoBooksInTheSnapshot() {
+        MetadataReader emptyReader = new MetadataReader() {
+            @Override
+            public List<SearchResult> results(int generation, Collection<Integer> bookIds) {
+                return List.of();
+            }
+
+            @Override
+            public Set<Integer> matchingBookIds(int generation, Collection<String> authorTerms, String language, Integer year) {
+                return Set.of(9999);
+            }
+        };
+        SearchCommand command = new SearchCommand(
+                (generation, terms, batchIds) -> POSTINGS.stream().filter(posting -> terms.contains(posting.term())).toList(),
+                emptyReader, new Tokenizer(Set.of()));
+        SearchQuery query = new SearchQuery("pride", "Unknown", List.of("unknown"), null, null, 0, 20);
+
+        SearchResponse response = command.execute(SNAPSHOT, query);
+
+        assertEquals(0, response.total());
+        assertEquals(List.of(), response.results());
     }
 
     @Test

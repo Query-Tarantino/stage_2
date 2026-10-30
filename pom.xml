@@ -15,6 +15,8 @@
         <module>services/indexer</module>
         <module>services/query</module>
         <module>services/control</module>
+        <module>bench</module>
+        <module>checks</module>
     </modules>
 
     <properties>

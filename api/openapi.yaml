@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Query Tarantino API
-  version: "1.1"
+  version: "1.5"
   description: |
     HTTP API of Query Tarantino Stage 2, derived from SPEC.md §6; `info.version` follows the SPEC.md version.
 
@@ -36,6 +36,8 @@ paths:
       summary: Search books by TF-IDF with optional filters
       description: |
         Consumer: front-end. Service: `query` (7003). nginx port: 8080.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
 
         An empty or blank optional parameter counts as absent; any other value must follow its rule as received.
         The parameters are checked in the order `q`, `author`, `language`, `year`, `offset` and `limit`: the first
@@ -94,6 +96,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchResponse"
+              example:
+                query: "pride prejudice"
+                filters:
+                  author: "austen"
+                  language: "en"
+                total: 1
+                offset: 0
+                limit: 20
+                results:
+                  - book_id: 1342
+                    title: "Pride and Prejudice"
+                    author: "Jane Austen"
+                    language: "en"
+                    year: 1998
         "400":
           $ref: "#/components/responses/BadRequest"
         "503":
@@ -107,7 +123,10 @@ paths:
       tags: [front-end]
       operationId: getBook
       summary: A book of the snapshot
-      description: "Consumer: front-end. Service: `query` (7003). nginx port: 8080."
+      description: |
+        Consumer: front-end. Service: `query` (7003). nginx port: 8080.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       parameters:
         - $ref: "#/components/parameters/BookId"
       responses:
@@ -117,6 +136,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Book"
+              example:
+                book_id: 1342
+                title: "Pride and Prejudice"
+                author: "Jane Austen"
+                language: "en"
+                languages:
+                  - "en"
+                year: 1998
+                original_year: null
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
@@ -132,7 +160,10 @@ paths:
       tags: [front-end]
       operationId: getSearchFilters
       summary: Languages and years of the snapshot's books
-      description: "Consumer: front-end. Service: `query` (7003). nginx port: 8080."
+      description: |
+        Consumer: front-end. Service: `query` (7003). nginx port: 8080.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       responses:
         "200":
           description: The filters summary of the snapshot.
@@ -140,6 +171,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SearchFilters"
+              example:
+                languages:
+                  - code: "en"
+                    name: "English"
+                    books: 2380
+                  - code: "fr"
+                    name: "French"
+                    books: 95
+                years:
+                  min: 1971
+                  max: 2026
+                total_books: 2800
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -156,7 +199,11 @@ paths:
       tags: [operational]
       operationId: ingestBook
       summary: Ask for a book to be downloaded
-      description: "Consumer: load and admin scripts. Service: `crawler` (7001). nginx port: 8081."
+      description: |
+        Consumer: load and admin scripts. Service: `crawler` (7001). nginx port: 8081.
+        Asynchronous: answers `202 Accepted` with `Location` when queued or retried, or `200 OK` if already downloaded, indexing or published.
+        Completion observation: poll `GET /ingest/status/{book_id}` at `Location` until `status` is `PUBLISHED` (or `FAILED` with `last_error`). Visible in `GET /search` after at most `TARANTINO_SNAPSHOT_SECONDS` once published.
+        Idempotency: repeating duplicates nothing; state transitions are conditional writes in MongoDB. If already `QUEUED` or `DOWNLOADING`, returns `202` without enqueuing again. If `DOWNLOADED`, `INDEXING` or `PUBLISHED`, returns `200` with current state.
       parameters:
         - $ref: "#/components/parameters/BookId"
       responses:
@@ -169,12 +216,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "QUEUED"
+                attempts: 0
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "200":
           description: Already `DOWNLOADED`, `INDEXING` or `PUBLISHED`.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "PUBLISHED"
+                attempts: 1
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "400":
           $ref: "#/components/responses/BadRequest"
         "503":
@@ -188,7 +247,10 @@ paths:
       tags: [operational]
       operationId: getIngestStatus
       summary: A book's state
-      description: "Consumer: whoever got a `202`; checks. Service: `crawler` (7001). nginx port: 8081."
+      description: |
+        Consumer: whoever got a `202`; checks. Service: `crawler` (7001). nginx port: 8081.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       parameters:
         - $ref: "#/components/parameters/BookId"
       responses:
@@ -209,7 +271,10 @@ paths:
       tags: [operational]
       operationId: listDownloadedBooks
       summary: Books in `DOWNLOADED`, `INDEXING` or `PUBLISHED`
-      description: "Consumer: checks. Service: `crawler` (7001). nginx port: 8081."
+      description: |
+        Consumer: checks. Service: `crawler` (7001). nginx port: 8081.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       responses:
         "200":
           description: The books, ascending.
@@ -217,6 +282,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/IngestList"
+              example:
+                count: 3
+                books:
+                  - 5
+                  - 17
+                  - 1342
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -228,7 +299,11 @@ paths:
       tags: [operational]
       operationId: updateIndex
       summary: Ask for a downloaded book to be indexed
-      description: "Consumer: admin. Service: `indexer` (7002). nginx port: 8081."
+      description: |
+        Consumer: admin. Service: `indexer` (7002). nginx port: 8081.
+        Asynchronous: answers `202 Accepted` with `Location` when `DOWNLOADED` (and enqueued) or already `INDEXING`; answers `200 OK` if already `PUBLISHED`.
+        Completion observation: poll `GET /index/status/{book_id}` at `Location` until `status` is `PUBLISHED` (or `FAILED` with `last_error`). Visible in `GET /search` after at most `TARANTINO_SNAPSHOT_SECONDS` once published.
+        Idempotency: repeating duplicates nothing. If `DOWNLOADED`, re-enqueues without state change; if `INDEXING`, returns `202` without enqueuing; if `PUBLISHED`, returns `200`.
       parameters:
         - $ref: "#/components/parameters/BookId"
       responses:
@@ -241,12 +316,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "INDEXING"
+                attempts: 1
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "200":
           description: Already `PUBLISHED`.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/BookState"
+              example:
+                book_id: 1342
+                status: "PUBLISHED"
+                attempts: 1
+                last_error: null
+                updated_at: "2026-10-21T10:05:00Z"
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
@@ -264,7 +351,10 @@ paths:
       tags: [operational]
       operationId: getIndexBookStatus
       summary: A book's state
-      description: "Consumer: whoever got a `202`. Service: `indexer` (7002). nginx port: 8081."
+      description: |
+        Consumer: whoever got a `202`. Service: `indexer` (7002). nginx port: 8081.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       parameters:
         - $ref: "#/components/parameters/BookId"
       responses:
@@ -285,7 +375,11 @@ paths:
       tags: [operational]
       operationId: rebuildIndex
       summary: Open a rebuild into the next generation
-      description: "Consumer: admin. Service: `indexer` (7002). nginx port: 8081."
+      description: |
+        Consumer: admin. Service: `indexer` (7002). nginx port: 8081.
+        Asynchronous: answers `202 Accepted` with `Location: /index/status`.
+        Completion observation: poll `GET /index/status` until `rebuild` becomes `null` and `generation` equals `target_generation` (status transitioned through `DONE`).
+        Idempotency: if a rebuild is already `RUNNING`, returns `202` with the existing rebuild document instead of failing (duplicate key code 11000 caught).
       responses:
         "202":
           description: The rebuild opened, or the one already running.
@@ -296,6 +390,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Rebuild"
+              example:
+                generation: 1
+                target_generation: 2
+                status: "RUNNING"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -307,7 +405,10 @@ paths:
       tags: [operational]
       operationId: getIndexStatus
       summary: The index of the current generation
-      description: "Consumer: admin and benchmarks. Service: `indexer` (7002). nginx port: 8081."
+      description: |
+        Consumer: admin and benchmarks. Service: `indexer` (7002). nginx port: 8081.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       responses:
         "200":
           description: Figures of the current generation.
@@ -315,6 +416,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/IndexStatus"
+              example:
+                generation: 1
+                books_indexed: 2800
+                batches_published: 28
+                last_update: "2026-10-21T10:06:00Z"
+                index_size_mb: 512.4
+                rebuild: null
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -326,7 +434,10 @@ paths:
       tags: [operational]
       operationId: getControlStatus
       summary: Books by state, queue sizes and the last reconciliation
-      description: "Consumer: admin and benchmarks. Service: `control` (7004). nginx port: 8081."
+      description: |
+        Consumer: admin and benchmarks. Service: `control` (7004). nginx port: 8081.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       responses:
         "200":
           description: The system's state.
@@ -334,6 +445,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ControlStatus"
+              example:
+                generation: 1
+                books:
+                  QUEUED: 10
+                  DOWNLOADING: 8
+                  DOWNLOADED: 0
+                  INDEXING: 100
+                  PUBLISHED: 2680
+                  FAILED: 2
+                queues:
+                  books-to-download: 10
+                  books-to-index: 0
+                last_reconciliation: "2026-10-21T10:06:30Z"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
         "500":
@@ -354,7 +478,10 @@ paths:
       tags: [health]
       operationId: getHealth
       summary: Whether the service reaches its dependencies
-      description: "Consumer: Compose healthchecks. Service: all four, on their own port. nginx port: none."
+      description: |
+        Consumer: Compose healthchecks. Service: all four, on their own port. nginx port: none.
+        Synchronous: answers in milliseconds.
+        Idempotency: safe and idempotent read.
       responses:
         "200":
           description: Everything answers.
@@ -362,6 +489,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+              example:
+                status: "UP"
         "503":
           description: Something does not answer; `application/json`, not Problem Details.
           headers:
@@ -371,6 +500,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+              example:
+                status: "DOWN"
+                down:
+                  - "mongo"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -415,32 +548,84 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/BookState"
+          example:
+            book_id: 1342
+            status: INDEXING
+            attempts: 1
+            last_error: null
+            updated_at: "2026-10-21T10:05:00Z"
     BadRequest:
       description: "A missing, malformed or out-of-range parameter: `MISSING_PARAMETER` or `INVALID_PARAMETER`, naming it in `parameter`."
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+          examples:
+            missingParameter:
+              summary: Missing required parameter
+              value:
+                type: "about:blank"
+                title: "Bad Request"
+                status: 400
+                code: "MISSING_PARAMETER"
+                parameter: "q"
+                detail: "q is required"
+            invalidParameter:
+              summary: Invalid parameter value
+              value:
+                type: "about:blank"
+                title: "Bad Request"
+                status: 400
+                code: "INVALID_PARAMETER"
+                parameter: "limit"
+                detail: "limit must be between 1 and 100"
     NotFound:
-      description: "`BOOK_NOT_FOUND`."
+      description: "`BOOK_NOT_FOUND`, or nginx's own 404 for an unknown path without `code` (SPEC.md §6.6)."
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+          examples:
+            bookNotFound:
+              summary: Book not found
+              value:
+                type: "about:blank"
+                title: "Not Found"
+                status: 404
+                code: "BOOK_NOT_FOUND"
+                detail: "Book 9999 was not found"
+            unknownPath:
+              summary: Unknown path returned by nginx without code
+              value:
+                type: "about:blank"
+                title: "Not Found"
+                status: 404
+                detail: "The requested path does not exist"
     Conflict:
       description: "`NOT_DOWNLOADED`: the book is `QUEUED`, `DOWNLOADING` or `FAILED`."
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+          example:
+            type: "about:blank"
+            title: "Conflict"
+            status: 409
+            code: "NOT_DOWNLOADED"
+            detail: "Book 1342 has not been downloaded yet"
     InternalError:
       description: An unexpected exception, without `code` (SPEC.md §6.6).
       content:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+          example:
+            type: "about:blank"
+            title: "Internal Server Error"
+            status: 500
+            detail: "An unexpected exception occurred"
     ServiceUnavailable:
-      description: "`DEPENDENCY_UNAVAILABLE`: Mongo or Hazelcast do not answer, or `query` has no snapshot yet."
+      description: "`DEPENDENCY_UNAVAILABLE`: Mongo or Hazelcast do not answer, `query` has no snapshot yet, or nginx when no upstream replica answers (SPEC.md §6.6)."
       headers:
         Retry-After:
           $ref: "#/components/headers/RetryAfter"
@@ -448,6 +633,23 @@ components:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+          examples:
+            snapshotUnavailable:
+              summary: Snapshot not available yet
+              value:
+                type: "about:blank"
+                title: "Service Unavailable"
+                status: 503
+                code: "DEPENDENCY_UNAVAILABLE"
+                detail: "Snapshot is not available yet"
+            noUpstreamReplica:
+              summary: No upstream replica answers behind nginx
+              value:
+                type: "about:blank"
+                title: "Service Unavailable"
+                status: 503
+                code: "DEPENDENCY_UNAVAILABLE"
+                detail: "No upstream replica is available"
 
   schemas:
     BookStatus:
@@ -489,6 +691,7 @@ components:
     BookState:
       description: A book's state (SPEC.md §6.2).
       type: object
+      additionalProperties: false
       required: [book_id, status, attempts, last_error, updated_at]
       properties:
         book_id:
@@ -509,6 +712,7 @@ components:
     SearchResponse:
       description: SPEC.md §6.3.
       type: object
+      additionalProperties: false
       required: [query, filters, total, offset, limit, results]
       properties:
         query:
@@ -516,12 +720,13 @@ components:
           description: "`q` as received."
         filters:
           type: object
+          additionalProperties: false
           description: The filters present, as received; without filters, `{}`.
           properties:
             author:
               type: string
             language:
-              type: string
+              $ref: "#/components/schemas/LanguageCode"
             year:
               $ref: "#/components/schemas/Year"
         total:
@@ -546,6 +751,7 @@ components:
 
     SearchResult:
       type: object
+      additionalProperties: false
       required: [book_id, title, author, language, year]
       properties:
         book_id:
@@ -569,6 +775,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/SearchResult"
         - type: object
+          additionalProperties: false
           required: [languages, original_year]
           properties:
             languages:
@@ -583,6 +790,7 @@ components:
     SearchFilters:
       description: SPEC.md §6.4, computed from the snapshot's books.
       type: object
+      additionalProperties: false
       required: [languages, years, total_books]
       properties:
         languages:
@@ -590,6 +798,7 @@ components:
           description: From most to fewest books.
           items:
             type: object
+            additionalProperties: false
             required: [code, name, books]
             properties:
               code:
@@ -602,6 +811,7 @@ components:
                 minimum: 1
         years:
           type: object
+          additionalProperties: false
           required: [min, max]
           properties:
             min:
@@ -620,6 +830,7 @@ components:
     IngestList:
       description: SPEC.md §6.5.
       type: object
+      additionalProperties: false
       required: [count, books]
       properties:
         count:
@@ -635,6 +846,7 @@ components:
     Rebuild:
       description: SPEC.md §6.5.
       type: object
+      additionalProperties: false
       required: [generation, target_generation, status]
       properties:
         generation:
@@ -647,6 +859,7 @@ components:
     IndexStatus:
       description: SPEC.md §6.5, all for the current generation.
       type: object
+      additionalProperties: false
       required: [generation, books_indexed, batches_published, last_update, index_size_mb, rebuild]
       properties:
         generation:
@@ -670,6 +883,7 @@ components:
           oneOf:
             - type: "null"
             - type: object
+              additionalProperties: false
               required: [target_generation, status, books_pending]
               properties:
                 target_generation:
@@ -684,6 +898,7 @@ components:
     ControlStatus:
       description: SPEC.md §6.5.
       type: object
+      additionalProperties: false
       required: [generation, books, queues, last_reconciliation]
       properties:
         generation:
@@ -691,13 +906,36 @@ components:
         books:
           type: object
           description: All six states, always.
+          additionalProperties: false
           required: [QUEUED, DOWNLOADING, DOWNLOADED, INDEXING, PUBLISHED, FAILED]
-          additionalProperties:
-            type: integer
-            format: int32
-            minimum: 0
+          properties:
+            QUEUED:
+              type: integer
+              format: int32
+              minimum: 0
+            DOWNLOADING:
+              type: integer
+              format: int32
+              minimum: 0
+            DOWNLOADED:
+              type: integer
+              format: int32
+              minimum: 0
+            INDEXING:
+              type: integer
+              format: int32
+              minimum: 0
+            PUBLISHED:
+              type: integer
+              format: int32
+              minimum: 0
+            FAILED:
+              type: integer
+              format: int32
+              minimum: 0
         queues:
           type: object
+          additionalProperties: false
           required: [books-to-download, books-to-index]
           properties:
             books-to-download:
@@ -716,6 +954,7 @@ components:
     Health:
       description: SPEC.md §6.5; `down` only when `DOWN`.
       type: object
+      additionalProperties: false
       required: [status]
       properties:
         status:
@@ -730,8 +969,9 @@ components:
             enum: [mongo, hazelcast, snapshot]
 
     Problem:
-      description: Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500`.
+      description: "Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500` and on nginx's own `404` for an unknown path."
       type: object
+      additionalProperties: false
       required: [type, title, status]
       properties:
         type:
@@ -747,10 +987,18 @@ components:
           description: Only in `400` responses.
         detail:
           type: string
+      example:
+        type: "about:blank"
+        title: "Bad Request"
+        status: 400
+        code: "INVALID_PARAMETER"
+        parameter: "limit"
+        detail: "limit must be between 1 and 100"
 
     BookTask:
       description: "Hazelcast message (SPEC.md §4.2) on the `books-to-download` and `books-to-index` queues."
       type: object
+      additionalProperties: false
       required: [book_id, enqueued_at]
       properties:
         book_id:
@@ -761,6 +1009,7 @@ components:
     BatchPublished:
       description: "Hazelcast message (SPEC.md §4.2) on the `published-batches` topic."
       type: object
+      additionalProperties: false
       required: [batch_id, generation, book_count, published_at]
       properties:
         batch_id:
