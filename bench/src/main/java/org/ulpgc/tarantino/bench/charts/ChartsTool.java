@@ -6,12 +6,16 @@ import org.ulpgc.tarantino.bench.containers.ContainerStats;
 import org.ulpgc.tarantino.bench.containers.StatsTool;
 import org.ulpgc.tarantino.bench.coordination.CoordinationTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryChecks;
+import org.ulpgc.tarantino.bench.resources.ResourceTool;
+import org.ulpgc.tarantino.bench.resources.ResourceUsage;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -39,7 +43,7 @@ public final class ChartsTool {
         }
         System.setProperty(HEADLESS, Boolean.TRUE.toString());
         Path runDirectory = Path.of(args.getFirst());
-        List<Path> charts = Stream.concat(coordination(runDirectory), resources(runDirectory)).toList();
+        List<Path> charts = Stream.of(coordination(runDirectory), resources(runDirectory), phases(runDirectory)).flatMap(Function.identity()).toList();
         if (charts.isEmpty()) {
             LOGGER.error("{} has neither {} nor {} to draw", runDirectory, CoordinationTool.FILE_NAME, StatsTool.FILE_NAME);
             return FAILED;
@@ -82,6 +86,13 @@ public final class ChartsTool {
         List<ContainerStats> samples = ResourceCharts.samples(lines(csv));
         return Stream.of(RunChart.write(ResourceCharts.cpu(samples), runDirectory, ResourceCharts.CPU),
                 RunChart.write(ResourceCharts.memory(samples), runDirectory, ResourceCharts.MEMORY));
+    }
+
+    private static Stream<Path> phases(Path runDirectory) {
+        Map<ResourceUsage.Key, ResourceUsage.Measures> usage = ResourceTool.usage(runDirectory);
+        return PhaseResourceCharts.phases(usage).stream().flatMap(phase -> Stream.of(
+                RunChart.write(PhaseResourceCharts.cpu(usage, phase), runDirectory, PhaseResourceCharts.CPU_PREFIX + phase),
+                RunChart.write(PhaseResourceCharts.memory(usage, phase), runDirectory, PhaseResourceCharts.MEMORY_PREFIX + phase)));
     }
 
     private static void writeSources(Path sources, List<RecoveryChart.RecoveryRun> runs) {
