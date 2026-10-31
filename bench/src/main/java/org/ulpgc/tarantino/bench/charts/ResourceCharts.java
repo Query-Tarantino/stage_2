@@ -4,6 +4,7 @@ import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.XYSeries;
 import org.knowm.xchart.style.lines.SeriesLines;
+import org.ulpgc.tarantino.bench.containers.ComposeReplica;
 import org.ulpgc.tarantino.bench.containers.ContainerStats;
 
 import java.awt.BasicStroke;
@@ -13,10 +14,9 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.ToDoubleFunction;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -38,7 +38,6 @@ final class ResourceCharts {
     static final Color OTHER_CONTAINER = Color.GRAY;
     static final List<BasicStroke> REPLICA_LINES = List.of(SeriesLines.SOLID, SeriesLines.DASH_DASH, SeriesLines.DOT_DOT, SeriesLines.DASH_DOT);
 
-    private static final Pattern COMPOSE_REPLICA = Pattern.compile(".+-([a-z]+)-([1-9]\\d*)");
     private static final double BYTES_PER_MIB = 1 << 20;
     private static final double MILLIS_PER_SECOND = 1_000;
     private static final String X_AXIS = "Seconds since the first sample";
@@ -73,10 +72,13 @@ final class ResourceCharts {
     }
 
     private static void style(XYSeries series, String container) {
-        Matcher replica = COMPOSE_REPLICA.matcher(container);
-        boolean isComposeReplica = replica.matches();
-        series.setLineColor(isComposeReplica ? SERVICE_COLORS.getOrDefault(replica.group(1), OTHER_CONTAINER) : OTHER_CONTAINER);
-        series.setLineStyle(isComposeReplica ? REPLICA_LINES.get((Integer.parseInt(replica.group(2)) - 1) % REPLICA_LINES.size()) : SeriesLines.SOLID);
+        Optional<ComposeReplica> replica = ComposeReplica.of(container);
+        series.setLineColor(replica.map(ResourceCharts::color).orElse(OTHER_CONTAINER));
+        series.setLineStyle(replica.map(compose -> REPLICA_LINES.get((compose.replica() - 1) % REPLICA_LINES.size())).orElse(SeriesLines.SOLID));
+    }
+
+    private static Color color(ComposeReplica replica) {
+        return SERVICE_COLORS.getOrDefault(replica.service(), OTHER_CONTAINER);
     }
 
     private static double secondsBetween(Instant start, Instant end) {
