@@ -31,6 +31,8 @@ main() {
     build_stack
     start_stats
     measure
+    stop_stats
+    java -jar "$BENCH_JAR" resources "$run_dir"
 }
 
 main "$@"
