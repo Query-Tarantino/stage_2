@@ -21,6 +21,7 @@ readonly LOGGED_SERVICES=(crawler control)
 readonly COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml)
 
 run_dir=""
+current_trial=""
 stats_pid=""
 
 main() {
@@ -30,7 +31,7 @@ main() {
     run_dir="$RUNS_DIR/$run_id"
     mkdir -p "$run_dir/logs" "$run_dir/jmh"
     exec > >(tee -a "$run_dir/log.txt") 2>&1
-    trap stop_stats EXIT
+    trap close_run EXIT
 
     java -jar "$BENCH_JAR" corpus check "$CACHE_DIR" "$CORPUS_SHA" "$STOPWORDS" "$run_dir"
     run_jmh
@@ -41,8 +42,16 @@ main() {
     stop_stats
 
     bench ingest-throughput "$run_dir"
+}
+
+close_run() {
+    stop_stats
+    if [[ -n $current_trial ]]; then
+        echo "Trial $current_trial did not finish; saving its logs"
+        save_trial_logs
+    fi
     java -jar "$BENCH_JAR" manifest finish "$run_dir"
-    echo "Run $run_id finished in $run_dir"
+    echo "Results in $run_dir"
 }
 
 run_jmh() {
@@ -89,28 +98,29 @@ measure_configuration() {
 
 measure_trial() {
     local replicas=$1 workers=$2 repetition=$3
-    local trial="replicas-$replicas-workers-$workers-rep-$repetition"
-    echo "Trial $trial: seeding the $(corpus_books) books of the mirror"
+    current_trial="replicas-$replicas-workers-$workers-rep-$repetition"
+    echo "Trial $current_trial: seeding the $(corpus_books) books of the mirror"
     export TARANTINO_CANDIDATES=mirror TARANTINO_PARALLEL_DOWNLOADS=$workers
     "${COMPOSE[@]}" down -v
     "${COMPOSE[@]}" up -d --scale crawler=0 --scale indexer=0 --scale query=0
     bench wait QUEUED "$(corpus_books)"
     "${COMPOSE[@]}" up -d --scale crawler="$replicas" crawler
-    java -jar "$BENCH_JAR" manifest trial "$run_dir" "$trial"
+    java -jar "$BENCH_JAR" manifest trial "$run_dir" "$current_trial"
     bench wait DOWNLOADED "$(corpus_books)" "$DOWNLOAD_TIMEOUT_SECONDS"
-    save_logs "$run_dir/logs/$trial"
+    save_trial_logs
 }
 
 corpus_books() {
     grep -c . "$CORPUS_SHA"
 }
 
-save_logs() {
-    local trial_logs=$1 service
+save_trial_logs() {
+    local trial_logs="$run_dir/logs/$current_trial" service
     mkdir -p "$trial_logs"
     for service in "${LOGGED_SERVICES[@]}"; do
         "${COMPOSE[@]}" logs --no-color --timestamps "$service" > "$trial_logs/$service.log"
     done
+    current_trial=""
 }
 
 start_stats() {
