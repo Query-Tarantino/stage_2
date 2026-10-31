@@ -16,6 +16,7 @@ readonly BASELINE_WORKERS=8
 readonly REPLICAS_SERIES=(1 2 3)
 readonly WORKERS_SERIES=(4 8 16)
 readonly REPETITIONS=3
+readonly DOWNLOAD_TIMEOUT_SECONDS=3600
 readonly LOGGED_SERVICES=(crawler control)
 readonly COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml)
 
@@ -82,21 +83,22 @@ measure_workers_series() {
 measure_configuration() {
     local replicas=$1 workers=$2 repetition
     for (( repetition = 1; repetition <= REPETITIONS; repetition++ )); do
-        measure_pass "$replicas" "$workers" "$repetition"
+        measure_trial "$replicas" "$workers" "$repetition"
     done
 }
 
-measure_pass() {
+measure_trial() {
     local replicas=$1 workers=$2 repetition=$3
-    local pass="replicas-$replicas-workers-$workers-rep-$repetition"
-    echo "Pass $pass: seeding the $(corpus_books) books of the mirror"
+    local trial="replicas-$replicas-workers-$workers-rep-$repetition"
+    echo "Trial $trial: seeding the $(corpus_books) books of the mirror"
     export TARANTINO_CANDIDATES=mirror TARANTINO_PARALLEL_DOWNLOADS=$workers
     "${COMPOSE[@]}" down -v
     "${COMPOSE[@]}" up -d --scale crawler=0 --scale indexer=0 --scale query=0
     bench wait QUEUED "$(corpus_books)"
     "${COMPOSE[@]}" up -d --scale crawler="$replicas" --scale indexer=0 --scale query=0 crawler
-    bench wait DOWNLOADED "$(corpus_books)"
-    save_logs "$run_dir/logs/$pass"
+    java -jar "$BENCH_JAR" manifest trial "$run_dir" "$trial"
+    bench wait DOWNLOADED "$(corpus_books)" "$DOWNLOAD_TIMEOUT_SECONDS"
+    save_logs "$run_dir/logs/$trial"
 }
 
 corpus_books() {
@@ -104,10 +106,10 @@ corpus_books() {
 }
 
 save_logs() {
-    local pass_logs=$1 service
-    mkdir -p "$pass_logs"
+    local trial_logs=$1 service
+    mkdir -p "$trial_logs"
     for service in "${LOGGED_SERVICES[@]}"; do
-        "${COMPOSE[@]}" logs --no-color --timestamps "$service" > "$pass_logs/$service.log"
+        "${COMPOSE[@]}" logs --no-color --timestamps "$service" > "$trial_logs/$service.log"
     done
 }
 
