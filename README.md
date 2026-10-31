@@ -43,6 +43,8 @@ Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` a
 mvn -DskipTests package
 docker compose -f docker-compose.yml -f docker-compose.mirror.yml up -d --build   # books from benchmarks/mirror
 curl 'http://localhost:8080/search?q=pride%20prejudice'
+curl 'http://localhost:8080/books/1342'
+curl 'http://localhost:8080/search/filters'
 curl http://localhost:8081/index/status                                           # generation, books indexed and rebuild in progress
 curl http://localhost:8081/index/status/1342                                      # state of one book
 curl -X POST http://localhost:8081/index/rebuild                                  # reindex every book into the next generation
@@ -70,6 +72,27 @@ Without `docker-compose.mirror.yml`, `crawler` downloads over HTTP from Gutenber
 Colima's default VM has 2 GiB, which fits one replica of each service; give it more before scaling, for example
 `colima start --memory 6`.
 
+
+### Functional checks and benchmarks
+
+Run the functional API checks (F4) against the running stack and validate every response against `api/openapi.yaml`:
+
+```bash
+java -jar checks/target/checks-1.0-SNAPSHOT.jar
+```
+
+Regenerate `checks/expected.json` when the corpus or schema changes:
+
+```bash
+java -jar checks/target/checks-1.0-SNAPSHOT.jar --generate-expected
+```
+
+Run the search latency benchmark:
+
+```bash
+./scripts/bench/search-latency.sh
+```
+
 ## Corpus
 
 `scripts/fill_cache.sh` copies the benchmark corpus, the first 2,800 downloadable books of
@@ -91,6 +114,8 @@ services/
   indexer/              Indexing
   query/                Search
   control/              seeding and reconciliation
+bench/                  load generator, recovery checks and benchmark metrics
+checks/                 functional API checks (F4) and OpenAPI validation
 api/openapi.yaml        HTTP API
 nginx/nginx.conf        entry ports 8080 and 8081
 docker-compose.yml      the stack; docker-compose.mirror.yml adds the local mirror

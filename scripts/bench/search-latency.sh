@@ -27,13 +27,9 @@ ensure_bench_jar() {
     fi
 }
 
-check_corpus() {
+verify_corpus() {
     local run_directory=$1
-    if [[ -d "$CORPUS_CACHE" ]]; then
-        java -jar "$BENCH_JAR" corpus check "$CORPUS_CACHE" "$CORPUS_SHA" "$STOPWORDS_FILE" "$run_directory"
-    else
-        echo "Notice: Corpus cache directory $CORPUS_CACHE not found; skipping cache verification"
-    fi
+    java -jar "$BENCH_JAR" corpus check "$CORPUS_CACHE" "$CORPUS_SHA" "$STOPWORDS_FILE" "$run_directory"
 }
 
 save_service_logs() {
@@ -76,7 +72,7 @@ wait_for_query_ready() {
             local total_books
             total_books=$(grep -o '"total_books":[0-9]*' /tmp/filters_check.json | cut -d: -f2 || echo 0)
             if [[ -n "$total_books" && "$total_books" -gt 0 ]]; then
-                (( consecutive_successes++ ))
+                consecutive_successes=$((consecutive_successes + 1))
             else
                 consecutive_successes=0
             fi
@@ -84,7 +80,7 @@ wait_for_query_ready() {
             consecutive_successes=0
         fi
         sleep 0.2
-        (( attempt++ ))
+        attempt=$((attempt + 1))
     done
     rm -f /tmp/filters_check.json
     if (( consecutive_successes >= 10 )); then
@@ -98,11 +94,13 @@ wait_for_query_ready() {
 export_explain() {
     local run_directory=$1
     echo "Saving explain plans in ${run_directory}/explain..."
-    if command -v docker >/dev/null 2>&1 && docker compose ps query 2>/dev/null | grep -q "query"; then
-        docker compose run --rm bench explain "${run_directory}/explain" "$MONGO_URI" 1 2>/dev/null || \
-        java -jar "$BENCH_JAR" explain "${run_directory}/explain" "$MONGO_URI" 1 2>/dev/null || true
+    if command -v docker >/dev/null 2>&1 && docker compose ps query | grep -q "query"; then
+        docker compose cp --index=1 "$BENCH_JAR" query:/tmp/bench.jar
+        docker compose exec -T --index=1 query java -cp "/tmp/bench.jar" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "/tmp/explain" "$MONGO_URI" 1
+        docker compose cp --index=1 query:/tmp/explain/. "${run_directory}/explain/"
+        docker compose exec -T --index=1 query rm -rf /tmp/bench.jar /tmp/explain
     else
-        java -jar "$BENCH_JAR" explain "${run_directory}/explain" "$MONGO_URI" 1 2>/dev/null || true
+        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "${run_directory}/explain" "$MONGO_URI" 1
     fi
 }
 
@@ -184,7 +182,7 @@ main() {
     exec > >(tee -a "${run_directory}/log.txt") 2>&1
     trap stop_stats EXIT
 
-    check_corpus "$run_directory"
+    verify_corpus "$run_directory"
 
     run_jmh "$run_directory"
 
