@@ -95,7 +95,7 @@ measure_trial() {
     "${COMPOSE[@]}" down -v
     "${COMPOSE[@]}" up -d --scale crawler=0 --scale indexer=0 --scale query=0
     bench wait QUEUED "$(corpus_books)"
-    "${COMPOSE[@]}" up -d --scale crawler="$replicas" --scale indexer=0 --scale query=0 crawler
+    "${COMPOSE[@]}" up -d --scale crawler="$replicas" crawler
     java -jar "$BENCH_JAR" manifest trial "$run_dir" "$trial"
     bench wait DOWNLOADED "$(corpus_books)" "$DOWNLOAD_TIMEOUT_SECONDS"
     save_logs "$run_dir/logs/$trial"
