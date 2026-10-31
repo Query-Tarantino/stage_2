@@ -1,9 +1,12 @@
 package org.ulpgc.tarantino.bench.coordination;
 
+import org.ulpgc.tarantino.bench.run.TrialName;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,11 +36,13 @@ public final class TransitionLogs {
         }
     }
 
-    /** The transition lines of each trial by trial name, in name order; empty in a run without trials. */
+    /** The transition lines of each trial by trial name, in {@link TrialName#ORDER}; empty in a run without trials. */
     public static Map<String, List<TransitionLine>> byTrial(Path logs) {
         try (Stream<Path> entries = Files.list(logs)) {
-            return entries.filter(Files::isDirectory).sorted().collect(Collectors.toMap(trial -> trial.getFileName().toString(),
-                    TransitionLogs::of, (first, second) -> first, LinkedHashMap::new));
+            return entries.filter(Files::isDirectory)
+                    .sorted(Comparator.comparing(trial -> trial.getFileName().toString(), TrialName.ORDER))
+                    .collect(Collectors.toMap(trial -> trial.getFileName().toString(), TransitionLogs::of,
+                            (first, second) -> first, LinkedHashMap::new));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -80,7 +80,6 @@ public final class IngestTool {
             return Map.of();
         }
         return TransitionLogs.byTrial(logs).entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(TrialName.ORDER))
                 .collect(Collectors.toMap(Map.Entry::getKey, trial -> IngestThroughput.of(trial.getValue()), (first, second) -> first, LinkedHashMap::new));
     }
 
