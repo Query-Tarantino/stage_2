@@ -33,6 +33,7 @@ final class RecoveryChart {
     private static final String X_AXIS = "Script";
     private static final String Y_AXIS = "Recovery time (s)";
     private static final String REPLICAS = "N = ";
+    private static final double HEADROOM = 1.1;
 
     private RecoveryChart() {
     }
@@ -66,6 +67,8 @@ final class RecoveryChart {
         List<String> scripts = runs.stream().map(RecoveryRun::script).distinct().sorted().toList();
         CategoryChart chart = new CategoryChartBuilder().width(RunChart.WIDTH).height(RunChart.HEIGHT)
                 .title(TITLE).xAxisTitle(X_AXIS).yAxisTitle(Y_AXIS).build();
+        chart.getStyler().setYAxisMin(0.0);
+        chart.getStyler().setYAxisMax(runs.stream().mapToDouble(RecoveryRun::recoverySeconds).max().orElse(0.0) * HEADROOM);
         runs.stream()
                 .collect(Collectors.groupingBy(RecoveryRun::replicas, TreeMap::new,
                         Collectors.toMap(RecoveryRun::script, RecoveryRun::recoverySeconds)))
