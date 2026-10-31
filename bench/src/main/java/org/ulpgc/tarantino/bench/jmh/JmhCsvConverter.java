@@ -10,13 +10,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class JmhCsvConverter {
 
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
+    private static final String PARAMS = "params";
+    private static final String PARAM_COLUMN_PREFIX = "Param: ";
 
     public static Path convert(Path jsonFile, Path csvFile) throws IOException {
         String jsonContent = Files.readString(jsonFile, StandardCharsets.UTF_8);
@@ -28,16 +32,30 @@ public class JmhCsvConverter {
         return csvFile;
     }
 
+    /** One row per benchmark and parameter combination, with a {@code Param: <name>} column per {@code @Param} in the file. */
     public static String convertJsonToCsv(String jsonContent) throws IOException {
         JsonNode root = MAPPER.readTree(jsonContent);
-        String header = "\"Benchmark\",\"Mode\",\"Score\",\"Score Error (99.9%)\",\"Unit\",\"Forks\",\"Warmup Iterations\",\"Measurement Iterations\",\"JVM Args\"\n";
-        if (!root.isArray()) {
-            return header;
-        }
-        String rows = StreamSupport.stream(root.spliterator(), false)
-                .map(JmhCsvConverter::formatRow)
-                .collect(Collectors.joining("\n"));
-        return rows.isEmpty() ? header : header + rows + "\n";
+        List<JsonNode> benchmarks = root.isArray() ? StreamSupport.stream(root.spliterator(), false).toList() : List.of();
+        List<String> paramNames = paramNames(benchmarks);
+        String header = "\"Benchmark\",\"Mode\",\"Score\",\"Score Error (99.9%)\",\"Unit\",\"Forks\",\"Warmup Iterations\",\"Measurement Iterations\",\"JVM Args\""
+                + paramNames.stream().map(name -> ",\"" + PARAM_COLUMN_PREFIX + name + "\"").collect(Collectors.joining()) + "\n";
+        return header + benchmarks.stream()
+                .map(benchmarkNode -> formatRow(benchmarkNode) + paramValues(benchmarkNode, paramNames) + "\n")
+                .collect(Collectors.joining());
+    }
+
+    private static List<String> paramNames(List<JsonNode> benchmarks) {
+        return benchmarks.stream()
+                .flatMap(benchmarkNode -> benchmarkNode.path(PARAMS).properties().stream())
+                .map(Map.Entry::getKey)
+                .distinct()
+                .toList();
+    }
+
+    private static String paramValues(JsonNode benchmarkNode, List<String> paramNames) {
+        return paramNames.stream()
+                .map(name -> ",\"" + benchmarkNode.path(PARAMS).path(name).asText("") + "\"")
+                .collect(Collectors.joining());
     }
 
     private static String formatRow(JsonNode benchmarkNode) {
