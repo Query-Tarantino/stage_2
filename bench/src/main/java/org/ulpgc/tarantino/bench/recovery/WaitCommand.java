@@ -20,7 +20,7 @@ public class WaitCommand {
     public static final int ANY = 1;
     public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
 
-    static final Duration POLL = Duration.ofMillis(200);
+    static final Duration POLL = Duration.ofSeconds(1);
 
     private static final String BOOKS = "books";
     private static final String QUEUES = "queues";
