@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class CoordinationToolTest {
 
@@ -37,6 +38,30 @@ class CoordinationToolTest {
 
         assertEquals(List.of(CoordinationTool.TRIAL_HEADER, "replicas-1-rep-1,84,249,1500,149,1500,3400", "replicas-2-rep-1,84,249,1500,149,1500,3400"),
                 Files.readAllLines(runDirectory.resolve(CoordinationTool.FILE_NAME)));
+    }
+
+    @Test
+    void summarisesEveryColumnPerConfigurationOverTheBooksOfAllItsRepetitions() throws IOException {
+        writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-1-rep-1"));
+        writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-1-rep-2"));
+        writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-2-rep-1"));
+
+        CoordinationTool.run(List.of(runDirectory.toString()));
+
+        List<String> summary = Files.readAllLines(runDirectory.resolve(CoordinationSummary.FILE_NAME));
+        assertEquals(1 + 2 * CoordinationTool.TIME_COLUMNS.size(), summary.size());
+        assertEquals("download_queue_wait,\"replicas=1\",249.00,0.00,0.00,249,249,249,ms", summary.get(1));
+        assertEquals("time_to_publication,\"replicas=1\",3400.00,0.00,0.00,3400,3400,3400,ms", summary.get(5));
+        assertEquals("download_queue_wait,\"replicas=2\",249.00,0.00,0.00,249,249,249,ms", summary.get(6));
+    }
+
+    @Test
+    void writesNoSummaryForARunWithoutTrials() throws IOException {
+        writeServiceLogsOfBook84(runDirectory.resolve("logs"));
+
+        CoordinationTool.run(List.of(runDirectory.toString()));
+
+        assertFalse(Files.exists(runDirectory.resolve(CoordinationSummary.FILE_NAME)));
     }
 
     @Test

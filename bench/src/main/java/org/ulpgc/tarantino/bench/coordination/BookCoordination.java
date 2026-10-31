@@ -28,6 +28,11 @@ public record BookCoordination(int bookId, Duration downloadQueueWait, Duration 
     private static final String INDEXING = BookStatus.INDEXING.name();
     private static final String BATCH_PUBLISHED = BatchStatus.PUBLISHED.name();
 
+    /** The queue waits, the work of each phase and the time to publication, in the order of {@code coordination.csv}. */
+    public List<Duration> times() {
+        return List.of(downloadQueueWait, download, indexQueueWait, indexing, timeToPublication);
+    }
+
     /** Every published book of the run by ascending id. */
     public static List<BookCoordination> of(List<TransitionLine> lines) {
         Map<String, Instant> batchesPublishedAt = lines.stream()

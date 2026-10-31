@@ -7,13 +7,16 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * Derives a run's {@code coordination.csv} from the transition lines in its {@code logs/<service>.log} or, in a run with
- * trials, in each {@code logs/<trial>/<service>.log}, with one row per book and trial (SPEC §4.8 and §9).
+ * trials, in each {@code logs/<trial>/<service>.log}, with one row per book and trial and the {@code summary.csv} rows
+ * of each configuration (SPEC §4.8 and §9).
  */
 public final class CoordinationTool {
 
@@ -21,7 +24,8 @@ public final class CoordinationTool {
     static final int WRONG_USAGE = 2;
     public static final String FILE_NAME = "coordination.csv";
     public static final List<String> PHASE_COLUMNS = List.of("download_queue_wait_ms", "download_ms", "index_queue_wait_ms", "indexing_ms");
-    static final String HEADER = "book_id," + String.join(",", PHASE_COLUMNS) + ",time_to_publication_ms";
+    static final List<String> TIME_COLUMNS = Stream.concat(PHASE_COLUMNS.stream(), Stream.of("time_to_publication_ms")).toList();
+    static final String HEADER = "book_id," + String.join(",", TIME_COLUMNS);
     static final String TRIAL_HEADER = "trial," + HEADER;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CoordinationTool.class);
@@ -44,27 +48,27 @@ public final class CoordinationTool {
         }
         Path runDirectory = Path.of(args.getFirst());
         Path logs = runDirectory.resolve(LOGS);
-        List<Path> trials = trials(logs);
-        List<String> rows = trials.isEmpty() ? rows(logs) : trials.stream().flatMap(CoordinationTool::trialRows).toList();
-        Path written = write(runDirectory.resolve(FILE_NAME), trials.isEmpty() ? HEADER : TRIAL_HEADER, rows);
-        LOGGER.info("Wrote the coordination times of {} published books to {}", rows.size(), written);
+        Map<String, List<BookCoordination>> booksByTrial = booksByTrial(logs);
+        if (booksByTrial.isEmpty()) {
+            List<String> rows = BookCoordination.of(transitions(logs)).stream().map(CoordinationTool::row).toList();
+            LOGGER.info("Wrote the coordination times of {} published books to {}", rows.size(), write(runDirectory.resolve(FILE_NAME), HEADER, rows));
+            return DONE;
+        }
+        List<String> rows = booksByTrial.entrySet().stream()
+                .flatMap(trial -> trial.getValue().stream().map(book -> trial.getKey() + SEPARATOR + row(book)))
+                .toList();
+        LOGGER.info("Wrote the coordination times of {} published books to {}", rows.size(), write(runDirectory.resolve(FILE_NAME), TRIAL_HEADER, rows));
+        CoordinationSummary.append(runDirectory, booksByTrial);
         return DONE;
     }
 
-    private static List<Path> trials(Path logs) {
+    private static Map<String, List<BookCoordination>> booksByTrial(Path logs) {
         try (Stream<Path> entries = Files.list(logs)) {
-            return entries.filter(Files::isDirectory).sorted().toList();
+            return entries.filter(Files::isDirectory).sorted().collect(Collectors.toMap(trial -> trial.getFileName().toString(),
+                    trial -> BookCoordination.of(transitions(trial)), (first, second) -> first, LinkedHashMap::new));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static Stream<String> trialRows(Path trialLogs) {
-        return rows(trialLogs).stream().map(row -> trialLogs.getFileName() + SEPARATOR + row);
-    }
-
-    private static List<String> rows(Path logs) {
-        return BookCoordination.of(transitions(logs)).stream().map(CoordinationTool::row).toList();
     }
 
     private static List<TransitionLine> transitions(Path logs) {
@@ -96,7 +100,7 @@ public final class CoordinationTool {
     }
 
     private static String row(BookCoordination book) {
-        return Stream.of(book.downloadQueueWait(), book.download(), book.indexQueueWait(), book.indexing(), book.timeToPublication())
+        return book.times().stream()
                 .map(duration -> String.valueOf(duration.toMillis()))
                 .collect(Collectors.joining(SEPARATOR, book.bookId() + SEPARATOR, ""));
     }
