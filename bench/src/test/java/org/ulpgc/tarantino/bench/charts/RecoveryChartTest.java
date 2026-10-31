@@ -46,6 +46,16 @@ class RecoveryChartTest {
         assertEquals(List.of(9.0, 21.0), chart.getSeriesMap().get("N = 2").getYData());
     }
 
+    @Test
+    void startsTheAxisAtZeroAndLeavesRoomAboveTheTallestBarSoEqualBarsStillGetTicks() {
+        CategoryChart chart = RecoveryChart.of(List.of(
+                new RecoveryChart.RecoveryRun("20261110-150500-recovery-13-r1-3f2a9c1", "13", 1, 20.0),
+                new RecoveryChart.RecoveryRun("20261110-151000-recovery-13-r2-3f2a9c1", "13", 2, 20.0)));
+
+        assertEquals(0.0, chart.getStyler().getYAxisMin());
+        assertEquals(22.0, chart.getStyler().getYAxisMax(), 1e-9);
+    }
+
     private void recoveryRun(String runId, double recoverySeconds) throws IOException {
         Files.writeString(Files.createDirectories(runs.resolve(runId)).resolve("checks.json"),
                 "{\"control_status\": {}, \"search\": {}, \"recovery_seconds\": " + recoverySeconds + "}");

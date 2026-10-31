@@ -30,6 +30,25 @@ class ResourceChartsTest {
     }
 
     @Test
+    void coloursEachServiceTheSameInEveryRunAndTellsItsReplicasApartByLineStyle() {
+        XYChart chart = ResourceCharts.memory(ResourceCharts.samples(List.of(
+                "instant,container,cpu_percent,memory_bytes",
+                "2026-10-21T10:00:00Z,stage_2-crawler-1,3.00,134217728",
+                "2026-10-21T10:00:00Z,stage_2-crawler-2,3.00,134217728",
+                "2026-10-21T10:00:00Z,stage_2-nginx-1,1.00,8388608",
+                "2026-10-21T10:00:00Z,stage_2-bench-run-e1218bd40d63,1.00,8388608")));
+
+        XYSeries firstCrawler = chart.getSeriesMap().get("stage_2-crawler-1");
+        XYSeries secondCrawler = chart.getSeriesMap().get("stage_2-crawler-2");
+        assertEquals(ResourceCharts.SERVICE_COLORS.get("crawler"), firstCrawler.getLineColor());
+        assertEquals(ResourceCharts.SERVICE_COLORS.get("crawler"), secondCrawler.getLineColor());
+        assertEquals(ResourceCharts.REPLICA_LINES.get(0), firstCrawler.getLineStyle());
+        assertEquals(ResourceCharts.REPLICA_LINES.get(1), secondCrawler.getLineStyle());
+        assertEquals(ResourceCharts.SERVICE_COLORS.get("nginx"), chart.getSeriesMap().get("stage_2-nginx-1").getLineColor());
+        assertEquals(ResourceCharts.OTHER_CONTAINER, chart.getSeriesMap().get("stage_2-bench-run-e1218bd40d63").getLineColor());
+    }
+
+    @Test
     void drawsTheMemoryInMebibytes() {
         XYChart chart = ResourceCharts.memory(ResourceCharts.samples(STATS));
 

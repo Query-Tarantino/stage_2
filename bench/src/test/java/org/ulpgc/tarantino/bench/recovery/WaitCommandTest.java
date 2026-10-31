@@ -5,6 +5,7 @@ import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -36,7 +37,7 @@ class WaitCommandTest {
                 status(0, 0), new UncheckedIOException(new IOException("refused")), new Answer(503, TarantinoJson.mapper().missingNode()),
                 status(2, 0)));
 
-        assertTrue(new WaitCommand(stack(answers), clock, clock.pause()).awaitAboveZero("DOWNLOADING"));
+        assertTrue(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast("DOWNLOADING", WaitCommand.ANY, WaitCommand.DEFAULT_TIMEOUT));
         assertEquals(START.plus(WaitCommand.POLL.multipliedBy(3)), clock.instant());
     }
 
@@ -44,8 +45,25 @@ class WaitCommandTest {
     void waitsForAQueueAndGivesUpAfterTheTimeout() {
         Deque<Object> answers = new ArrayDeque<>(List.of(status(5, 0)));
 
-        assertFalse(new WaitCommand(stack(answers), clock, clock.pause()).awaitAboveZero("books-to-download"));
-        assertEquals(START.plus(WaitCommand.TIMEOUT), clock.instant());
+        assertFalse(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast("books-to-download", WaitCommand.ANY, WaitCommand.DEFAULT_TIMEOUT));
+        assertEquals(START.plus(WaitCommand.DEFAULT_TIMEOUT), clock.instant());
+    }
+
+    @Test
+    void waitsUntilAStateReachesTheMinimum() {
+        Deque<Object> answers = new ArrayDeque<>(List.of(status(1500, 0), status(2799, 0), status(2800, 0)));
+
+        assertTrue(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast("DOWNLOADING", 2800, WaitCommand.DEFAULT_TIMEOUT));
+        assertEquals(START.plus(WaitCommand.POLL.multipliedBy(2)), clock.instant());
+    }
+
+    @Test
+    void keepsWaitingPastTheDefaultTimeoutWhenAWholePhaseNeedsLonger() {
+        Deque<Object> answers = new ArrayDeque<>(List.of(status(2799, 0)));
+        Duration phase = Duration.ofMinutes(20);
+
+        assertFalse(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast("DOWNLOADING", 2800, phase));
+        assertEquals(START.plus(phase), clock.instant());
     }
 
     private static Answer status(int downloading, int booksToDownload) {

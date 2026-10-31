@@ -70,4 +70,26 @@ class JmhCsvConverterTest {
         assertTrue(lines.get(1).contains("\"org.ulpgc.tarantino.query.benchmarks.SearchBenchmark.searchWithoutFilters\",\"thrpt\",14250.1234,120.5678,\"ops/s\",1,5,10,\"-Xmx1g\""));
         assertTrue(lines.get(2).contains("\"org.ulpgc.tarantino.query.benchmarks.SearchBenchmark.tfidfRanking\",\"avgt\",0.0456,0.0012,\"ms/op\",1,5,10,\"-Xmx1g\""));
     }
+
+    @Test
+    void addsAColumnPerParamSoEachRowSaysWhichCombinationItMeasured() throws IOException {
+        String json = """
+                [
+                  {"benchmark": "TokenizerBenchmark.tokenize", "mode": "avgt", "params": {"bookId": "1080"},
+                   "primaryMetric": {"score": 1.5, "scoreError": 0.1, "scoreUnit": "ms/op"}},
+                  {"benchmark": "TokenizerBenchmark.tokenize", "mode": "avgt", "params": {"bookId": "84"},
+                   "primaryMetric": {"score": 2.5, "scoreError": 0.2, "scoreUnit": "ms/op"}},
+                  {"benchmark": "BatchWriteBenchmark.write", "mode": "avgt", "params": {"books": "100"},
+                   "primaryMetric": {"score": 30.0, "scoreError": 1.0, "scoreUnit": "ms/op"}}
+                ]
+                """;
+
+        List<String> lines = JmhCsvConverter.convertJsonToCsv(json).lines().toList();
+
+        assertTrue(lines.getFirst().endsWith(",\"JVM Args\",\"Param: bookId\",\"Param: books\""));
+        assertTrue(lines.get(1).startsWith("\"TokenizerBenchmark.tokenize\",\"avgt\",1.5000,"));
+        assertTrue(lines.get(1).endsWith(",\"1080\",\"\""));
+        assertTrue(lines.get(2).endsWith(",\"84\",\"\""));
+        assertTrue(lines.get(3).endsWith(",\"\",\"100\""));
+    }
 }

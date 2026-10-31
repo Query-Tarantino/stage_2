@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -23,7 +24,7 @@ import java.util.regex.Pattern;
 
 /**
  * The recovery commands of {@code bench} (SPEC §8), run in the Compose {@code bench} service against nginx and MongoDB
- * with the timing of {@code control}: {@code wait <state|queue>}, {@code recovery <nn> <run_id> <failed_at>} and
+ * with the timing of {@code control}: {@code wait <state|queue> [<minimum>]}, {@code recovery <nn> <run_id> <failed_at>} and
  * {@code recovery-compare <nn>}; and {@code instant [<seconds from now>]}, which gives the scripts their {@code failed_at}.
  */
 public final class RecoveryTool {
@@ -36,6 +37,8 @@ public final class RecoveryTool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryTool.class);
     private static final Pattern SCRIPT = Pattern.compile("\\d{2}");
+    private static final Pattern POSITIVE = Pattern.compile("[1-9]\\d{0,8}");
+    private static final int WAIT_ARGUMENTS = 3;
     private static final Pattern RECOVERY_EXPERIMENT = Pattern.compile("recovery-\\d{2}-r\\d+");
     private static final String ZOMBIE_INDEXER_SCRIPT = "10";
     private static final String QUERY_REPLICA_SCRIPT = "14";
@@ -57,12 +60,14 @@ public final class RecoveryTool {
     }
 
     public static int waitFor(List<String> args) {
-        if (args.size() != 1 || WaitCommand.sectionOf(args.getFirst()).isEmpty()) {
-            LOGGER.error("Usage: bench wait <QUEUED|DOWNLOADING|DOWNLOADED|INDEXING|PUBLISHED|FAILED|books-to-download|books-to-index>");
+        Optional<Integer> minimum = args.size() > 1 ? positive(args.get(1)) : Optional.of(WaitCommand.ANY);
+        Optional<Duration> timeout = args.size() > 2 ? positive(args.get(2)).map(Duration::ofSeconds) : Optional.of(WaitCommand.DEFAULT_TIMEOUT);
+        if (args.isEmpty() || args.size() > WAIT_ARGUMENTS || minimum.isEmpty() || timeout.isEmpty() || WaitCommand.sectionOf(args.getFirst()).isEmpty()) {
+            LOGGER.error("Usage: bench wait <QUEUED|DOWNLOADING|DOWNLOADED|INDEXING|PUBLISHED|FAILED|books-to-download|books-to-index> [<minimum above 0> [<timeout seconds>]]");
             return WRONG_USAGE;
         }
-        boolean reached = new WaitCommand(nginx(), Clock.systemUTC(), Pause.ofThread()).awaitAboveZero(args.getFirst());
-        LOGGER.info(reached ? "{} is above 0" : "{} stayed at 0", args.getFirst());
+        boolean reached = new WaitCommand(nginx(), Clock.systemUTC(), Pause.ofThread()).awaitAtLeast(args.getFirst(), minimum.get(), timeout.get());
+        LOGGER.info(reached ? "{} reached {}" : "{} stayed below {} for {} s", args.getFirst(), minimum.get(), timeout.get().toSeconds());
         return reached ? DONE : FAILED;
     }
 
@@ -133,6 +138,10 @@ public final class RecoveryTool {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private static Optional<Integer> positive(String value) {
+        return POSITIVE.matcher(value).matches() ? Optional.of(Integer.parseInt(value)) : Optional.empty();
     }
 
     private static Optional<Instant> instant(String value) {

@@ -10,14 +10,17 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * {@code bench wait <state|queue>} (SPEC §8): returns as soon as {@code GET /control/status} shows a book in that state
- * or that queue above 0, so a script can cause its failure while there is work in flight. It gives up after
- * {@link #TIMEOUT}.
+ * {@code bench wait <state|queue> [<minimum> [<timeout seconds>]]} (SPEC §8): returns as soon as
+ * {@code GET /control/status} shows at least that many books in that state or messages in that queue, {@link #ANY} by
+ * default, so a script can cause its failure while there is work in flight or start measuring once the work it needs is
+ * ready. It gives up after the timeout, {@link #DEFAULT_TIMEOUT} unless a whole phase needs longer.
  */
 public class WaitCommand {
 
+    public static final int ANY = 1;
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
+
     static final Duration POLL = Duration.ofMillis(200);
-    static final Duration TIMEOUT = Duration.ofMinutes(5);
 
     private static final String BOOKS = "books";
     private static final String QUEUES = "queues";
@@ -43,12 +46,12 @@ public class WaitCommand {
         return Optional.empty();
     }
 
-    /** Whether {@code target} went above 0 before {@link #TIMEOUT}; {@code target} must have a section. */
-    public boolean awaitAboveZero(String target) {
+    /** Whether {@code target} reached {@code minimum} within {@code timeout}; {@code target} must have a section. */
+    public boolean awaitAtLeast(String target, int minimum, Duration timeout) {
         String section = sectionOf(target).orElseThrow();
-        Instant deadline = clock.instant().plus(TIMEOUT);
+        Instant deadline = clock.instant().plus(timeout);
         while (clock.instant().isBefore(deadline)) {
-            if (count(section, target) > 0) {
+            if (count(section, target) >= minimum) {
                 return true;
             }
             pause.sleep(POLL);

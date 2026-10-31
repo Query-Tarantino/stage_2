@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.5 · October 29, 2026
+Version 1.6 · October 31, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -654,18 +654,19 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 - Scripts only start containers and launch jars. The load generator and result processing (`coordination.csv`, `summary.csv` and the charts, with XChart) are Java, in the `bench` module.
 - Before measuring, the script checks the corpus against `workload/corpus.sha256` (id and SHA-256 of each text) and stops if it does not match: Gutenberg updates its texts, so two caches filled on different days may differ.
 - Books come from the local mirror, as in Stage 1, so the network is not measured. One factor changes at a time, with the hypothesis written before measuring.
+- An experiment that measures several configurations, or repeats one, in a single run splits it into trials, one per configuration and repetition, named `<factor>-<value>-…-rep-<n>`, as in `replicas-2-workers-8-rep-1`. Once each trial's stack is up, the script runs `bench manifest trial <run dir> <trial>`, which adds that trial's replicas and threads per service to `manifest.json`, and when the trial ends it saves the trial's logs in `logs/<trial>/`. `bench wait <state|queue> <minimum>` returns once that state or queue holds at least `<minimum>`, so a trial can start and end on a whole phase instead of the first book.
 - `workload/sample_ids.txt` holds 20 books of the corpus, so all of them are in the cache and in the mirror: with the mirror, a book outside it would end `FAILED` with `NOT_FOUND`. They include books in German and French and one in German and English, so the checks cover the `language` filter.
 - Each complexity bound in the report states which assumptions it depends on and is checked with at least three sizes. In Mongo, the plan of each measured query is saved too.
 
 | Run file | Content |
 | --- | --- |
-| `manifest.json` | `run_id`, commit and whether the tree was clean, exact command, start and end, host (CPU, cores, RAM, disk and OS), Docker version and resources, JVM and its flags, every `TARANTINO_*` variable, replicas and threads per service and client concurrency |
+| `manifest.json` | `run_id`, commit and whether the tree was clean, exact command, start and end, host (CPU, cores, RAM, disk and OS), Docker version and resources, JVM and its flags, every `TARANTINO_*` variable, replicas and threads per service, or per trial in a run with trials, and client concurrency |
 | `corpus.json` | Corpus ids in order, their combined SHA-256 and the number of books and terms |
 | `jmh/` | Raw JMH output in JSON and its CSV, with forks, iterations and `-Xmx` |
 | `load/` | One row per load-generator request: instant, path, status and latency in µs |
 | `stats.csv` | `docker stats` every second: container, CPU and memory |
-| `logs/<service>.log` | `docker compose logs --no-color --timestamps <service>` of each service, with the transition logs (§4.8) |
-| `coordination.csv` | Queue wait and time to publication for each book, derived from the transition logs in `logs/` |
+| `logs/<service>.log` | `docker compose logs --no-color --timestamps <service>` of each service, with the transition logs (§4.8); in a run with trials, `logs/<trial>/<service>.log` |
+| `coordination.csv` | Queue wait and time to publication for each book, and for each trial in a run with trials, derived from the transition logs in `logs/` |
 | `checks.json` | Recovery runs only: `GET /control/status` and the `/search` answers to `workload/queries.txt` once recovered (§8) |
 | `explain/` | `explain("executionStats")` of each measured Mongo query |
 | `summary.csv` | The figures the report cites: metric, configuration, mean, standard deviation, 95 % CI, p50, p95, p99 and unit |

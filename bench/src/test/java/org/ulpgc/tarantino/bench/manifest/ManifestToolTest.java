@@ -13,6 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,10 +26,9 @@ class ManifestToolTest {
     private static final String DOCKER_INFO = """
             {"ServerVersion":"28.3.2","OperatingSystem":"Docker Desktop","NCPU":8,"MemTotal":8222093312}
             """;
-    private static final String CONTROL_CONTAINER = """
-            [{"Config": {"Labels": {"com.docker.compose.service": "control"},
-                         "Env": ["TARANTINO_RECONCILE_SECONDS=3", "JAVA_VERSION=jdk-25.0.1+8", "JAVA_TOOL_OPTIONS=-Xmx512m"]}}]
-            """;
+    private static final String CONTROL_REPLICA = """
+            {"Config": {"Labels": {"com.docker.compose.service": "control"},
+                        "Env": ["TARANTINO_RECONCILE_SECONDS=3", "JAVA_VERSION=jdk-25.0.1+8", "JAVA_TOOL_OPTIONS=-Xmx512m"]}}""";
 
     @TempDir
     Path runsDirectory;
@@ -72,20 +73,48 @@ class ManifestToolTest {
     }
 
     @Test
+    void recordsEachTrialWithTheReplicasRunningWhenItStarts() {
+        ManifestTool.run(List.of("start", runsDirectory.toString(), "coordination-cost", "0", "--", "run.sh"), stack(),
+                new PrintStream(printed, true, StandardCharsets.UTF_8));
+        String runDirectory = runsDirectory.resolve(printed.toString(StandardCharsets.UTF_8).strip()).toString();
+
+        assertEquals(ManifestTool.DONE, ManifestTool.run(List.of("trial", runDirectory, "replicas-1-rep-1"), stack(), System.out));
+        assertEquals(ManifestTool.DONE, ManifestTool.run(List.of("trial", runDirectory, "replicas-2-rep-1"), stack("c1\nc2\n"), System.out));
+
+        List<Trial> trials = Manifest.readFrom(Path.of(runDirectory)).trials();
+        assertEquals(List.of("replicas-1-rep-1", "replicas-2-rep-1"), trials.stream().map(Trial::name).toList());
+        assertEquals(List.of(1, 2), trials.stream().map(trial -> trial.services().get("control").replicas()).toList());
+    }
+
+    @Test
     void answersWrongUsageWithoutTheCommandOrTheConcurrency() {
         assertEquals(ManifestTool.WRONG_USAGE, ManifestTool.run(List.of("start", runsDirectory.toString(), "x", "0"), stack(), System.out));
         assertEquals(ManifestTool.WRONG_USAGE, ManifestTool.run(List.of("start", runsDirectory.toString(), "x", "many", "--", "run.sh"), stack(), System.out));
         assertEquals(ManifestTool.WRONG_USAGE, ManifestTool.run(List.of("finish"), stack(), System.out));
     }
 
+    @Test
+    void answersWrongUsageForATrialNotNamedAfterItsFactorsAndRepetition() {
+        String runDirectory = runsDirectory.toString();
+        assertEquals(ManifestTool.WRONG_USAGE, ManifestTool.run(List.of("trial", runDirectory, "replicas-2"), stack(), System.out));
+        assertEquals(ManifestTool.WRONG_USAGE, ManifestTool.run(List.of("trial", runDirectory, "../replicas-2-rep-1"), stack(), System.out));
+        assertEquals(ManifestTool.WRONG_USAGE, ManifestTool.run(List.of("trial", runDirectory), stack(), System.out));
+    }
+
     private static CommandRunner stack() {
+        return stack("c1\n");
+    }
+
+    private static CommandRunner stack(String controlContainerIds) {
         ProcessCommandRunner host = new ProcessCommandRunner();
+        List<String> inspect = Stream.concat(ServiceConfiguration.INSPECT.stream(), controlContainerIds.lines()).toList();
+        String controlContainers = controlContainerIds.lines().map(id -> CONTROL_REPLICA).collect(Collectors.joining(",", "[", "]"));
         Map<List<String>, String> outputs = Map.of(
                 GitState.SHORT_COMMIT, "3f2a9c1\n",
                 GitState.CHANGED_FILES, "",
                 DockerState.INFO, DOCKER_INFO,
-                ServiceConfiguration.CONTAINER_IDS, "c1\n",
-                List.of("docker", "inspect", "c1"), CONTROL_CONTAINER);
+                ServiceConfiguration.CONTAINER_IDS, controlContainerIds,
+                inspect, controlContainers);
         return command -> outputs.containsKey(command) ? outputs.get(command) : host.output(command);
     }
 }

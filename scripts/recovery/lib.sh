@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly SCRIPT_COMMAND=("$0" "$@")
+SCRIPT_COMMAND=("$0" "$@")
+readonly SCRIPT_COMMAND
 readonly SCRIPT_NUMBER=$(basename "$0" | cut -c1-2)
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
@@ -13,8 +14,9 @@ readonly CRASH_EXIT_CODE=1
 readonly CRASH_EXIT_TIMEOUT_SECONDS=120
 readonly PAUSE_LONGER_THAN_LEASE_SECONDS=10
 readonly WRONG_USAGE=2
-readonly SERVICES=(mongo hazelcast crawler indexer query control nginx)
-readonly COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml --env-file scripts/recovery/recovery.env)
+SERVICES=(mongo hazelcast crawler indexer query control nginx)
+COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml --env-file scripts/recovery/recovery.env)
+readonly SERVICES COMPOSE
 
 replicas=""
 run_dir=""
@@ -70,7 +72,8 @@ open_run() {
 
 recover_from_crash() {
     local service=$1 point=$2
-    local crash_variable="${service^^}_CRASH_AT"
+    local crash_variable
+    crash_variable="$(printf '%s' "$service" | tr '[:lower:]' '[:upper:]')_CRASH_AT"
     export "$crash_variable=$point"
     start_stack
     unset "$crash_variable"
@@ -110,7 +113,7 @@ await_crash() {
 first_crash() {
     "${COMPOSE[@]}" ps --all --quiet "$1" \
         | xargs docker inspect --format "{{if and (eq .State.Status \"exited\") (eq .State.ExitCode $CRASH_EXIT_CODE)}}{{.State.FinishedAt}}{{end}}" \
-        | sort | sed -n '/./{p;q}'
+        | sort | sed -n '/./{p;q;}'
 }
 
 bring_back() {
@@ -120,11 +123,11 @@ bring_back() {
 }
 
 utc_in() {
-    date -u -d "+$1 seconds" +%Y-%m-%dT%H:%M:%S.%3NZ
+    java -jar "$BENCH_JAR" instant "$1"
 }
 
 utc_now() {
-    utc_in 0
+    java -jar "$BENCH_JAR" instant
 }
 
 bench() {

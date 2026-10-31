@@ -11,7 +11,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/** Derives a run's {@code coordination.csv} from the transition lines in its {@code logs/<service>.log} (SPEC §4.8 and §9). */
+/**
+ * Derives a run's {@code coordination.csv} from the transition lines in its {@code logs/<service>.log} or, in a run with
+ * trials, in each {@code logs/<trial>/<service>.log}, with one row per book and trial (SPEC §4.8 and §9).
+ */
 public final class CoordinationTool {
 
     static final int DONE = 0;
@@ -19,10 +22,12 @@ public final class CoordinationTool {
     public static final String FILE_NAME = "coordination.csv";
     public static final List<String> PHASE_COLUMNS = List.of("download_queue_wait_ms", "download_ms", "index_queue_wait_ms", "indexing_ms");
     static final String HEADER = "book_id," + String.join(",", PHASE_COLUMNS) + ",time_to_publication_ms";
+    static final String TRIAL_HEADER = "trial," + HEADER;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CoordinationTool.class);
     private static final String LOGS = "logs";
     private static final String LOG_SUFFIX = ".log";
+    private static final String SEPARATOR = ",";
     private static final String USAGE = "Usage: CoordinationTool <run directory>";
 
     private CoordinationTool() {
@@ -38,10 +43,28 @@ public final class CoordinationTool {
             return WRONG_USAGE;
         }
         Path runDirectory = Path.of(args.getFirst());
-        List<BookCoordination> books = BookCoordination.of(transitions(runDirectory.resolve(LOGS)));
-        Path written = write(runDirectory.resolve(FILE_NAME), books);
-        LOGGER.info("Wrote the coordination times of {} published books to {}", books.size(), written);
+        Path logs = runDirectory.resolve(LOGS);
+        List<Path> trials = trials(logs);
+        List<String> rows = trials.isEmpty() ? rows(logs) : trials.stream().flatMap(CoordinationTool::trialRows).toList();
+        Path written = write(runDirectory.resolve(FILE_NAME), trials.isEmpty() ? HEADER : TRIAL_HEADER, rows);
+        LOGGER.info("Wrote the coordination times of {} published books to {}", rows.size(), written);
         return DONE;
+    }
+
+    private static List<Path> trials(Path logs) {
+        try (Stream<Path> entries = Files.list(logs)) {
+            return entries.filter(Files::isDirectory).sorted().toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static Stream<String> trialRows(Path trialLogs) {
+        return rows(trialLogs).stream().map(row -> trialLogs.getFileName() + SEPARATOR + row);
+    }
+
+    private static List<String> rows(Path logs) {
+        return BookCoordination.of(transitions(logs)).stream().map(CoordinationTool::row).toList();
     }
 
     private static List<TransitionLine> transitions(Path logs) {
@@ -64,10 +87,9 @@ public final class CoordinationTool {
         }
     }
 
-    private static Path write(Path csv, List<BookCoordination> books) {
-        String rows = books.stream().map(CoordinationTool::row).map(row -> row + "\n").collect(Collectors.joining());
+    private static Path write(Path csv, String header, List<String> rows) {
         try {
-            return Files.writeString(csv, HEADER + "\n" + rows);
+            return Files.writeString(csv, Stream.concat(Stream.of(header), rows.stream()).map(line -> line + "\n").collect(Collectors.joining()));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -76,6 +98,6 @@ public final class CoordinationTool {
     private static String row(BookCoordination book) {
         return Stream.of(book.downloadQueueWait(), book.download(), book.indexQueueWait(), book.indexing(), book.timeToPublication())
                 .map(duration -> String.valueOf(duration.toMillis()))
-                .collect(Collectors.joining(",", book.bookId() + ",", ""));
+                .collect(Collectors.joining(SEPARATOR, book.bookId() + SEPARATOR, ""));
     }
 }
