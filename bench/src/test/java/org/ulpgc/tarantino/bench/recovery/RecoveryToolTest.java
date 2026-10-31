@@ -16,6 +16,13 @@ class RecoveryToolTest {
     }
 
     @Test
+    void waitsOnlyForAMinimumAboveZero() {
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "0")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "-2800")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "2800", "60")));
+    }
+
+    @Test
     void recoversOnlyATwoDigitScriptWithAnIsoFailureInstant() {
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.recovery(List.of("4", "run", "2026-11-10T15:30:00Z")));
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.recovery(List.of("04", "run", "2026-11-10 15:30:00")));
