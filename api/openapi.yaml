@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Query Tarantino API
-  version: "1.5"
+  version: "1.6"
   description: |
     HTTP API of Query Tarantino Stage 2, derived from SPEC.md §6; `info.version` follows the SPEC.md version.
 
