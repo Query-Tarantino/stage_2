@@ -47,7 +47,7 @@ final class PhaseResourceCharts {
         keys.stream().map(ResourceUsage.Key::configuration).distinct().forEach(configuration -> {
             List<Optional<SummaryStats.Metrics>> metrics = services.stream()
                     .map(service -> Optional.ofNullable(usage.get(new ResourceUsage.Key(configuration, phase, service)))
-                            .map(measures -> SummaryStats.calculate(values.apply(measures).stream().map(Math::round).toList())))
+                            .map(measures -> SummaryStats.calculate(values.apply(measures))))
                     .toList();
             chart.addSeries(configuration, services,
                     metrics.stream().map(metric -> metric.map(SummaryStats.Metrics::mean).orElse(0.0)).toList(),

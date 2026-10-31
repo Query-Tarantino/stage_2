@@ -51,9 +51,9 @@ class CoordinationToolTest {
 
         List<String> summary = Files.readAllLines(runDirectory.resolve(SummaryStats.FILE_NAME));
         assertEquals(1 + 2 * CoordinationTool.TIME_COLUMNS.size(), summary.size());
-        assertEquals("download_queue_wait,\"replicas=1\",249.00,0.00,0.00,249,249,249,ms", summary.get(1));
-        assertEquals("time_to_publication,\"replicas=1\",3400.00,0.00,0.00,3400,3400,3400,ms", summary.get(5));
-        assertEquals("download_queue_wait,\"replicas=2\",249.00,0.00,0.00,249,249,249,ms", summary.get(6));
+        assertEquals("download_queue_wait,\"replicas=1\",249.00,0.00,0.00,249.00,249.00,249.00,ms", summary.get(1));
+        assertEquals("time_to_publication,\"replicas=1\",3400.00,0.00,0.00,3400.00,3400.00,3400.00,ms", summary.get(5));
+        assertEquals("download_queue_wait,\"replicas=2\",249.00,0.00,0.00,249.00,249.00,249.00,ms", summary.get(6));
     }
 
     @Test

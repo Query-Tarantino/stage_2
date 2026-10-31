@@ -33,9 +33,9 @@ class ResourceToolTest {
 
         assertEquals(List.of(
                         "metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
-                        "cpu_per_replica,\"replicas=2,phase=ingestion,service=crawler\",15.00,7.07,9.80,10,20,20,percent",
-                        "cpu_total,\"replicas=2,phase=ingestion,service=crawler\",31.00,0.00,0.00,31,31,31,percent",
-                        "memory_per_replica,\"replicas=2,phase=ingestion,service=crawler\",150.00,70.71,98.00,100,200,200,MiB"),
+                        "cpu_per_replica,\"replicas=2,phase=ingestion,service=crawler\",15.30,6.93,62.26,10.40,20.20,20.20,percent",
+                        "cpu_total,\"replicas=2,phase=ingestion,service=crawler\",30.60,0.00,0.00,30.60,30.60,30.60,percent",
+                        "memory_per_replica,\"replicas=2,phase=ingestion,service=crawler\",150.00,70.71,635.31,100.00,200.00,200.00,MiB"),
                 Files.readAllLines(runDirectory.resolve(SummaryStats.FILE_NAME)));
     }
 

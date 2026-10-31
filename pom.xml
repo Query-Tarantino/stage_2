@@ -32,6 +32,7 @@
         <testcontainers.version>2.0.5</testcontainers.version>
         <jmh.version>1.37</jmh.version>
         <xchart.version>3.8.8</xchart.version>
+        <commons-math3.version>3.6.1</commons-math3.version>
     </properties>
 
     <dependencyManagement>
@@ -88,6 +89,11 @@
                 <groupId>org.knowm.xchart</groupId>
                 <artifactId>xchart</artifactId>
                 <version>${xchart.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-math3</artifactId>
+                <version>${commons-math3.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
