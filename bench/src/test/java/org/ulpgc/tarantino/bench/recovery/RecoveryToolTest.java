@@ -16,10 +16,12 @@ class RecoveryToolTest {
     }
 
     @Test
-    void waitsOnlyForAMinimumAboveZero() {
+    void waitsOnlyForAMinimumAndATimeoutAboveZero() {
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "0")));
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "-2800")));
-        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "2800", "60")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "2800", "0")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "2800", "15m")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("DOWNLOADED", "2800", "900", "1")));
     }
 
     @Test

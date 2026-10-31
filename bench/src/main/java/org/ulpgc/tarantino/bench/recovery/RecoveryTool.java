@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -36,7 +37,8 @@ public final class RecoveryTool {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryTool.class);
     private static final Pattern SCRIPT = Pattern.compile("\\d{2}");
-    private static final Pattern MINIMUM = Pattern.compile("[1-9]\\d{0,8}");
+    private static final Pattern POSITIVE = Pattern.compile("[1-9]\\d{0,8}");
+    private static final int WAIT_ARGUMENTS = 3;
     private static final Pattern RECOVERY_EXPERIMENT = Pattern.compile("recovery-\\d{2}-r\\d+");
     private static final String ZOMBIE_INDEXER_SCRIPT = "10";
     private static final String QUERY_REPLICA_SCRIPT = "14";
@@ -58,13 +60,14 @@ public final class RecoveryTool {
     }
 
     public static int waitFor(List<String> args) {
-        Optional<Integer> minimum = waitMinimum(args);
-        if (minimum.isEmpty() || WaitCommand.sectionOf(args.getFirst()).isEmpty()) {
-            LOGGER.error("Usage: bench wait <QUEUED|DOWNLOADING|DOWNLOADED|INDEXING|PUBLISHED|FAILED|books-to-download|books-to-index> [<minimum above 0>]");
+        Optional<Integer> minimum = args.size() > 1 ? positive(args.get(1)) : Optional.of(WaitCommand.ANY);
+        Optional<Duration> timeout = args.size() > 2 ? positive(args.get(2)).map(Duration::ofSeconds) : Optional.of(WaitCommand.DEFAULT_TIMEOUT);
+        if (args.isEmpty() || args.size() > WAIT_ARGUMENTS || minimum.isEmpty() || timeout.isEmpty() || WaitCommand.sectionOf(args.getFirst()).isEmpty()) {
+            LOGGER.error("Usage: bench wait <QUEUED|DOWNLOADING|DOWNLOADED|INDEXING|PUBLISHED|FAILED|books-to-download|books-to-index> [<minimum above 0> [<timeout seconds>]]");
             return WRONG_USAGE;
         }
-        boolean reached = new WaitCommand(nginx(), Clock.systemUTC(), Pause.ofThread()).awaitAtLeast(args.getFirst(), minimum.get());
-        LOGGER.info(reached ? "{} reached {}" : "{} stayed below {}", args.getFirst(), minimum.get());
+        boolean reached = new WaitCommand(nginx(), Clock.systemUTC(), Pause.ofThread()).awaitAtLeast(args.getFirst(), minimum.get(), timeout.get());
+        LOGGER.info(reached ? "{} reached {}" : "{} stayed below {} for {} s", args.getFirst(), minimum.get(), timeout.get().toSeconds());
         return reached ? DONE : FAILED;
     }
 
@@ -137,14 +140,8 @@ public final class RecoveryTool {
         }
     }
 
-    private static Optional<Integer> waitMinimum(List<String> args) {
-        if (args.size() == 1) {
-            return Optional.of(WaitCommand.ANY);
-        }
-        if (args.size() != 2 || !MINIMUM.matcher(args.get(1)).matches()) {
-            return Optional.empty();
-        }
-        return Optional.of(Integer.parseInt(args.get(1)));
+    private static Optional<Integer> positive(String value) {
+        return POSITIVE.matcher(value).matches() ? Optional.of(Integer.parseInt(value)) : Optional.empty();
     }
 
     private static Optional<Instant> instant(String value) {
