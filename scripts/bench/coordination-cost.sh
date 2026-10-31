@@ -4,8 +4,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/trials.sh"
 state_hypotheses() {
     echo "Factor: replicas of crawler and indexer together ($REPLICAS_LIST), $REPETITIONS repetitions each, interleaved: repetition 1 of every N, then repetition 2, so drift over the run spreads across every N"
     echo "H1: with 1 replica the wait in books-to-download dominates: its median is far above the download time"
-    echo "H2: the download queue wait falls roughly as 1/N while download and indexing times per book stay flat, sublinearly at N=3 because Mongo is shared"
-    echo "H3: the wait in books-to-index falls less, because a book also waits for its batch to fill"
+    echo "H2: the wait in books-to-download falls with N but less than 1/N: from N=2 the crawlers and indexers no longer fit in the 8 P cores of the official machine and spill onto its slower E cores, so the download and indexing times per book grow with N"
+    echo "H3: the wait in books-to-index falls less than the wait in books-to-download, because a book also waits for its batch to fill"
 }
 
 measure() {
