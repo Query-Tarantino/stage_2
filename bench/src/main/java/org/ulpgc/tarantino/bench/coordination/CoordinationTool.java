@@ -29,8 +29,6 @@ public final class CoordinationTool {
     static final String TRIAL_HEADER = "trial," + HEADER;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CoordinationTool.class);
-    private static final String LOGS = "logs";
-    private static final String LOG_SUFFIX = ".log";
     private static final String SEPARATOR = ",";
     private static final String USAGE = "Usage: CoordinationTool <run directory>";
 
@@ -47,10 +45,11 @@ public final class CoordinationTool {
             return WRONG_USAGE;
         }
         Path runDirectory = Path.of(args.getFirst());
-        Path logs = runDirectory.resolve(LOGS);
-        Map<String, List<BookCoordination>> booksByTrial = booksByTrial(logs);
+        Path logs = runDirectory.resolve(TransitionLogs.FOLDER);
+        Map<String, List<BookCoordination>> booksByTrial = TransitionLogs.byTrial(logs).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, trial -> BookCoordination.of(trial.getValue()), (first, second) -> first, LinkedHashMap::new));
         if (booksByTrial.isEmpty()) {
-            List<String> rows = BookCoordination.of(transitions(logs)).stream().map(CoordinationTool::row).toList();
+            List<String> rows = BookCoordination.of(TransitionLogs.of(logs)).stream().map(CoordinationTool::row).toList();
             LOGGER.info("Wrote the coordination times of {} published books to {}", rows.size(), write(runDirectory.resolve(FILE_NAME), HEADER, rows));
             return DONE;
         }
@@ -60,35 +59,6 @@ public final class CoordinationTool {
         LOGGER.info("Wrote the coordination times of {} published books to {}", rows.size(), write(runDirectory.resolve(FILE_NAME), TRIAL_HEADER, rows));
         CoordinationSummary.append(runDirectory, booksByTrial);
         return DONE;
-    }
-
-    private static Map<String, List<BookCoordination>> booksByTrial(Path logs) {
-        try (Stream<Path> entries = Files.list(logs)) {
-            return entries.filter(Files::isDirectory).sorted().collect(Collectors.toMap(trial -> trial.getFileName().toString(),
-                    trial -> BookCoordination.of(transitions(trial)), (first, second) -> first, LinkedHashMap::new));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static List<TransitionLine> transitions(Path logs) {
-        try (Stream<Path> files = Files.list(logs)) {
-            return files.filter(file -> file.getFileName().toString().endsWith(LOG_SUFFIX))
-                    .sorted()
-                    .flatMap(CoordinationTool::lines)
-                    .flatMap(line -> TransitionLine.parse(line).stream())
-                    .toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static Stream<String> lines(Path log) {
-        try {
-            return Files.readAllLines(log).stream();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     private static Path write(Path csv, String header, List<String> rows) {
