@@ -42,4 +42,10 @@ class ContainerStatsTest {
         assertEquals(Optional.empty(), ContainerStats.parse("{\"CPUPerc\":\"--\",\"MemUsage\":\"-- / --\",\"Name\":\"stage_2-crawler-1\"}", AT));
         assertEquals(Optional.empty(), ContainerStats.parse("{not json}", AT));
     }
+
+    @Test
+    void skipsAContainerBeingCreatedOrRemoved() {
+        assertEquals(Optional.empty(), ContainerStats.parse("{\"CPUPerc\":\"0.00%\",\"MemUsage\":\"0B / 0B\",\"Name\":\"--\"}", AT));
+        assertEquals(Optional.empty(), ContainerStats.parse("{\"CPUPerc\":\"0.00%\",\"MemUsage\":\"0B / 0B\",\"Name\":\"\"}", AT));
+    }
 }
