@@ -40,10 +40,10 @@ class IngestToolTest {
                 Files.readAllLines(runDirectory.resolve(IngestTool.FILE_NAME)));
         assertEquals(List.of(
                         "metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
-                        "ingest_throughput,\"replicas=1,workers=4\",1.00,0.00,0.00,1,1,1,books/s",
-                        "ingest_throughput_steady,\"replicas=1,workers=4\",1.00,0.00,0.00,1,1,1,books/s",
-                        "ingest_throughput,\"replicas=1,workers=16\",2.00,0.00,0.00,2,2,2,books/s",
-                        "ingest_throughput_steady,\"replicas=1,workers=16\",2.00,0.00,0.00,2,2,2,books/s"),
+                        "ingest_throughput,\"replicas=1,workers=4\",1.00,0.00,0.00,1.00,1.00,1.00,books/s",
+                        "ingest_throughput_steady,\"replicas=1,workers=4\",1.00,0.00,0.00,1.00,1.00,1.00,books/s",
+                        "ingest_throughput,\"replicas=1,workers=16\",2.00,0.00,0.00,2.00,2.00,2.00,books/s",
+                        "ingest_throughput_steady,\"replicas=1,workers=16\",2.00,0.00,0.00,2.00,2.00,2.00,books/s"),
                 Files.readAllLines(runDirectory.resolve(SummaryStats.FILE_NAME)));
     }
 

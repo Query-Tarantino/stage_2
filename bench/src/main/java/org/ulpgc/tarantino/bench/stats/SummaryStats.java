@@ -1,5 +1,7 @@
 package org.ulpgc.tarantino.bench.stats;
 
+import org.apache.commons.math3.distribution.TDistribution;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -7,49 +9,57 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * The figures of {@code summary.csv} (SPEC §9): mean, sample standard deviation, the half-width of the 95 % CI of the
+ * mean with Student's t for {@code count - 1} degrees of freedom, and nearest-rank percentiles.
+ */
 public class SummaryStats {
 
     public static final String FILE_NAME = "summary.csv";
+
+    private static final double CONFIDENCE = 0.95;
+    private static final double UPPER_TAIL = 1 - (1 - CONFIDENCE) / 2;
 
     public record Metrics(
             int count,
             double mean,
             double stdDev,
             double ci95,
-            long p50,
-            long p95,
-            long p99) {}
+            double p50,
+            double p95,
+            double p99) {}
 
-    public static Metrics calculate(List<Long> values) {
+    public static Metrics calculate(List<? extends Number> values) {
         if (values.isEmpty()) {
-            return new Metrics(0, 0.0, 0.0, 0.0, 0, 0, 0);
+            return new Metrics(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         }
-        List<Long> sorted = new ArrayList<>(values);
-        Collections.sort(sorted);
+        List<Double> sorted = values.stream().map(Number::doubleValue).sorted().toList();
         int count = sorted.size();
 
-        double sum = sorted.stream().mapToLong(Long::longValue).sum();
+        double sum = sorted.stream().mapToDouble(Double::doubleValue).sum();
         double mean = sum / count;
 
         double sumSq = sorted.stream()
                 .mapToDouble(value -> (value - mean) * (value - mean))
                 .sum();
         double stdDev = count > 1 ? Math.sqrt(sumSq / (count - 1)) : 0.0;
-        double ci95 = count > 1 ? 1.96 * (stdDev / Math.sqrt(count)) : 0.0;
+        double ci95 = count > 1 ? studentT(count - 1) * (stdDev / Math.sqrt(count)) : 0.0;
 
-        long p50 = percentile(sorted, 50);
-        long p95 = percentile(sorted, 95);
-        long p99 = percentile(sorted, 99);
+        double p50 = percentile(sorted, 50);
+        double p95 = percentile(sorted, 95);
+        double p99 = percentile(sorted, 99);
 
         return new Metrics(count, mean, stdDev, ci95, p50, p95, p99);
     }
 
-    private static long percentile(List<Long> sorted, double percentage) {
+    private static double studentT(int degreesOfFreedom) {
+        return new TDistribution(degreesOfFreedom).inverseCumulativeProbability(UPPER_TAIL);
+    }
+
+    private static double percentile(List<Double> sorted, double percentage) {
         int index = (int) Math.ceil((percentage / 100.0) * sorted.size()) - 1;
         return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
     }
@@ -64,7 +74,7 @@ public class SummaryStats {
             if (!exists) {
                 writer.write("metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit\n");
             }
-            String line = String.format(Locale.ROOT, "%s,\"%s\",%.2f,%.2f,%.2f,%d,%d,%d,%s\n",
+            String line = String.format(Locale.ROOT, "%s,\"%s\",%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s\n",
                     metric, configuration, metrics.mean(), metrics.stdDev(), metrics.ci95(), metrics.p50(), metrics.p95(), metrics.p99(), unit);
             writer.write(line);
         }

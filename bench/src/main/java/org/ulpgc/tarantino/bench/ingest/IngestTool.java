@@ -126,7 +126,7 @@ public final class IngestTool {
     private static void appendRow(Path summaryCsv, String metric, String configuration, List<IngestThroughput.Window> windows) {
         try {
             SummaryStats.appendToSummary(summaryCsv, metric, configuration,
-                    SummaryStats.calculate(windows.stream().map(window -> Math.round(window.booksPerSecond())).toList()), BOOKS_PER_SECOND);
+                    SummaryStats.calculate(windows.stream().map(IngestThroughput.Window::booksPerSecond).toList()), BOOKS_PER_SECOND);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

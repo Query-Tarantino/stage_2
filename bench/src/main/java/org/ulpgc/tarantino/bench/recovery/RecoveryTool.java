@@ -117,8 +117,7 @@ public final class RecoveryTool {
     }
 
     private static void appendRecoverySeconds(Path runDirectory, double recoverySeconds) {
-        long rounded = Math.round(recoverySeconds);
-        SummaryStats.Metrics single = new SummaryStats.Metrics(1, recoverySeconds, 0, 0, rounded, rounded, rounded);
+        SummaryStats.Metrics single = SummaryStats.calculate(List.of(recoverySeconds));
         try {
             SummaryStats.appendToSummary(runDirectory.resolve(SummaryStats.FILE_NAME), RECOVERY_SECONDS, configuration(runDirectory), single, SECONDS);
         } catch (IOException e) {

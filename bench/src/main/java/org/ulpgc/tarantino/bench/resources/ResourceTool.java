@@ -83,7 +83,7 @@ public final class ResourceTool {
 
     private static void appendRow(Path summaryCsv, String metric, String configuration, List<Double> values, String unit) {
         try {
-            SummaryStats.appendToSummary(summaryCsv, metric, configuration, SummaryStats.calculate(values.stream().map(Math::round).toList()), unit);
+            SummaryStats.appendToSummary(summaryCsv, metric, configuration, SummaryStats.calculate(values), unit);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

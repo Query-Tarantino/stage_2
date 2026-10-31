@@ -48,7 +48,7 @@ final class IngestChart {
                                   Function<IngestThroughput, IngestThroughput.Window> window) {
         List<SummaryStats.Metrics> metrics = repetitionsByConfiguration.values().stream()
                 .map(repetitions -> SummaryStats.calculate(repetitions.stream().map(window)
-                        .map(measured -> Math.round(measured.booksPerSecond())).toList()))
+                        .map(IngestThroughput.Window::booksPerSecond).toList()))
                 .toList();
         chart.addSeries(series, List.copyOf(repetitionsByConfiguration.keySet()),
                 metrics.stream().map(SummaryStats.Metrics::mean).toList(),
