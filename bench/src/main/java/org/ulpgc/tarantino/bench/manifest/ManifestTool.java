@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.bench.manifest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.bench.run.RunContext;
+import org.ulpgc.tarantino.bench.run.TrialName;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -10,7 +11,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Opens a run on the host once the stack is up, printing its {@code run_id} for the script, records each trial of a
@@ -26,7 +26,6 @@ public final class ManifestTool {
     private static final String COMMAND_SEPARATOR = "--";
     private static final int CLIENT_CONCURRENCY = 3;
     private static final int ARGUMENTS_BEFORE_COMMAND = 4;
-    private static final Pattern TRIAL_NAME = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*-rep-[1-9]\\d*");
     private static final String USAGE = """
             Usage: ManifestTool start <runs directory> <experiment> <client concurrency> -- <command and its arguments>
                    ManifestTool trial <run directory> <factor>-<value>-...-rep-<n>
@@ -50,7 +49,7 @@ public final class ManifestTool {
             runIdOutput.println(manifest.runId());
             return DONE;
         }
-        if (args.size() == 3 && args.getFirst().equals("trial") && TRIAL_NAME.matcher(args.get(2)).matches()) {
+        if (args.size() == 3 && args.getFirst().equals("trial") && TrialName.isValid(args.get(2))) {
             recordTrial(Path.of(args.get(1)), args.get(2), runner);
             return DONE;
         }

@@ -11,6 +11,7 @@ import org.ulpgc.tarantino.bench.jmh.JmhCsvConverter;
 import org.ulpgc.tarantino.bench.load.SearchLoadGenerator;
 import org.ulpgc.tarantino.bench.manifest.ManifestTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryTool;
+import org.ulpgc.tarantino.bench.resources.ResourceTool;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
 
 import java.util.List;
@@ -37,6 +38,7 @@ public final class Bench {
             Map.entry("manifest", ManifestTool::run),
             Map.entry("stats", StatsTool::run),
             Map.entry("coordination", CoordinationTool::run),
+            Map.entry("resources", ResourceTool::run),
             Map.entry("charts", ChartsTool::run),
             Map.entry("instant", RecoveryTool::printInstant),
             Map.entry("wait", RecoveryTool::waitFor),
