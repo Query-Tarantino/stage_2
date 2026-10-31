@@ -50,6 +50,22 @@ class ChartsToolTest {
     }
 
     @Test
+    void drawsTheIngestThroughputOfARunWithItsIngestCsv() throws IOException {
+        Path run = Files.createDirectories(runs.resolve("20261031-134354-ingest-throughput-d403115"));
+        Path trialLogs = Files.createDirectories(run.resolve("logs").resolve("replicas-1-workers-8-rep-1"));
+        String transition = " INFO org.ulpgc.tarantino.common.operations.TransitionLog - transition entity=book id=";
+        Files.write(trialLogs.resolve("crawler.log"), List.of(
+                "crawler-1  | 2026-10-31T13:54:00Z" + transition + "1 from=QUEUED to=DOWNLOADING batch_id=- generation=- enqueued_at=- at=2026-10-31T13:54:00Z replica=a",
+                "crawler-1  | 2026-10-31T13:54:01Z" + transition + "1 from=DOWNLOADING to=DOWNLOADED batch_id=- generation=- enqueued_at=- at=2026-10-31T13:54:01Z replica=a",
+                "crawler-1  | 2026-10-31T13:54:02Z" + transition + "2 from=DOWNLOADING to=DOWNLOADED batch_id=- generation=- enqueued_at=- at=2026-10-31T13:54:02Z replica=a"));
+        Files.writeString(run.resolve("ingest.csv"), "");
+
+        assertEquals(ChartsTool.DONE, ChartsTool.run(List.of(run.toString())));
+
+        assertTrue(Files.exists(run.resolve("charts").resolve("ingest-throughput.png")));
+    }
+
+    @Test
     void failsWhenTheRunHasNothingToDraw() throws IOException {
         Path run = Files.createDirectories(runs.resolve("20261110-153000-coordination-cost-3f2a9c1"));
 
