@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.6 · October 31, 2026
+Version 1.7 · October 31, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -328,6 +328,14 @@ Besides every number being a positive integer, these are required:
 
 `TARANTINO_DATALAKE_LAYOUT`, `TARANTINO_INDEX`, `TARANTINO_METADATA`, `TARANTINO_DATAMARTS` and `TARANTINO_CONTROL` are gone: there are no alternative structures or state files anymore.
 
+The scripts in `scripts/bench/` also read these. `TarantinoConfig` does not, because no service uses them:
+
+| Variable | Default | Used by | Purpose |
+| --- | --- | --- | --- |
+| `TARANTINO_REPETITIONS` | 5 | Every experiment with trials | Repetitions of each configuration (§9) |
+| `TARANTINO_REPLICAS_LIST` | `1 2 3` | `coordination-cost`, `resource-usage` | Replica counts of `crawler` and `indexer` together, space-separated |
+| `TARANTINO_PHASE_TIMEOUT_SECONDS` | 1800 | `coordination-cost`, `resource-usage` | Longest wait for a phase of a trial before the run gives up |
+
 ### 4.8 Transition logs
 
 Each service writes one line for every book or batch state change it achieves (§5.1), and `control` also writes one for every message it requeues, with equal `from` and `to`. The line is written by `TransitionLog`, in `common`, at INFO level and with these keys in this order; `-` marks what does not apply:
@@ -651,10 +659,11 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 
 - `run_id` is `<YYYYMMDD-HHMMSS>-<experiment>-<short commit>`, for example `20261110-153000-search-latency-3f2a9c1`. In a recovery run, `<experiment>` is `recovery-<nn>-r<N>`, as in `20261110-153000-recovery-04-r2-3f2a9c1`.
 - The experiments are `ingest-throughput` (A), `index-throughput` (B), `search-latency` (C), `coordination-cost` and `resource-usage` (D). Each has its script, `scripts/bench/<experiment>.sh`, and each §8 row has its own, `scripts/recovery/<nn>-<row>.sh`. All of them write `benchmarks/runs/<run_id>/`, which is versioned.
-- Scripts only start containers and launch jars. The load generator and result processing (`coordination.csv`, `summary.csv` and the charts, with XChart) are Java, in the `bench` module.
+- Scripts only start containers and launch jars. The load generator and result processing (`coordination.csv`, `ingest.csv`, `summary.csv` and the charts, with XChart) are Java, in the `bench` module.
 - Before measuring, the script checks the corpus against `workload/corpus.sha256` (id and SHA-256 of each text) and stops if it does not match: Gutenberg updates its texts, so two caches filled on different days may differ.
 - Books come from the local mirror, as in Stage 1, so the network is not measured. One factor changes at a time, with the hypothesis written before measuring.
-- An experiment that measures several configurations, or repeats one, in a single run splits it into trials, one per configuration and repetition, named `<factor>-<value>-…-rep-<n>`, as in `replicas-2-workers-8-rep-1`. Once each trial's stack is up, the script runs `bench manifest trial <run dir> <trial>`, which adds that trial's replicas and threads per service to `manifest.json`, and when the trial ends it saves the trial's logs in `logs/<trial>/`. `bench wait <state|queue> <minimum>` returns once that state or queue holds at least `<minimum>`, so a trial can start and end on a whole phase instead of the first book.
+- An experiment that measures several configurations, or repeats one, in a single run splits it into trials, one per configuration and repetition, named `<factor>-<value>-…-rep-<n>`, as in `replicas-2-workers-8-rep-1`. Once each trial's stack is up, the script runs `bench manifest trial <run dir> <trial>`, which adds that trial's replicas and threads per service to `manifest.json`, and when the trial ends it saves the trial's logs in `logs/<trial>/`. `bench wait <state|queue> [<minimum> [<timeout seconds>]]` returns once that state or queue holds at least `<minimum>`, 1 by default, so a trial can start and end on a whole phase instead of the first book, and gives up after the timeout, 300 s by default. `bench wait generation <n>` returns once `GET /control/status` reports a `generation` of at least `<n>`, so a trial can end when a rebuild has switched generation (§5.4).
+- The runs the report cites are official: all of them run on the same machine, from a `dev` commit with a clean tree and the scripts as merged, and the owner of each experiment commits its run. A run made anywhere else is a test run and is not committed. Each configuration runs `TARANTINO_REPETITIONS` times (§4.7), and the repetitions are interleaved: repetition 1 of every configuration, then repetition 2, and so on, so drift over a long run, such as a laptop slowing down as it heats up, spreads across every configuration instead of falling on one.
 - `workload/sample_ids.txt` holds 20 books of the corpus, so all of them are in the cache and in the mirror: with the mirror, a book outside it would end `FAILED` with `NOT_FOUND`. They include books in German and French and one in German and English, so the checks cover the `language` filter.
 - Each complexity bound in the report states which assumptions it depends on and is checked with at least three sizes. In Mongo, the plan of each measured query is saved too.
 
@@ -667,9 +676,10 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 | `stats.csv` | `docker stats` every second: container, CPU and memory |
 | `logs/<service>.log` | `docker compose logs --no-color --timestamps <service>` of each service, with the transition logs (§4.8); in a run with trials, `logs/<trial>/<service>.log` |
 | `coordination.csv` | Queue wait and time to publication for each book, and for each trial in a run with trials, derived from the transition logs in `logs/` |
+| `ingest.csv` | `ingest-throughput` only: one row per trial with its factors, its repetition, and the books, seconds and books per second of two windows. The whole window runs from the first download claim to the last book downloaded, and the steady one from the download that completes 10 % of the books to the one that completes 90 %. `summary.csv` holds them as `ingest_throughput` and `ingest_throughput_steady` |
 | `checks.json` | Recovery runs only: `GET /control/status` and the `/search` answers to `workload/queries.txt` once recovered (§8) |
 | `explain/` | `explain("executionStats")` of each measured Mongo query |
-| `summary.csv` | The figures the report cites: metric, configuration, mean, standard deviation, 95 % CI, p50, p95, p99 and unit |
+| `summary.csv` | The figures the report cites: metric, configuration, mean, sample standard deviation, half-width of the 95 % CI of the mean with Student's t for n − 1 degrees of freedom, nearest-rank p50, p95 and p99, and unit. With only a few repetitions per configuration, p95 and p99 are the maximum, so the report does not cite them |
 | `charts/` | The run's XChart charts in PNG, each with its `run_id` in the footer |
 | `log.txt` | Full command output |
 
