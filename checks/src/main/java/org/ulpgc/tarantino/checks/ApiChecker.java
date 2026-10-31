@@ -112,9 +112,16 @@ public class ApiChecker {
     }
 
     private CheckedClient.Response checkHealthViaDocker(String service, String port) throws IOException, InterruptedException {
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "docker", "compose", "exec", "-T", service, "curl", "-isS", "http://localhost:" + port + "/health"
-        );
+        List<String> command = new ArrayList<>(List.of("docker", "compose"));
+        String composeFileEnv = System.getenv("COMPOSE_FILE");
+        if (composeFileEnv == null || composeFileEnv.isBlank()) {
+            findComposePath().ifPresent(composePath -> {
+                command.add("-f");
+                command.add(composePath.toString());
+            });
+        }
+        command.addAll(List.of("exec", "-T", service, "curl", "-isS", "http://localhost:" + port + "/health"));
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -123,6 +130,15 @@ public class ApiChecker {
             throw new IOException("docker compose exec failed for " + service + " with exit code " + exitCode + ": " + output);
         }
         return parseCurlResponse(output, "/health");
+    }
+
+    private static Optional<Path> findComposePath() {
+        List<Path> candidates = List.of(
+                Paths.get("docker-compose.yml"),
+                Paths.get("../docker-compose.yml"),
+                Paths.get("../../docker-compose.yml")
+        );
+        return candidates.stream().filter(Files::exists).findFirst();
     }
 
     private CheckedClient.Response parseCurlResponse(String rawOutput, String path) throws IOException {
@@ -534,6 +550,19 @@ public class ApiChecker {
             if (bookExpected.has("year") && !bookExpected.get("year").isNull()) {
                 assertEquals(bookExpected.get("year").asInt(), response.json().get("year").asInt());
             }
+            if (bookExpected.has("languages") && !bookExpected.get("languages").isNull()) {
+                assertEquals(bookExpected.get("languages"), response.json().get("languages"));
+            }
+            if (bookExpected.has("original_year")) {
+                JsonNode expectedOriginalYear = bookExpected.get("original_year");
+                JsonNode actualOriginalYear = response.json().get("original_year");
+                if (expectedOriginalYear.isNull()) {
+                    assertTrue(actualOriginalYear == null || actualOriginalYear.isNull());
+                } else {
+                    assertTrue(actualOriginalYear != null && !actualOriginalYear.isNull());
+                    assertEquals(expectedOriginalYear.asInt(), actualOriginalYear.asInt());
+                }
+            }
         } catch (IOException | InterruptedException exception) {
             throw new RuntimeException(exception);
         }
@@ -564,6 +593,7 @@ public class ApiChecker {
                     if (response.json().has("languages")) {
                         bookNode.set("languages", response.json().get("languages"));
                     }
+                    bookNode.set("original_year", response.json().get("original_year"));
                     bookNodes.add(response.json());
                 }
             } catch (IOException | InterruptedException exception) {

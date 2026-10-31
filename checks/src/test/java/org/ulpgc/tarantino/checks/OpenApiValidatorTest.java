@@ -65,6 +65,25 @@ class OpenApiValidatorTest {
     }
 
     @Test
+    void validatesValidBookDetailsResponse() {
+        String body = """
+                {
+                  "book_id": 1342,
+                  "title": "Pride and Prejudice",
+                  "author": "Jane Austen",
+                  "language": "en",
+                  "languages": [
+                    "en"
+                  ],
+                  "year": 1998,
+                  "original_year": null
+                }
+                """;
+        Map<String, List<String>> headers = Map.of("Content-Type", List.of("application/json"));
+        assertDoesNotThrow(() -> validator.validateResponse("GET", "/books/1342", 200, headers, body));
+    }
+
+    @Test
     void failsOnAdditionalProperties() {
         String body = """
                 {
@@ -268,7 +287,9 @@ class OpenApiValidatorTest {
             assertTrue(book.has("title"));
             assertTrue(book.has("author"));
             assertTrue(book.has("language"));
+            assertTrue(book.has("languages"));
             assertTrue(book.has("year"));
+            assertTrue(book.has("original_year"));
         });
     }
 
