@@ -19,7 +19,6 @@ import java.util.stream.IntStream;
  */
 final class CoordinationSummary {
 
-    static final String FILE_NAME = "summary.csv";
     static final String UNIT = "ms";
 
     private static final String UNIT_SUFFIX = "_ms";
@@ -30,7 +29,7 @@ final class CoordinationSummary {
     static void append(Path runDirectory, Map<String, List<BookCoordination>> booksByTrial) {
         booksByConfiguration(booksByTrial).forEach((configuration, books) ->
                 IntStream.range(0, CoordinationTool.TIME_COLUMNS.size()).forEach(column ->
-                        appendRow(runDirectory.resolve(FILE_NAME), metric(column), configuration, millis(books, column))));
+                        appendRow(runDirectory.resolve(SummaryStats.FILE_NAME),metric(column), configuration, millis(books, column))));
     }
 
     private static Map<String, List<BookCoordination>> booksByConfiguration(Map<String, List<BookCoordination>> booksByTrial) {

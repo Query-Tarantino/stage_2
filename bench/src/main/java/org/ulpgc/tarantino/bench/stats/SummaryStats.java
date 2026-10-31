@@ -14,6 +14,8 @@ import java.util.Locale;
 
 public class SummaryStats {
 
+    public static final String FILE_NAME = "summary.csv";
+
     public record Metrics(
             int count,
             double mean,
@@ -88,7 +90,7 @@ public class SummaryStats {
                     ? Paths.get(args[2])
                     : (Files.exists(specificCsv) ? specificCsv : runDir.resolve("load/requests.csv"));
             String metricName = args.length > 3 && !args[3].isBlank() ? args[3] : "search_latency";
-            Path summaryCsv = runDir.resolve("summary.csv");
+            Path summaryCsv = runDir.resolve(FILE_NAME);
 
             List<Long> latencies = readLatencies(requestsCsv);
             Metrics metrics = calculate(latencies);

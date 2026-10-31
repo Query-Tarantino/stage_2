@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.bench.coordination;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.ulpgc.tarantino.bench.stats.SummaryStats;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -48,7 +49,7 @@ class CoordinationToolTest {
 
         CoordinationTool.run(List.of(runDirectory.toString()));
 
-        List<String> summary = Files.readAllLines(runDirectory.resolve(CoordinationSummary.FILE_NAME));
+        List<String> summary = Files.readAllLines(runDirectory.resolve(SummaryStats.FILE_NAME));
         assertEquals(1 + 2 * CoordinationTool.TIME_COLUMNS.size(), summary.size());
         assertEquals("download_queue_wait,\"replicas=1\",249.00,0.00,0.00,249,249,249,ms", summary.get(1));
         assertEquals("time_to_publication,\"replicas=1\",3400.00,0.00,0.00,3400,3400,3400,ms", summary.get(5));
@@ -61,7 +62,7 @@ class CoordinationToolTest {
 
         CoordinationTool.run(List.of(runDirectory.toString()));
 
-        assertFalse(Files.exists(runDirectory.resolve(CoordinationSummary.FILE_NAME)));
+        assertFalse(Files.exists(runDirectory.resolve(SummaryStats.FILE_NAME)));
     }
 
     @Test

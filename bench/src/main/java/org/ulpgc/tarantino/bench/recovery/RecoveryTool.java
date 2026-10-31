@@ -42,7 +42,6 @@ public final class RecoveryTool {
     private static final Pattern RECOVERY_EXPERIMENT = Pattern.compile("recovery-\\d{2}-r\\d+");
     private static final String ZOMBIE_INDEXER_SCRIPT = "10";
     private static final String QUERY_REPLICA_SCRIPT = "14";
-    private static final String SUMMARY = "summary.csv";
     private static final String RECOVERY_SECONDS = "recovery_seconds";
     private static final String SECONDS = "s";
 
@@ -121,7 +120,7 @@ public final class RecoveryTool {
         long rounded = Math.round(recoverySeconds);
         SummaryStats.Metrics single = new SummaryStats.Metrics(1, recoverySeconds, 0, 0, rounded, rounded, rounded);
         try {
-            SummaryStats.appendToSummary(runDirectory.resolve(SUMMARY), RECOVERY_SECONDS, configuration(runDirectory), single, SECONDS);
+            SummaryStats.appendToSummary(runDirectory.resolve(SummaryStats.FILE_NAME), RECOVERY_SECONDS, configuration(runDirectory), single, SECONDS);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
