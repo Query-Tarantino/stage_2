@@ -36,7 +36,7 @@ class WaitCommandTest {
                 status(0, 0), new UncheckedIOException(new IOException("refused")), new Answer(503, TarantinoJson.mapper().missingNode()),
                 status(2, 0)));
 
-        assertTrue(new WaitCommand(stack(answers), clock, clock.pause()).awaitAboveZero("DOWNLOADING"));
+        assertTrue(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast("DOWNLOADING", WaitCommand.ANY));
         assertEquals(START.plus(WaitCommand.POLL.multipliedBy(3)), clock.instant());
     }
 
@@ -44,8 +44,16 @@ class WaitCommandTest {
     void waitsForAQueueAndGivesUpAfterTheTimeout() {
         Deque<Object> answers = new ArrayDeque<>(List.of(status(5, 0)));
 
-        assertFalse(new WaitCommand(stack(answers), clock, clock.pause()).awaitAboveZero("books-to-download"));
+        assertFalse(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast("books-to-download", WaitCommand.ANY));
         assertEquals(START.plus(WaitCommand.TIMEOUT), clock.instant());
+    }
+
+    @Test
+    void waitsUntilAStateReachesTheMinimum() {
+        Deque<Object> answers = new ArrayDeque<>(List.of(status(1500, 0), status(2799, 0), status(2800, 0)));
+
+        assertTrue(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast("DOWNLOADING", 2800));
+        assertEquals(START.plus(WaitCommand.POLL.multipliedBy(2)), clock.instant());
     }
 
     private static Answer status(int downloading, int booksToDownload) {
