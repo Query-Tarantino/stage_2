@@ -24,6 +24,10 @@ measure() {
     done
 }
 
+summarise_run() {
+    java -jar "$BENCH_JAR" resources "$run_dir"
+}
+
 main() {
     open_run resource-usage "$0" "$@"
     state_hypotheses
@@ -31,8 +35,6 @@ main() {
     build_stack
     start_stats
     measure
-    stop_stats
-    java -jar "$BENCH_JAR" resources "$run_dir"
 }
 
 main "$@"

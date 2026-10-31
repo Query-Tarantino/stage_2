@@ -21,6 +21,10 @@ measure() {
     done
 }
 
+summarise_run() {
+    java -jar "$BENCH_JAR" coordination "$run_dir"
+}
+
 main() {
     open_run coordination-cost "$0" "$@"
     state_hypotheses

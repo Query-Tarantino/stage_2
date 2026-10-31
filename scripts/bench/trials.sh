@@ -106,7 +106,7 @@ close_run() {
         echo "Trial $current_trial did not finish; saving its logs"
         save_trial_logs
     fi
-    java -jar "$BENCH_JAR" coordination "$run_dir"
+    summarise_run
     java -jar "$BENCH_JAR" manifest finish "$run_dir"
     java -jar "$BENCH_JAR" charts "$run_dir"
     echo "Results in $run_dir"
