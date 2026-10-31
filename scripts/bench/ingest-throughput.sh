@@ -51,6 +51,7 @@ close_run() {
         save_trial_logs
     fi
     java -jar "$BENCH_JAR" manifest finish "$run_dir"
+    java -jar "$BENCH_JAR" charts "$run_dir"
     echo "Results in $run_dir"
 }
 
