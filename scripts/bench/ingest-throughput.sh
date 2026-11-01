@@ -54,13 +54,17 @@ close_run() {
 
 run_jmh() {
     local absolute_run_dir
-    absolute_run_dir="$(cd "$run_dir" && pwd)"
+    absolute_run_dir="$(host_path "$(cd "$run_dir" && pwd)")"
     mvn -DskipTests install
-    TARANTINO_MIRROR="$PWD/$MIRROR_DIR" mvn -pl services/crawler exec:exec \
+    TARANTINO_MIRROR="$(host_path "$PWD/$MIRROR_DIR")" mvn -pl services/crawler exec:exec \
         -Dexec.executable=java \
         -Dexec.classpathScope=test \
         "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.crawler.benchmarks.CrawlerBenchmarks $absolute_run_dir"
     bench jmh-csv "$run_dir/jmh/crawler.json" "$run_dir/jmh/crawler.csv"
+}
+
+host_path() {
+    if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s\n' "$1"; fi
 }
 
 print_hypotheses() {
