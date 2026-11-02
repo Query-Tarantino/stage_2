@@ -11,11 +11,8 @@ readonly MIRROR_DIR=benchmarks/mirror
 readonly CORPUS_SHA=workload/corpus.sha256
 readonly STOPWORDS=workload/stopwords.txt
 readonly NO_CLIENTS=0
-readonly BASELINE_REPLICAS=1
-readonly BASELINE_WORKERS=8
-readonly REPLICAS_SERIES=(1 2 3)
-readonly WORKERS_SERIES=(4 8 16)
-readonly REPETITIONS=3
+readonly CONFIGURATIONS=("1 8" "2 8" "3 8" "1 4" "1 16")
+readonly REPETITIONS="${TARANTINO_REPETITIONS:-5}"
 readonly DOWNLOAD_TIMEOUT_SECONDS=3600
 readonly LOGGED_SERVICES=(crawler control)
 readonly COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml)
@@ -32,13 +29,13 @@ main() {
     mkdir -p "$run_dir/logs" "$run_dir/jmh"
     exec > >(tee -a "$run_dir/log.txt") 2>&1
     trap close_run EXIT
+    print_hypotheses
 
     java -jar "$BENCH_JAR" corpus check "$CACHE_DIR" "$CORPUS_SHA" "$STOPWORDS" "$run_dir"
     run_jmh
     "${COMPOSE[@]}" build crawler control
     start_stats
-    measure_replicas_series
-    measure_workers_series
+    measure_interleaved_repetitions
     stop_stats
 
     bench ingest-throughput "$run_dir"
@@ -57,43 +54,37 @@ close_run() {
 
 run_jmh() {
     local absolute_run_dir
-    absolute_run_dir="$(cd "$run_dir" && pwd)"
+    absolute_run_dir="$(host_path "$(cd "$run_dir" && pwd)")"
     mvn -DskipTests install
-    TARANTINO_MIRROR="$PWD/$MIRROR_DIR" mvn -pl services/crawler exec:exec \
+    TARANTINO_MIRROR="$(host_path "$PWD/$MIRROR_DIR")" mvn -pl services/crawler exec:exec \
         -Dexec.executable=java \
         -Dexec.classpathScope=test \
-        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.crawler.benchmarks.CrawlerBenchmarks $absolute_run_dir"
+        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.crawler.benchmarks.CrawlerBenchmarks \"$absolute_run_dir\""
     bench jmh-csv "$run_dir/jmh/crawler.json" "$run_dir/jmh/crawler.csv"
 }
 
-measure_replicas_series() {
-    echo "Series replicas: ${REPLICAS_SERIES[*]} crawler replicas with $BASELINE_WORKERS workers each"
-    echo "Hypothesis: throughput grows with replicas but less than linearly, because every download makes three"
-    echo "conditional writes on the single Mongo and every replica shares the host's CPU and the datalake disk."
-    local replicas
-    for replicas in "${REPLICAS_SERIES[@]}"; do
-        measure_configuration "$replicas" "$BASELINE_WORKERS"
-    done
+host_path() {
+    if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s\n' "$1"; fi
 }
 
-measure_workers_series() {
-    echo "Series workers: ${WORKERS_SERIES[*]} workers in $BASELINE_REPLICAS crawler replica"
-    echo "Hypothesis: throughput grows from 4 to 8 workers and flattens towards 16, because reading the local"
-    echo "mirror is cheap and the bottleneck moves to the Mongo writes and the datalake disk."
-    local workers
-    for workers in "${WORKERS_SERIES[@]}"; do
-        if (( workers == BASELINE_WORKERS )); then
-            echo "$BASELINE_REPLICAS replica with $workers workers was already measured in the replicas series"
-            continue
-        fi
-        measure_configuration "$BASELINE_REPLICAS" "$workers"
-    done
+print_hypotheses() {
+    echo "Machine: the official one, with 24 hardware threads, 8 fast P cores and 16 slower E cores, without hyperthreading"
+    echo "Premise: ingestion is bound by the crawlers' CPU, not by Mongo. In the preliminary run the crawlers used 400-790 % CPU and Mongo about 100 %, and JFR put over half of the crawler samples in GutenbergText.bookText"
+    echo "Series replicas: 1, 2 and 3 crawler replicas with 8 workers each"
+    echo "H1: throughput grows with replicas but less than linearly: 8 workers fit in the 8 P cores, while 16 and 24 spill onto the slower E cores, so the gain from 2 to 3 replicas is smaller than from 1 to 2"
+    echo "Series workers: 4, 8 and 16 workers in 1 crawler replica"
+    echo "H2: throughput grows from 4 to 8 workers, which still fit in the P cores, and flattens towards 16, whose extra workers run on the E cores"
+    echo "Time windows: the whole one, from the first download claim to the last book downloaded, is the main figure; the steady one, between the downloads that complete 10 % and 90 % of the books, shows how much start-up and tail weigh"
 }
 
-measure_configuration() {
-    local replicas=$1 workers=$2 repetition
+measure_interleaved_repetitions() {
+    echo "$REPETITIONS interleaved repetitions of ${#CONFIGURATIONS[@]} configurations"
+    local repetition configuration replicas workers
     for (( repetition = 1; repetition <= REPETITIONS; repetition++ )); do
-        measure_trial "$replicas" "$workers" "$repetition"
+        for configuration in "${CONFIGURATIONS[@]}"; do
+            read -r replicas workers <<< "$configuration"
+            measure_trial "$replicas" "$workers" "$repetition"
+        done
     done
 }
 
