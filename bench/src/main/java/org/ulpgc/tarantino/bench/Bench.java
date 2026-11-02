@@ -7,6 +7,7 @@ import org.ulpgc.tarantino.bench.containers.StatsTool;
 import org.ulpgc.tarantino.bench.coordination.CoordinationTool;
 import org.ulpgc.tarantino.bench.corpus.CorpusTool;
 import org.ulpgc.tarantino.bench.explain.ExplainPlanExporter;
+import org.ulpgc.tarantino.bench.index.IndexTool;
 import org.ulpgc.tarantino.bench.ingest.IngestTool;
 import org.ulpgc.tarantino.bench.jmh.JmhCsvConverter;
 import org.ulpgc.tarantino.bench.load.SearchLoadGenerator;
@@ -41,6 +42,7 @@ public final class Bench {
             Map.entry("coordination", CoordinationTool::run),
             Map.entry("resources", ResourceTool::run),
             Map.entry("ingest-throughput", IngestTool::run),
+            Map.entry("index-throughput", IndexTool::run),
             Map.entry("charts", ChartsTool::run),
             Map.entry("instant", RecoveryTool::printInstant),
             Map.entry("wait", RecoveryTool::waitFor),
