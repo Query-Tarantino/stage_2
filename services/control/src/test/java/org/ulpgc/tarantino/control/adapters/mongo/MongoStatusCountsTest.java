@@ -5,7 +5,9 @@ import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.ulpgc.tarantino.common.http.ProblemException;
 import org.ulpgc.tarantino.common.model.BookStatus;
+import org.ulpgc.tarantino.common.model.ProblemCode;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.mongo.IndexState;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.set;
 
 class MongoStatusCountsTest {
@@ -38,6 +41,13 @@ class MongoStatusCountsTest {
         new IndexState(database()).createPointer();
 
         assertEquals(1, counts().currentGeneration());
+    }
+
+    @Test
+    void answersUnavailableUntilThePointerExists() {
+        ProblemException unavailable = assertThrows(ProblemException.class, () -> counts().currentGeneration());
+
+        assertEquals(ProblemCode.DEPENDENCY_UNAVAILABLE, unavailable.code());
     }
 
     private MongoStatusCounts counts() {
