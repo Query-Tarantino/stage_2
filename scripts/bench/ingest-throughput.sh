@@ -59,7 +59,7 @@ run_jmh() {
     TARANTINO_MIRROR="$(host_path "$PWD/$MIRROR_DIR")" mvn -pl services/crawler exec:exec \
         -Dexec.executable=java \
         -Dexec.classpathScope=test \
-        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.crawler.benchmarks.CrawlerBenchmarks $absolute_run_dir"
+        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.crawler.benchmarks.CrawlerBenchmarks \"$absolute_run_dir\""
     bench jmh-csv "$run_dir/jmh/crawler.json" "$run_dir/jmh/crawler.csv"
 }
 
