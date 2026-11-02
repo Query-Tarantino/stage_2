@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.bench.ingest;
 
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.bench.coordination.TransitionLine;
+import org.ulpgc.tarantino.bench.throughput.ThroughputWindow;
 
 import java.time.Instant;
 import java.util.List;
@@ -22,8 +23,8 @@ class IngestThroughputTest {
 
         IngestThroughput throughput = IngestThroughput.of(lines).orElseThrow();
 
-        assertEquals(new IngestThroughput.Window(10, 10.0), throughput.whole());
-        assertEquals(new IngestThroughput.Window(8, 8.0), throughput.steady());
+        assertEquals(new ThroughputWindow(10, 10.0), throughput.whole());
+        assertEquals(new ThroughputWindow(8, 8.0), throughput.steady());
         assertEquals(1.0, throughput.whole().booksPerSecond());
     }
 
@@ -32,7 +33,7 @@ class IngestThroughputTest {
         List<TransitionLine> lines = Stream.concat(Stream.of(claim("1", 0), downloaded("1", 1), downloaded("1", 30)),
                 IntStream.rangeClosed(2, 10).mapToObj(book -> downloaded(String.valueOf(book), book))).toList();
 
-        assertEquals(new IngestThroughput.Window(10, 10.0), IngestThroughput.of(lines).orElseThrow().whole());
+        assertEquals(new ThroughputWindow(10, 10.0), IngestThroughput.of(lines).orElseThrow().whole());
     }
 
     @Test
