@@ -1,0 +1,1704 @@
+Opened run 20261102-215134-resource-usage-77ed00a: candidates mirror, replicas 1 2 3, 5 repetitions, phases up to 1800 s
+Factor: replicas of crawler and indexer together (1 2 3), 5 repetitions each, interleaved: repetition 1 of every N, then repetition 2, so drift over the run spreads across every N
+Phases: ingestion with no indexer until every book is DOWNLOADED, then indexing with the indexers until every book is PUBLISHED
+H1: during ingestion the total CPU of the crawlers grows with N while the CPU per crawler stays flat, until the 24 hardware threads of the official machine saturate
+H2: during ingestion the crawlers use far more CPU than Mongo, as in the preliminary ingest-throughput run (crawlers 400-790 %, Mongo about 100 %), because the crawler spends its CPU processing the text
+H3: during indexing Mongo takes a larger share of the CPU than during ingestion, and it grows with N, because every indexer writes its postings to the same Mongo
+H4: the memory of each JVM stays flat below its -Xmx512m whatever N is
+[main] INFO org.ulpgc.tarantino.bench.corpus.CorpusTool - The corpus matches workload\corpus.sha256: 2800 books and 755974 distinct terms in benchmarks\runs\20261102-215134-resource-usage-77ed00a\corpus.json
+ Image stage_2-crawler Building 
+ Image stage_2-indexer Building 
+ Image stage_2-query Building 
+ Image stage_2-control Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.33kB done
+#1 DONE 0.0s
+
+#2 [query internal] load build definition from Dockerfile
+#2 DONE 0.0s
+
+#2 [indexer internal] load build definition from Dockerfile
+#2 transferring dockerfile: 344B done
+#2 DONE 0.0s
+
+#3 [crawler internal] load metadata for docker.io/library/eclipse-temurin:25-jre
+#3 DONE 0.1s
+
+#4 [indexer internal] load .dockerignore
+#4 transferring context: 180B done
+#4 DONE 0.0s
+
+#5 [indexer internal] load build context
+#5 transferring context: 179B done
+#5 DONE 0.0s
+
+#6 [control 1/4] FROM docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5
+#6 resolve docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5 0.0s done
+#6 DONE 0.0s
+
+#7 [indexer 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#7 CACHED
+
+#8 [indexer 3/4] WORKDIR /app
+#8 CACHED
+
+#9 [indexer 4/4] COPY services/indexer/target/indexer-1.0-SNAPSHOT.jar /app/service.jar
+#9 CACHED
+
+#10 [indexer] exporting to image
+#10 exporting layers done
+#10 exporting manifest sha256:9ddd1b998871c0686bdf504737b2ba0e9450762dbf56bdd012df29336e2f8710
+#10 exporting manifest sha256:9ddd1b998871c0686bdf504737b2ba0e9450762dbf56bdd012df29336e2f8710 done
+#10 exporting config sha256:a32f4668f92d6993a87516325ab85881262f6352804767217cecd66167ce39a2 done
+#10 exporting attestation manifest sha256:ef4a40d4a2065716416b8c5f0b153db4024eb6e29d6976d30ea88799f7e0bc2b 0.0s done
+#10 exporting manifest list sha256:efc678be564cc005c742d12e4507ae846c37473ce6db9f3660bebf012a42cf57 0.0s done
+#10 naming to docker.io/library/stage_2-indexer:latest done
+#10 unpacking to docker.io/library/stage_2-indexer:latest 0.0s done
+#10 DONE 0.1s
+
+#11 [crawler internal] load build context
+#11 transferring context: 179B 0.0s done
+#11 DONE 0.0s
+
+#8 [crawler 3/4] WORKDIR /app
+#8 CACHED
+
+#7 [crawler 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#7 CACHED
+
+#12 [crawler 4/4] COPY services/crawler/target/crawler-1.0-SNAPSHOT.jar /app/service.jar
+#12 CACHED
+
+#13 [crawler] exporting to image
+#13 exporting layers done
+#13 exporting manifest sha256:1e0ad7f7dcfddd27c2782ad874a8c9d2801a158b0a6b440c0970ee4429d7f497 done
+#13 exporting config sha256:d81d6916dff4d988254933407304fdd955bff6bfd53e7c4bb3dca9b9cbae6899 done
+#13 exporting attestation manifest sha256:f54469e61372a5d941f1870faf17fc9c2a6b7289c76a6c05a28e4f1cadc15d6b 0.0s done
+#13 exporting manifest list sha256:ebb789e54dbc17e862983507b151f65084556f2761f4400aceb85ac5c11e5eb2 0.0s done
+#13 naming to docker.io/library/stage_2-crawler:latest done
+#13 unpacking to docker.io/library/stage_2-crawler:latest done
+#13 DONE 0.1s
+
+#14 [control internal] load build context
+#14 ...
+
+#15 [indexer] resolving provenance for metadata file
+#15 DONE 0.0s
+
+#16 [crawler] resolving provenance for metadata file
+#16 DONE 0.0s
+
+#14 [control internal] load build context
+#14 transferring context: 32.83MB 4.6s done
+#14 DONE 4.6s
+
+#17 [query internal] load build context
+#17 transferring context: 32.81MB 4.6s done
+#17 DONE 4.6s
+
+#18 [control 4/4] COPY services/control/target/control-1.0-SNAPSHOT.jar /app/service.jar
+#18 CACHED
+
+#8 [query 3/4] WORKDIR /app
+#8 CACHED
+
+#7 [query 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#7 CACHED
+
+#19 [query 4/4] COPY services/query/target/query-1.0-SNAPSHOT.jar /app/service.jar
+#19 CACHED
+
+#20 [control] exporting to image
+#20 exporting layers done
+#20 exporting manifest sha256:fe0961c65da90d03a6c650a8cf0ccc9b08e532f9e8ff9a8133cda6dbd714c5c9 done
+#20 exporting config sha256:4332c98fe01d4785c0cd2e4d185955f2f2ef88117a8278d4c152d0b00e1b870d done
+#20 exporting attestation manifest sha256:7fa6bfb8acc888a43c9b476a6e35a9dd954189847bba30de5dec767e5c9701f3 0.0s done
+#20 exporting manifest list sha256:e70dc3419446b37b51ce51b3c444ab516275d0900efc2814c5834f6be537e871 0.0s done
+#20 naming to docker.io/library/stage_2-control:latest done
+#20 unpacking to docker.io/library/stage_2-control:latest done
+#20 DONE 0.1s
+
+#21 [query] exporting to image
+#21 exporting layers done
+#21 exporting manifest sha256:3375d1ec3e471a404b0a6fdf431595a02b36ba3de65949b166dc89177e2959a9 done
+#21 exporting config sha256:670c51612c81fc8855309e9b62ae0664480cd1572f464a5438e9cd4234eb9626 done
+#21 exporting attestation manifest sha256:75a17cc9d3d5e3feba682b53b3b585d2e7573c52e15778bcce6ae2ea26b49114 0.0s done
+#21 exporting manifest list sha256:8f826e76f75866e7b0bf4cec8dada626fd53d923e29ba0ab2a079071aafe50a3 0.0s done
+#21 naming to docker.io/library/stage_2-query:latest done
+#21 unpacking to docker.io/library/stage_2-query:latest done
+#21 DONE 0.1s
+
+#22 [control] resolving provenance for metadata file
+#22 DONE 0.0s
+
+#23 [query] resolving provenance for metadata file
+#23 DONE 0.0s
+ Image stage_2-query Built 
+ Image stage_2-control Built 
+ Image stage_2-crawler Built 
+ Image stage_2-indexer Built 
+=== Trial replicas-1-rep-1: crawler=1, indexer=0 ===
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-bench-run-150b29b310f4 Creating 
+ Container stage_2-bench-run-150b29b310f4 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-control-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-1-rep-1 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-a0c70f69ee13 Creating 
+ Container stage_2-bench-run-a0c70f69ee13 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-2-rep-1: crawler=2, indexer=0 ===
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-query-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-query-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-bench-run-4c7c8611facd Creating 
+ Container stage_2-bench-run-4c7c8611facd Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-control-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-2-rep-1 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-9aa5be9b87a2 Creating 
+ Container stage_2-bench-run-9aa5be9b87a2 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-3-rep-1: crawler=3, indexer=0 ===
+ Container stage_2-query-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-crawler-3 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-crawler-3 Created 
+ Container stage_2-control-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-control-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-3 Starting 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-crawler-3 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-bench-run-41ae4f63fa6f Creating 
+ Container stage_2-bench-run-41ae4f63fa6f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-mongo-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-crawler-3 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-3-rep-1 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-91330ba83bbf Creating 
+ Container stage_2-bench-run-91330ba83bbf Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-1-rep-2: crawler=1, indexer=0 ===
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-crawler-3 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-crawler-3 Stopped 
+ Container stage_2-crawler-3 Removing 
+ Container stage_2-crawler-3 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removed 
+ Volume stage_2_datalake Removed 
+ Network stage_2_default Removed 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-query-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-query-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-query-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-bench-run-8d26cf42c233 Creating 
+ Container stage_2-bench-run-8d26cf42c233 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-control-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-1-rep-2 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-6c658e3b38a8 Creating 
+ Container stage_2-bench-run-6c658e3b38a8 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-2-rep-2: crawler=2, indexer=0 ===
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-bench-run-2886b9abfb1b Creating 
+ Container stage_2-bench-run-2886b9abfb1b Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-2-rep-2 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-d915c441f463 Creating 
+ Container stage_2-bench-run-d915c441f463 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-3-rep-2: crawler=3, indexer=0 ===
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-crawler-3 Creating 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-crawler-3 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-crawler-3 Starting 
+ Container stage_2-crawler-3 Started 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-bench-run-a05b919b6db0 Creating 
+ Container stage_2-bench-run-a05b919b6db0 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-crawler-3 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-3-rep-2 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-532e3e4dfd66 Creating 
+ Container stage_2-bench-run-532e3e4dfd66 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-1-rep-3: crawler=1, indexer=0 ===
+ Container stage_2-query-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-crawler-3 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-crawler-3 Stopped 
+ Container stage_2-crawler-3 Removing 
+ Container stage_2-crawler-3 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-query-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-query-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-bench-run-dea385ccc5ff Creating 
+ Container stage_2-bench-run-dea385ccc5ff Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-crawler-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-1-rep-3 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-31f84d570026 Creating 
+ Container stage_2-bench-run-31f84d570026 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-2-rep-3: crawler=2, indexer=0 ===
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-control-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-control-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-bench-run-a6f1ad28092a Creating 
+ Container stage_2-bench-run-a6f1ad28092a Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-mongo-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-2-rep-3 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-b4a82c8031d6 Creating 
+ Container stage_2-bench-run-b4a82c8031d6 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-3-rep-3: crawler=3, indexer=0 ===
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Volume stage_2_mongo-data Removing 
+ Volume stage_2_datalake Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_mongo-data Removed 
+ Volume stage_2_datalake Removed 
+ Network stage_2_default Removed 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-crawler-3 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-crawler-3 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-control-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-crawler-3 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-control-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-crawler-3 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-bench-run-2cdf7b5bd0be Creating 
+ Container stage_2-bench-run-2cdf7b5bd0be Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-crawler-3 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-3-rep-3 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-0395ca73bae3 Creating 
+ Container stage_2-bench-run-0395ca73bae3 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-1-rep-4: crawler=1, indexer=0 ===
+ Container stage_2-query-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-crawler-3 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-crawler-3 Stopped 
+ Container stage_2-crawler-3 Removing 
+ Container stage_2-crawler-3 Removed 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-query-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-query-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-bench-run-9e2d4ac6f859 Creating 
+ Container stage_2-bench-run-9e2d4ac6f859 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-nginx-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-1-rep-4 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-baf152ff8fce Creating 
+ Container stage_2-bench-run-baf152ff8fce Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-2-rep-4: crawler=2, indexer=0 ===
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Network stage_2_default Removing 
+ Volume stage_2_mongo-data Removing 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removed 
+ Volume stage_2_datalake Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-bench-run-e94011bbe254 Creating 
+ Container stage_2-bench-run-e94011bbe254 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-control-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-2-rep-4 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-abb58494970a Creating 
+ Container stage_2-bench-run-abb58494970a Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-3-rep-4: crawler=3, indexer=0 ===
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Volume stage_2_mongo-data Removing 
+ Volume stage_2_datalake Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-crawler-3 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-crawler-3 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-3 Starting 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-crawler-3 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-bench-run-6e5e1c53a437 Creating 
+ Container stage_2-bench-run-6e5e1c53a437 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-control-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-crawler-3 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-3-rep-4 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-14e9c7a7d935 Creating 
+ Container stage_2-bench-run-14e9c7a7d935 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-1-rep-5: crawler=1, indexer=0 ===
+ Container stage_2-query-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-crawler-3 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-crawler-3 Stopped 
+ Container stage_2-crawler-3 Removing 
+ Container stage_2-crawler-3 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-bench-run-80ec3c49eaca Creating 
+ Container stage_2-bench-run-80ec3c49eaca Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-crawler-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-1-rep-5 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-0f9a559ebf35 Creating 
+ Container stage_2-bench-run-0f9a559ebf35 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-2-rep-5: crawler=2, indexer=0 ===
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removed 
+ Volume stage_2_datalake Removed 
+ Network stage_2_default Removed 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-query-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-query-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-bench-run-72f38fd00ce6 Creating 
+ Container stage_2-bench-run-72f38fd00ce6 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-mongo-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-query-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-2-rep-5 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-9d2c8f2d9344 Creating 
+ Container stage_2-bench-run-9d2c8f2d9344 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+=== Trial replicas-3-rep-5: crawler=3, indexer=0 ===
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-crawler-3 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-3 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-3 Starting 
+ Container stage_2-crawler-3 Started 
+ Container stage_2-bench-run-9d9980cf1b7b Creating 
+ Container stage_2-bench-run-9d9980cf1b7b Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - DOWNLOADED reached 2800
+ Container stage_2-query-1 Running 
+ Container stage_2-control-1 Running 
+ Container stage_2-nginx-1 Running 
+ Container stage_2-crawler-1 Running 
+ Container stage_2-crawler-2 Running 
+ Container stage_2-crawler-3 Running 
+ Container stage_2-hazelcast-1 Running 
+ Container stage_2-mongo-1 Running 
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial replicas-3-rep-5 of run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+ Container stage_2-bench-run-e645aef1a4d8 Creating 
+ Container stage_2-bench-run-e645aef1a4d8 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+[main] INFO org.ulpgc.tarantino.bench.containers.StatsTool - Recorded 25685 container samples in benchmarks\runs\20261102-215134-resource-usage-77ed00a\stats.csv
+[main] INFO org.ulpgc.tarantino.bench.resources.ResourceTool - Summarised the resources of 39 services, phases and configurations in benchmarks\runs\20261102-215134-resource-usage-77ed00a\summary.csv
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Finished run 20261102-215134-resource-usage-77ed00a in benchmarks\runs\20261102-215134-resource-usage-77ed00a\manifest.json
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261102-215134-resource-usage-77ed00a\charts\cpu.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261102-215134-resource-usage-77ed00a\charts\memory.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261102-215134-resource-usage-77ed00a\charts\cpu-ingestion.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261102-215134-resource-usage-77ed00a\charts\memory-ingestion.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261102-215134-resource-usage-77ed00a\charts\cpu-indexing.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261102-215134-resource-usage-77ed00a\charts\memory-indexing.png
+Results in benchmarks/runs/20261102-215134-resource-usage-77ed00a
