@@ -18,13 +18,14 @@ final class IngestChart {
     static final String STEADY = "10-90 % of the books";
 
     private static final String TITLE = "Download throughput per configuration";
+    private static final String Y_AXIS = "Mean throughput (books/s)";
 
     private IngestChart() {
     }
 
     static CategoryChart of(Map<String, IngestThroughput> throughputsByTrial) {
-        return ThroughputChart.of(TITLE, throughputsByTrial, List.of(
-                new ThroughputChart.Series<>(WHOLE, IngestThroughput::whole),
-                new ThroughputChart.Series<>(STEADY, IngestThroughput::steady)));
+        return ConfigurationChart.of(TITLE, Y_AXIS, throughputsByTrial, List.of(
+                new ConfigurationChart.Series<>(WHOLE, throughput -> throughput.whole().booksPerSecond()),
+                new ConfigurationChart.Series<>(STEADY, throughput -> throughput.steady().booksPerSecond())));
     }
 }
