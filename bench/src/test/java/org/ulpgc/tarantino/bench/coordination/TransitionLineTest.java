@@ -19,7 +19,7 @@ class TransitionLineTest {
 
         TransitionLine line = TransitionLine.parse(logged).orElseThrow();
 
-        assertEquals(new TransitionLine("book", "1342", "QUEUED", "DOWNLOADING", null,
+        assertEquals(new TransitionLine("book", "1342", "QUEUED", "DOWNLOADING", null, null,
                 Instant.parse("2026-10-21T10:05:00Z"), Instant.parse("2026-10-21T10:05:02.481Z")), line);
         assertTrue(line.isBook());
         assertTrue(line.moves("QUEUED", "DOWNLOADING"));
@@ -34,6 +34,8 @@ class TransitionLineTest {
 
         assertTrue(batch.isBatch());
         assertEquals("6717a0c2e4b0f81d2c9a5e31", batch.id());
+        assertEquals(1, batch.generation());
+        assertNull(created.generation());
         assertNull(created.from());
         assertNull(created.enqueuedAt());
     }

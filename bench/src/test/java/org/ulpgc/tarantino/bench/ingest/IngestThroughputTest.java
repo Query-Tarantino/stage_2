@@ -43,10 +43,10 @@ class IngestThroughputTest {
     }
 
     private static TransitionLine claim(String bookId, int second) {
-        return new TransitionLine(TransitionLine.BOOK, bookId, "QUEUED", "DOWNLOADING", null, START, START.plusSeconds(second));
+        return new TransitionLine(TransitionLine.BOOK, bookId, "QUEUED", "DOWNLOADING", null, null, START, START.plusSeconds(second));
     }
 
     private static TransitionLine downloaded(String bookId, int second) {
-        return new TransitionLine(TransitionLine.BOOK, bookId, "DOWNLOADING", "DOWNLOADED", null, START, START.plusSeconds(second));
+        return new TransitionLine(TransitionLine.BOOK, bookId, "DOWNLOADING", "DOWNLOADED", null, null, START, START.plusSeconds(second));
     }
 }
