@@ -14,14 +14,18 @@ import java.util.Optional;
  * {@code GET /control/status} shows at least that many books in that state or messages in that queue, {@link #ANY} by
  * default, so a script can cause its failure while there is work in flight or start measuring once the work it needs is
  * ready. It gives up after the timeout, {@link #DEFAULT_TIMEOUT} unless a whole phase needs longer.
+ * {@code bench wait generation <n> [<timeout seconds>]} (SPEC §9) returns once the {@code generation} of that answer is
+ * at least {@code <n>}, so a trial can end when a rebuild has switched generation.
  */
 public class WaitCommand {
 
     public static final int ANY = 1;
     public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
+    public static final String GENERATION = "generation";
 
     static final Duration POLL = Duration.ofSeconds(1);
 
+    private static final String POINTER_SEPARATOR = "/";
     private static final String BOOKS = "books";
     private static final String QUEUES = "queues";
 
@@ -46,12 +50,12 @@ public class WaitCommand {
         return Optional.empty();
     }
 
-    /** Whether {@code target} reached {@code minimum} within {@code timeout}; {@code target} must have a section. */
+    /** Whether {@code target} reached {@code minimum} within {@code timeout}; it is {@link #GENERATION} or has a section. */
     public boolean awaitAtLeast(String target, int minimum, Duration timeout) {
-        String section = sectionOf(target).orElseThrow();
+        String pointer = pointerTo(target);
         Instant deadline = clock.instant().plus(timeout);
         while (clock.instant().isBefore(deadline)) {
-            if (count(section, target) >= minimum) {
+            if (reading(pointer) >= minimum) {
                 return true;
             }
             pause.sleep(POLL);
@@ -59,10 +63,16 @@ public class WaitCommand {
         return false;
     }
 
-    private int count(String section, String target) {
+    private static String pointerTo(String target) {
+        return target.equals(GENERATION)
+                ? POINTER_SEPARATOR + GENERATION
+                : POINTER_SEPARATOR + sectionOf(target).orElseThrow() + POINTER_SEPARATOR + target;
+    }
+
+    private int reading(String pointer) {
         try {
             Answer status = stack.controlStatus();
-            return status.ok() ? status.body().path(section).path(target).asInt() : 0;
+            return status.ok() ? status.body().at(pointer).asInt() : 0;
         } catch (RuntimeException e) {
             return 0;
         }
