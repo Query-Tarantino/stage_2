@@ -82,6 +82,28 @@ class ChartsToolTest {
     }
 
     @Test
+    void drawsTheSearchLatencyOfARunWithTrialLatenciesInItsSummary() throws IOException {
+        Path run = Files.createDirectories(runs.resolve("20261102-184016-search-latency-62583e8"));
+        Files.write(run.resolve("summary.csv"), List.of(
+                "metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
+                "search_latency,\"clients-8-threads-32-replicas-1-rep-1\",2340.56,903.19,2.77,2053.00,4081.00,5056.00,us"));
+
+        assertEquals(ChartsTool.DONE, ChartsTool.run(List.of(run.toString())));
+
+        assertTrue(Files.exists(run.resolve("charts").resolve("search-latency.png")));
+    }
+
+    @Test
+    void failsWhenTheSummaryHasNoTrialLatencyToDraw() throws IOException {
+        Path run = Files.createDirectories(runs.resolve("20261102-184016-recovery-04-r2-3f2a9c1"));
+        Files.write(run.resolve("summary.csv"), List.of(
+                "metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
+                "recovery_seconds,\"N=2\",12.50,0.00,0.00,12.50,12.50,12.50,s"));
+
+        assertEquals(ChartsTool.FAILED, ChartsTool.run(List.of(run.toString())));
+    }
+
+    @Test
     void failsWhenTheRunHasNothingToDraw() throws IOException {
         Path run = Files.createDirectories(runs.resolve("20261110-153000-coordination-cost-3f2a9c1"));
 

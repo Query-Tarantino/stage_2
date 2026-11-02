@@ -10,6 +10,7 @@ import org.ulpgc.tarantino.bench.ingest.IngestTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryChecks;
 import org.ulpgc.tarantino.bench.resources.ResourceTool;
 import org.ulpgc.tarantino.bench.resources.ResourceUsage;
+import org.ulpgc.tarantino.bench.stats.SummaryStats;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -45,10 +46,10 @@ public final class ChartsTool {
         }
         System.setProperty(HEADLESS, Boolean.TRUE.toString());
         Path runDirectory = Path.of(args.getFirst());
-        List<Path> charts = Stream.of(coordination(runDirectory), ingest(runDirectory), index(runDirectory), resources(runDirectory), phases(runDirectory))
+        List<Path> charts = Stream.of(coordination(runDirectory), ingest(runDirectory), index(runDirectory), latency(runDirectory), resources(runDirectory), phases(runDirectory))
                 .flatMap(Function.identity()).toList();
         if (charts.isEmpty()) {
-            LOGGER.error("{} has no {}, {}, {} or {} to draw", runDirectory, CoordinationTool.FILE_NAME, IngestTool.FILE_NAME, IndexTool.FILE_NAME, StatsTool.FILE_NAME);
+            LOGGER.error("{} has no {}, {}, {}, trial latencies in {} or {} to draw", runDirectory, CoordinationTool.FILE_NAME, IngestTool.FILE_NAME, IndexTool.FILE_NAME, SummaryStats.FILE_NAME, StatsTool.FILE_NAME);
             return FAILED;
         }
         charts.forEach(chart -> LOGGER.info("Wrote {}", chart));
@@ -93,6 +94,18 @@ public final class ChartsTool {
             return Stream.empty();
         }
         return Stream.of(RunChart.write(IndexChart.of(IndexTool.throughputs(runDirectory)), runDirectory, IndexChart.NAME));
+    }
+
+    private static Stream<Path> latency(Path runDirectory) {
+        Path summary = runDirectory.resolve(SummaryStats.FILE_NAME);
+        if (!Files.exists(summary)) {
+            return Stream.empty();
+        }
+        Map<String, LatencyChart.TrialLatency> latencyByTrial = LatencyChart.trials(lines(summary));
+        if (latencyByTrial.isEmpty()) {
+            return Stream.empty();
+        }
+        return Stream.of(RunChart.write(LatencyChart.of(latencyByTrial), runDirectory, LatencyChart.NAME));
     }
 
     private static Stream<Path> resources(Path runDirectory) {
