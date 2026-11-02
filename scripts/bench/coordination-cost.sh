@@ -8,12 +8,21 @@ state_hypotheses() {
     echo "H3: the wait in books-to-index falls less than the wait in books-to-download, because a book also waits for its batch to fill"
 }
 
+start_trial_with_consumers_ready() {
+    local trial=$1 replicas=$2
+    echo "=== Trial $trial: $replicas crawlers and indexers ready before control seeds, so the queue waits leave out their startup ==="
+    "${COMPOSE[@]}" down -v
+    "${COMPOSE[@]}" up -d --wait --scale "crawler=$replicas" --scale "indexer=$replicas" mongo hazelcast crawler indexer query nginx
+    "${COMPOSE[@]}" up -d control
+    current_trial=$trial
+}
+
 measure() {
     local books replicas repetition
     books=$(expected_books)
     for repetition in $(seq 1 "$REPETITIONS"); do
         for replicas in $REPLICAS_LIST; do
-            start_trial "$(trial_name "$replicas" "$repetition")" "$replicas" "$replicas"
+            start_trial_with_consumers_ready "$(trial_name "$replicas" "$repetition")" "$replicas"
             record_trial
             wait_for PUBLISHED "$books"
             save_trial_logs
