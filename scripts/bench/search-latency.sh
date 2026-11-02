@@ -110,9 +110,9 @@ export_explain() {
     mkdir -p "${run_dir}/explain"
     if command -v docker >/dev/null 2>&1 && "${COMPOSE[@]}" ps query 2>/dev/null | grep -q "query"; then
         "${COMPOSE[@]}" cp --index=1 "$BENCH_JAR" query:/tmp/bench.jar
-        "${COMPOSE[@]}" exec -T --index=1 query java -cp "/tmp/bench.jar" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "/tmp/explain" "$MONGO_URI" 1
+        MSYS_NO_PATHCONV=1 "${COMPOSE[@]}" exec -T --index=1 query java -cp "/tmp/bench.jar" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "/tmp/explain" "$MONGO_URI" 1
         "${COMPOSE[@]}" cp --index=1 query:/tmp/explain/. "${run_dir}/explain/"
-        "${COMPOSE[@]}" exec -T --index=1 query rm -rf /tmp/bench.jar /tmp/explain
+        MSYS_NO_PATHCONV=1 "${COMPOSE[@]}" exec -T --index=1 query rm -rf /tmp/bench.jar /tmp/explain
     else
         java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "${run_dir}/explain" "$MONGO_URI" 1
     fi
@@ -126,7 +126,7 @@ run_jmh() {
     mvn -f services/query/pom.xml exec:exec \
         -Dexec.executable=java \
         -Dexec.classpathScope=test \
-        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark ${absolute_run_dir}"
+        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark \"${absolute_run_dir}\""
     if [[ -f "${run_dir}/jmh/query.json" ]]; then
         echo "Converting JMH JSON to CSV..."
         java -jar "$BENCH_JAR" jmh-csv "${run_dir}/jmh/query.json" "${run_dir}/jmh/query.csv"
@@ -222,6 +222,7 @@ main() {
     open_run search-latency "$0" "$@"
     state_hypotheses
     check_corpus
+    wait_for PUBLISHED "$(expected_books)"
     build_stack
     configure_query "$BASELINE_REPLICAS" "$BASELINE_THREADS"
     wait_for_query_ready
