@@ -5,7 +5,6 @@ import org.ulpgc.tarantino.bench.throughput.ThroughputWindow;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * The indexing throughput of each configuration of an {@code index-throughput} run (SPEC §9): the mean over its
@@ -17,11 +16,13 @@ final class IndexChart {
     static final String WHOLE = "Whole window";
 
     private static final String TITLE = "Indexing throughput per configuration";
+    private static final String Y_AXIS = "Mean throughput (books/s)";
 
     private IndexChart() {
     }
 
     static CategoryChart of(Map<String, ThroughputWindow> throughputsByTrial) {
-        return ThroughputChart.of(TITLE, throughputsByTrial, List.of(new ThroughputChart.Series<>(WHOLE, Function.identity())));
+        return ConfigurationChart.of(TITLE, Y_AXIS, throughputsByTrial,
+                List.of(new ConfigurationChart.Series<>(WHOLE, ThroughputWindow::booksPerSecond)));
     }
 }
