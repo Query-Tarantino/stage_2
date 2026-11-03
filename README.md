@@ -93,6 +93,12 @@ Run the search latency benchmark:
 ./scripts/bench/search-latency.sh
 ```
 
+Run the index throughput benchmark, which ingests the corpus once and rebuilds the index once per trial:
+
+```bash
+./scripts/bench/index-throughput.sh
+```
+
 ## Corpus
 
 `scripts/fill_cache.sh` copies the benchmark corpus, the first 2,800 downloadable books of
