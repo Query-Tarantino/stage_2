@@ -11,9 +11,9 @@ of truth in MongoDB, and everything runs on one machine with Docker Compose.
 
 ## Status
 
-The walking skeleton runs end to end: `control` seeds the candidates, `crawler` downloads them, `indexer` publishes
-them in batches and `query` answers `GET /search` behind nginx. Still to come: lease renewals, failed downloads,
-reconciliation, the operational endpoints, the search filters, `/books` and `/search/filters`, `bench` and `checks`.
+The system runs end to end: `control` seeds the candidates and reconciles, `crawler` downloads them, `indexer` publishes
+them in batches and `query` answers the search API behind nginx. Every row of the failure matrix recovers with 1, 2 and
+3 replicas, in the runs in `benchmarks/runs/`. Still to come: the official `index-throughput` and `search-latency` runs.
 
 ## Requirements
 
