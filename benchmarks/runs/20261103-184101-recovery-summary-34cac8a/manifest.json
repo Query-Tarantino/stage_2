@@ -1,0 +1,27 @@
+{
+  "run_id" : "20261103-184101-recovery-summary-34cac8a",
+  "git" : {
+    "commit" : "34cac8a",
+    "clean" : true
+  },
+  "command" : [ "java", "-jar", "bench/target/bench-1.0-SNAPSHOT.jar", "recovery-chart" ],
+  "start" : "2026-11-03T18:41:01.144422Z",
+  "end" : "2026-11-03T18:41:03.843649900Z",
+  "host" : {
+    "cpu" : "Intel(R) Core(TM) Ultra 9 275HX",
+    "cores" : 24,
+    "memory_bytes" : 33690722304,
+    "disk_bytes" : 1023035830272,
+    "free_disk_bytes" : 645714956288,
+    "operating_system" : "Windows 11 10.0 amd64"
+  },
+  "docker" : {
+    "version" : "29.9.2",
+    "operating_system" : "Docker Desktop",
+    "cpus" : 24,
+    "memory_bytes" : 16435421184
+  },
+  "services" : { },
+  "client_concurrency" : 0,
+  "trials" : [ ]
+}
