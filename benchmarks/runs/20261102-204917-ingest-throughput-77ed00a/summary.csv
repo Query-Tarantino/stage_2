@@ -1,0 +1,11 @@
+metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit
+ingest_throughput,"replicas=1,workers=4",403.27,12.20,15.14,399.15,419.97,419.97,books/s
+ingest_throughput_steady,"replicas=1,workers=4",431.00,13.51,16.77,423.48,449.56,449.56,books/s
+ingest_throughput,"replicas=1,workers=8",553.51,58.74,72.93,579.56,604.57,604.57,books/s
+ingest_throughput_steady,"replicas=1,workers=8",600.23,71.26,88.48,643.24,657.96,657.96,books/s
+ingest_throughput,"replicas=1,workers=16",610.36,47.13,58.52,633.83,635.23,635.23,books/s
+ingest_throughput_steady,"replicas=1,workers=16",651.04,55.30,68.66,680.09,689.52,689.52,books/s
+ingest_throughput,"replicas=2,workers=8",557.42,31.42,39.02,567.02,589.29,589.29,books/s
+ingest_throughput_steady,"replicas=2,workers=8",608.52,35.44,44.01,627.59,637.66,637.66,books/s
+ingest_throughput,"replicas=3,workers=8",525.76,27.40,34.03,516.39,565.29,565.29,books/s
+ingest_throughput_steady,"replicas=3,workers=8",581.46,31.89,39.59,567.96,626.22,626.22,books/s

@@ -1,0 +1,269 @@
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-query-3 Stopping 
+ Container stage_2-query-2 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-crawler-3 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-crawler-3 Stopped 
+ Container stage_2-crawler-3 Removing 
+ Container stage_2-crawler-3 Removed 
+ Container stage_2-query-2 Stopped 
+ Container stage_2-query-2 Removing 
+ Container stage_2-query-2 Removed 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-query-3 Stopped 
+ Container stage_2-query-3 Removing 
+ Container stage_2-query-3 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Image stage_2-query Building 
+ Image stage_2-indexer Building 
+ Image stage_2-control Building 
+ Image stage_2-crawler Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.33kB done
+#1 DONE 0.0s
+
+#2 [query internal] load build definition from Dockerfile
+#2 transferring dockerfile: 344B done
+#2 DONE 0.0s
+
+#3 [query internal] load metadata for docker.io/library/eclipse-temurin:25-jre
+#3 DONE 0.0s
+
+#4 [query internal] load .dockerignore
+#4 transferring context: 180B done
+#4 DONE 0.0s
+
+#5 [crawler 1/4] FROM docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5
+#5 resolve docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5 0.0s done
+#5 DONE 0.0s
+
+#6 [crawler internal] load build context
+#6 transferring context: 18.39MB 5.1s
+#6 ...
+
+#7 [indexer internal] load build context
+#7 ...
+
+#6 [crawler internal] load build context
+#6 transferring context: 32.81MB 9.2s done
+#6 DONE 9.2s
+
+#8 [control internal] load build context
+#8 transferring context: 32.83MB 9.2s done
+#8 DONE 9.2s
+
+#9 [query internal] load build context
+#9 transferring context: 32.81MB 9.2s done
+#9 DONE 9.2s
+
+#7 [indexer internal] load build context
+#7 transferring context: 32.82MB 9.2s done
+#7 DONE 9.2s
+
+#10 [crawler 4/4] COPY services/crawler/target/crawler-1.0-SNAPSHOT.jar /app/service.jar
+#10 CACHED
+
+#11 [control 4/4] COPY services/control/target/control-1.0-SNAPSHOT.jar /app/service.jar
+#11 CACHED
+
+#12 [indexer 4/4] COPY services/indexer/target/indexer-1.0-SNAPSHOT.jar /app/service.jar
+#12 CACHED
+
+#13 [indexer 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#13 CACHED
+
+#14 [indexer 3/4] WORKDIR /app
+#14 CACHED
+
+#15 [query 4/4] COPY services/query/target/query-1.0-SNAPSHOT.jar /app/service.jar
+#15 CACHED
+
+#16 [indexer] exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:2cc63e9314ff4d8a41d2e3ae9cb1c6a9d93b510a22f01571c63d3e7d533e463c done
+#16 exporting config sha256:2c5a66bc73755eb8c34a1892173bd38f9af9250cde88684a600cd713fa07bc2b done
+#16 exporting attestation manifest sha256:2c6380b0a5ba4dc504462e9def47ef98bb56f718287559ecf628da09260aab29 0.0s done
+#16 exporting manifest list sha256:0666f9ce62bb07c7ea93a339454b4558cfc67b886ea2c550f28fc4800ea94d3e 0.0s done
+#16 naming to docker.io/library/stage_2-indexer:latest
+#16 naming to docker.io/library/stage_2-indexer:latest done
+#16 unpacking to docker.io/library/stage_2-indexer:latest done
+#16 DONE 0.1s
+
+#17 [crawler] exporting to image
+#17 exporting layers done
+#17 exporting manifest sha256:78379ebdcbe0ca3a9bafd0f93e941d91e9df54890fdb2b1a0bb24f3b790b28b9 done
+#17 exporting config sha256:542cf9345a40b18de7bd7ce062748a430e05a026d94fbd72f162b7985fa13b2d done
+#17 exporting attestation manifest sha256:ecfe7c04a2c881342ca56bea64e76fc3d896afd66053a012ef15bf907f1b6213 0.0s done
+#17 exporting manifest list sha256:07f2fdfbd485ebf9bbb014fecef9d207d86945c087099178d5705fbf84d9b298 0.0s done
+#17 naming to docker.io/library/stage_2-crawler:latest done
+#17 unpacking to docker.io/library/stage_2-crawler:latest done
+#17 DONE 0.1s
+
+#18 [query] exporting to image
+#18 exporting layers done
+#18 exporting manifest sha256:e5bf37fc20cc913df806f4188d59a2fbaf7040343596216514a915b732e58915 done
+#18 exporting config sha256:57f5cf29d3ab32fb81a43a1ca21d9fa440b7007f3d31aa47747a08287b948463 done
+#18 exporting attestation manifest sha256:0bdeecf06c0e47d194e749eee8a939f1b1c0fc2e4db6f6156d9c46d5fb93f357 0.0s done
+#18 exporting manifest list sha256:5b73bd84fe93fdf3f3de7c43534e902182e93b20212d9d6d09ebb088652bd374 0.0s done
+#18 naming to docker.io/library/stage_2-query:latest done
+#18 unpacking to docker.io/library/stage_2-query:latest done
+#18 DONE 0.1s
+
+#19 [control] exporting to image
+#19 exporting layers done
+#19 exporting manifest sha256:32b6e2f04273607bfede6cc03a322e6f5562c576132ee9ea260ad6a059114ccd done
+#19 exporting config sha256:2ee1e292d810a4c98a6f6ece1d942a2a70809f03684e905227c70d65fd7d65e8 done
+#19 exporting attestation manifest sha256:c52f948fafc68b900d2553c73c633eab2ec2599cb3799074b38feecb4c190b38 0.0s done
+#19 exporting manifest list sha256:27d57f197cdb002728f7482a361c34a8fcc899355c093bc89143c865652892e8 0.0s done
+#19 naming to docker.io/library/stage_2-control:latest done
+#19 unpacking to docker.io/library/stage_2-control:latest done
+#19 DONE 0.1s
+
+#20 [crawler] resolving provenance for metadata file
+#20 DONE 0.0s
+
+#21 [control] resolving provenance for metadata file
+#21 DONE 0.0s
+
+#22 [query] resolving provenance for metadata file
+#22 DONE 0.0s
+
+#23 [indexer] resolving provenance for metadata file
+#23 DONE 0.0s
+ Image stage_2-query Built 
+ Image stage_2-control Built 
+ Image stage_2-crawler Built 
+ Image stage_2-indexer Built 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-3 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-query-2 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-query-1 Creating 
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-crawler-3 Creating 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-3 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-query-3 Created 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-query-2 Created 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-query-2 Starting 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-control-1 Started 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-query-2 Started 
+ Container stage_2-query-3 Starting 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-query-3 Started 
+ Container stage_2-query-1 Starting 
+ Container stage_2-crawler-3 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-query-1 Started 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Started run 20261103-104136-recovery-14-r3-05e4b5a in benchmarks\runs\20261103-104136-recovery-14-r3-05e4b5a\manifest.json
+Opened run 20261103-104136-recovery-14-r3-05e4b5a with failed_at 2026-11-03T10:41:56.454Z
+ Container stage_2-bench-run-1cbeed22642f Creating 
+ Container stage_2-bench-run-1cbeed22642f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@38425407, com.mongodb.Jep395RecordCodecProvider@43bc63a3, com.mongodb.KotlinCodecProvider@702657cc, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+[cluster-6ae9ba63389594ffe86d9650-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=19473734, minRoundTripTimeNanos=0}
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [No book is seeded yet]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [20 books are still DOWNLOADED]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 0 checks fail: []
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 0 checks fail: []
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 0 checks fail: []
+8b311684ba9d07fff288f9b0da57f9dffbf81d798609cc8d35f2cd98eb4c9218
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - Recovered in 0.896 s; checks in benchmarks/runs/20261103-104136-recovery-14-r3-05e4b5a/checks.json
+[main] INFO org.ulpgc.tarantino.bench.coordination.CoordinationTool - Wrote the coordination times of 20 published books to benchmarks\runs\20261103-104136-recovery-14-r3-05e4b5a\coordination.csv
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Finished run 20261103-104136-recovery-14-r3-05e4b5a in benchmarks\runs\20261103-104136-recovery-14-r3-05e4b5a\manifest.json

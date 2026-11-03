@@ -66,6 +66,28 @@ class WaitCommandTest {
         assertEquals(START.plus(phase), clock.instant());
     }
 
+    @Test
+    void returnsOnceTheGenerationReachesTheTargetThroughAnswersThatFailed() {
+        Deque<Object> answers = new ArrayDeque<>(List.of(
+                generation(1), new UncheckedIOException(new IOException("refused")), new Answer(503, TarantinoJson.mapper().missingNode()),
+                generation(2)));
+
+        assertTrue(new WaitCommand(stack(answers), clock, clock.pause()).awaitAtLeast(WaitCommand.GENERATION, 2, WaitCommand.DEFAULT_TIMEOUT));
+        assertEquals(START.plus(WaitCommand.POLL.multipliedBy(3)), clock.instant());
+    }
+
+    @Test
+    void acceptsAGenerationBeyondTheTargetAndGivesUpBelowIt() {
+        assertTrue(new WaitCommand(stack(new ArrayDeque<>(List.of(generation(3)))), clock, clock.pause())
+                .awaitAtLeast(WaitCommand.GENERATION, 2, WaitCommand.DEFAULT_TIMEOUT));
+        assertFalse(new WaitCommand(stack(new ArrayDeque<>(List.of(generation(1)))), clock, clock.pause())
+                .awaitAtLeast(WaitCommand.GENERATION, 2, WaitCommand.DEFAULT_TIMEOUT));
+    }
+
+    private static Answer generation(int generation) {
+        return new Answer(200, TarantinoJson.mapper().valueToTree(Map.of("generation", generation)));
+    }
+
     private static Answer status(int downloading, int booksToDownload) {
         return new Answer(200, TarantinoJson.mapper().valueToTree(Map.of(
                 "books", Map.of("DOWNLOADING", downloading),

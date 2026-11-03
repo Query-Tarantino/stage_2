@@ -65,11 +65,11 @@ class BookCoordinationTest {
 
     private static TransitionLine book(int bookId, String from, String to, String batchId, Integer enqueuedSecond, int second) {
         Instant enqueuedAt = enqueuedSecond == null ? null : START.plusSeconds(enqueuedSecond);
-        return new TransitionLine(TransitionLine.BOOK, String.valueOf(bookId), from, to, batchId, enqueuedAt, START.plusSeconds(second));
+        return new TransitionLine(TransitionLine.BOOK, String.valueOf(bookId), from, to, batchId, null, enqueuedAt, START.plusSeconds(second));
     }
 
     private static TransitionLine batch(String batchId, String from, String to, int second) {
-        return new TransitionLine(TransitionLine.BATCH, batchId, from, to, null, null, START.plusSeconds(second));
+        return new TransitionLine(TransitionLine.BATCH, batchId, from, to, null, null, null, START.plusSeconds(second));
     }
 
     private static Duration seconds(int seconds) {

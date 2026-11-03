@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.bench.charts;
 import org.junit.jupiter.api.Test;
 import org.knowm.xchart.CategoryChart;
 import org.ulpgc.tarantino.bench.ingest.IngestThroughput;
+import org.ulpgc.tarantino.bench.throughput.ThroughputWindow;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +29,6 @@ class IngestChartTest {
     }
 
     private static IngestThroughput throughput(int wholeBooksPerSecond, int steadyBooksPerSecond) {
-        return new IngestThroughput(new IngestThroughput.Window(wholeBooksPerSecond, 1.0), new IngestThroughput.Window(steadyBooksPerSecond, 1.0));
+        return new IngestThroughput(new ThroughputWindow(wholeBooksPerSecond, 1.0), new ThroughputWindow(steadyBooksPerSecond, 1.0));
     }
 }

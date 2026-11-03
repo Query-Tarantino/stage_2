@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
  * A transition line of SPEC §4.8 read back from {@code docker compose logs}, whatever prefix the log puts in front.
  * {@code null} marks a {@code -}.
  */
-public record TransitionLine(String entity, String id, String from, String to, String batchId, Instant enqueuedAt, Instant at) {
+public record TransitionLine(String entity, String id, String from, String to, String batchId, Integer generation, Instant enqueuedAt, Instant at) {
 
     public static final String BOOK = "book";
     public static final String BATCH = "batch";
@@ -29,7 +29,8 @@ public record TransitionLine(String entity, String id, String from, String to, S
                 .collect(Collectors.toMap(field -> field.substring(0, field.indexOf(KEY_VALUE)),
                         field -> field.substring(field.indexOf(KEY_VALUE) + 1), (first, second) -> first));
         return Optional.of(new TransitionLine(fields.get("entity"), fields.get("id"), orNull(fields.get("from")),
-                fields.get("to"), orNull(fields.get("batch_id")), instant(fields.get("enqueued_at")), instant(fields.get("at"))));
+                fields.get("to"), orNull(fields.get("batch_id")), generation(fields.get("generation")),
+                instant(fields.get("enqueued_at")), instant(fields.get("at"))));
     }
 
     public boolean isBook() {
@@ -46,6 +47,10 @@ public record TransitionLine(String entity, String id, String from, String to, S
 
     private static String orNull(String value) {
         return value == null || value.equals(NOT_APPLICABLE) ? null : value;
+    }
+
+    private static Integer generation(String value) {
+        return orNull(value) == null ? null : Integer.valueOf(value);
     }
 
     private static Instant instant(String value) {

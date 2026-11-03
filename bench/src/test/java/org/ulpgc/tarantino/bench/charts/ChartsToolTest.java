@@ -66,6 +66,44 @@ class ChartsToolTest {
     }
 
     @Test
+    void drawsTheIndexThroughputOfARunWithItsIndexCsv() throws IOException {
+        Path run = Files.createDirectories(runs.resolve("20261102-180000-index-throughput-85750aa"));
+        Path trialLogs = Files.createDirectories(run.resolve("logs").resolve("batch-100-replicas-1-rep-1"));
+        String transition = " INFO org.ulpgc.tarantino.common.operations.TransitionLog - transition entity=";
+        Files.write(trialLogs.resolve("indexer.log"), List.of(
+                "indexer-1  | 2026-11-02T18:00:00Z" + transition + "book id=1 from=DOWNLOADED to=INDEXING batch_id=b generation=2 enqueued_at=- at=2026-11-02T18:00:00Z replica=a",
+                "indexer-1  | 2026-11-02T18:00:02Z" + transition + "batch id=b from=WRITING to=PUBLISHED batch_id=- generation=2 enqueued_at=- at=2026-11-02T18:00:02Z replica=a",
+                "indexer-1  | 2026-11-02T18:00:02Z" + transition + "book id=1 from=INDEXING to=PUBLISHED batch_id=b generation=2 enqueued_at=- at=2026-11-02T18:00:02Z replica=a"));
+        Files.writeString(run.resolve("index.csv"), "");
+
+        assertEquals(ChartsTool.DONE, ChartsTool.run(List.of(run.toString())));
+
+        assertTrue(Files.exists(run.resolve("charts").resolve("index-throughput.png")));
+    }
+
+    @Test
+    void drawsTheSearchLatencyOfARunWithTrialLatenciesInItsSummary() throws IOException {
+        Path run = Files.createDirectories(runs.resolve("20261102-184016-search-latency-62583e8"));
+        Files.write(run.resolve("summary.csv"), List.of(
+                "metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
+                "search_latency,\"clients-8-threads-32-replicas-1-rep-1\",2340.56,903.19,2.77,2053.00,4081.00,5056.00,us"));
+
+        assertEquals(ChartsTool.DONE, ChartsTool.run(List.of(run.toString())));
+
+        assertTrue(Files.exists(run.resolve("charts").resolve("search-latency.png")));
+    }
+
+    @Test
+    void failsWhenTheSummaryHasNoTrialLatencyToDraw() throws IOException {
+        Path run = Files.createDirectories(runs.resolve("20261102-184016-recovery-04-r2-3f2a9c1"));
+        Files.write(run.resolve("summary.csv"), List.of(
+                "metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
+                "recovery_seconds,\"N=2\",12.50,0.00,0.00,12.50,12.50,12.50,s"));
+
+        assertEquals(ChartsTool.FAILED, ChartsTool.run(List.of(run.toString())));
+    }
+
+    @Test
     void failsWhenTheRunHasNothingToDraw() throws IOException {
         Path run = Files.createDirectories(runs.resolve("20261110-153000-coordination-cost-3f2a9c1"));
 

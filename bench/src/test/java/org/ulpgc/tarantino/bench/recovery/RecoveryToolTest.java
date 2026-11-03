@@ -25,6 +25,15 @@ class RecoveryToolTest {
     }
 
     @Test
+    void waitsForAGenerationOnlyWithItsNumber() {
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("generation")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("generation", "0")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("generation", "two")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("generation", "2", "0")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("generation", "2", "900", "1")));
+    }
+
+    @Test
     void recoversOnlyATwoDigitScriptWithAnIsoFailureInstant() {
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.recovery(List.of("4", "run", "2026-11-10T15:30:00Z")));
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.recovery(List.of("04", "run", "2026-11-10 15:30:00")));
