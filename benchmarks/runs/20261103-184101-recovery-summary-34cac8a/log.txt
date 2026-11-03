@@ -1,0 +1,1 @@
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote the recovery time of 41 runs to C:\Users\javie\Desktop\CLASE\TERCERO DATOS\BD\PROYECTO\stage_2\benchmarks\runs\20261103-184101-recovery-summary-34cac8a\charts\recovery-seconds.png
