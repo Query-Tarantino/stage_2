@@ -20,7 +20,7 @@ state_hypotheses() {
     echo "H1: books per second rise from 1 to 100 books per batch and flatten from 100 to 250, because each batch pays a fixed cost (its lease, the postings bulkWrites, publishing and marking) that more books share, while tokenizing and writing postings cost the same per book"
     echo "Series replicas: 1, 2 and 3 indexer replicas with batches of 100"
     echo "H2: books per second grow with replicas but less than linearly: three indexing threads do not run out of CPU, and every replica writes its postings to the same Mongo, which becomes the bottleneck"
-    echo "H3: batches of 250 fit in -Xmx512m without OutOfMemoryError but spend more time in GC than batches of 100, which adds to the flattening of H1"
+    echo "H3: batches of 250 fit in -Xmx512m without OutOfMemoryError, but the indexer's memory in stats.csv peaks higher than with batches of 100, because a batch keeps the term frequencies and postings of all its books until it writes them"
 }
 
 run_jmh() {
