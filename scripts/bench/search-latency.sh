@@ -10,6 +10,8 @@ readonly THREADS_LIST="${TARANTINO_THREADS_LIST:-8 32 128}"
 readonly FRONTEND_URL="${TARANTINO_FRONTEND_URL:-http://localhost:8080}"
 readonly MONGO_URI="${TARANTINO_MONGO_URI:-mongodb://mongo:27017/tarantino}"
 
+trial_started_at=""
+
 to_windows_path() {
     local path=$1
     if command -v cygpath >/dev/null 2>&1; then
@@ -39,7 +41,7 @@ close_run() {
     fi
     summarise_run
     java -jar "$BENCH_JAR" manifest finish "$run_dir"
-    java -jar "$BENCH_JAR" charts "$run_dir" 2>/dev/null || true
+    java -jar "$BENCH_JAR" charts "$run_dir"
     echo "Results in $run_dir"
 }
 
@@ -133,49 +135,54 @@ run_jmh() {
     fi
 }
 
+save_trial_logs() {
+    local trial_logs="$run_dir/logs/$current_trial"
+    mkdir -p "$trial_logs"
+    local service
+    for service in "${SERVICES[@]}"; do
+        "${COMPOSE[@]}" logs --no-color --timestamps --since "$trial_started_at" "$service" > "$trial_logs/$service.log"
+    done
+    current_trial=""
+}
+
 run_search_trial() {
     local clients=$1 threads=$2 replicas=$3 repetition=$4
     local trial
     trial=$(search_trial_name "$clients" "$threads" "$replicas" "$repetition")
     current_trial="$trial"
+    trial_started_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     echo "=== Trial $trial: clients=$clients, threads=$threads, replicas=$replicas, rep=$repetition ==="
+    recreate_query "$replicas" "$threads"
+    wait_for_query_ready
     record_trial
-    local trial_csv="$run_dir/load/${trial}.csv"
+    local trial_csv="$run_dir/load/${trial}.csv.gz"
     java -jar "$BENCH_JAR" load "$FRONTEND_URL" "$run_dir" "$clients" "$trial"
+    local non_200
+    non_200=$(gzip -dc "$trial_csv" 2>/dev/null | awk -F',' 'NR > 1 && $3 != "200" { count++ } END { print count+0 }' || echo 0)
+    echo "Trial $trial non-200 responses: $non_200"
     java -jar "$BENCH_JAR" summary "$run_dir" "$trial" "$trial_csv" search_latency
     save_trial_logs
 }
 
 measure() {
+    local configurations=(
+        "1 32 1"
+        "8 32 1"
+        "32 32 1"
+        "64 32 1"
+        "32 8 1"
+        "32 128 1"
+        "32 32 2"
+        "32 32 3"
+    )
     local repetition
     for repetition in $(seq 1 "$REPETITIONS"); do
         echo "=== Interleaved Repetition $repetition of $REPETITIONS ==="
-
-        configure_query "$BASELINE_REPLICAS" "$BASELINE_THREADS"
-        wait_for_query_ready
-        local client_count
-        for client_count in $CLIENTS_LIST; do
-            run_search_trial "$client_count" "$BASELINE_THREADS" "$BASELINE_REPLICAS" "$repetition"
+        local cfg c t r
+        for cfg in "${configurations[@]}"; do
+            read -r c t r <<< "$cfg"
+            run_search_trial "$c" "$t" "$r" "$repetition"
         done
-
-        recreate_query 1 8
-        wait_for_query_ready
-        run_search_trial 32 8 1 "$repetition"
-
-        recreate_query 1 128
-        wait_for_query_ready
-        run_search_trial 32 128 1 "$repetition"
-
-        recreate_query 1 "$BASELINE_THREADS"
-        wait_for_query_ready
-
-        configure_query 2 "$BASELINE_THREADS"
-        wait_for_query_ready
-        run_search_trial 32 "$BASELINE_THREADS" 2 "$repetition"
-
-        configure_query 3 "$BASELINE_THREADS"
-        wait_for_query_ready
-        run_search_trial 32 "$BASELINE_THREADS" 3 "$repetition"
     done
 }
 
@@ -195,24 +202,20 @@ summarise_run() {
     for cfg in "${unique_configs[@]}"; do
         read -r c t r <<< "$cfg"
         local config_label="clients=${c},threads=${t},replicas=${r}"
-        local pooled_csv="$run_dir/load/clients_${c}_threads_${t}_replicas_${r}.csv"
-        rm -f "$pooled_csv"
-        local rep first=1
+        local pooled_gz="$run_dir/load/pooled.csv.gz"
+        rm -f "$pooled_gz"
+        local rep
         for rep in $(seq 1 "$REPETITIONS"); do
             local trial
             trial=$(search_trial_name "$c" "$t" "$r" "$rep")
-            local trial_csv="$run_dir/load/${trial}.csv"
+            local trial_csv="$run_dir/load/${trial}.csv.gz"
             if [[ -f "$trial_csv" ]]; then
-                if (( first )); then
-                    cat "$trial_csv" > "$pooled_csv"
-                    first=0
-                else
-                    tail -n +2 "$trial_csv" >> "$pooled_csv"
-                fi
+                cat "$trial_csv" >> "$pooled_gz"
             fi
         done
-        if [[ -f "$pooled_csv" ]]; then
-            java -jar "$BENCH_JAR" summary "$run_dir" "$config_label" "$pooled_csv" search_latency
+        if [[ -f "$pooled_gz" ]]; then
+            java -jar "$BENCH_JAR" summary "$run_dir" "$config_label" "$pooled_gz" search_latency
+            rm -f "$pooled_gz"
         fi
     done
 }

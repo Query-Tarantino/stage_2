@@ -4,10 +4,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,15 +58,40 @@ class SummaryStatsTest {
     void shouldExecuteMainWithCustomMetricName(@TempDir Path tempDir) throws IOException {
         Path loadDir = tempDir.resolve("load");
         Files.createDirectories(loadDir);
-        Path requestsCsv = loadDir.resolve("requests.csv");
-        Files.writeString(requestsCsv, "instant,path,status,latency_us\n2026-10-27T12:00:00Z,/search,200,12345\n");
+        Path trialGz = loadDir.resolve("trial.csv.gz");
+        try (GZIPOutputStream gos = new GZIPOutputStream(Files.newOutputStream(trialGz))) {
+            gos.write("instant,path,status,latency_us\n2026-10-27T12:00:00Z,/search,200,12345\n".getBytes(StandardCharsets.UTF_8));
+        }
 
-        SummaryStats.main(new String[]{tempDir.toString(), "series=clients,clients=32", requestsCsv.toString(), "custom_metric"});
+        SummaryStats.main(new String[]{tempDir.toString(), "series=clients,clients=32", trialGz.toString(), "custom_metric"});
 
         Path summaryCsv = tempDir.resolve("summary.csv");
         assertTrue(Files.exists(summaryCsv));
         List<String> lines = Files.readAllLines(summaryCsv);
         assertEquals(2, lines.size());
         assertTrue(lines.get(1).startsWith("custom_metric,\"series=clients,clients=32\",12345.00,0.00,0.00,12345.00,12345.00,12345.00,us"));
+    }
+
+    @Test
+    void shouldReadLatenciesFromConcatenatedGzip(@TempDir Path tempDir) throws IOException {
+        ByteArrayOutputStream member1 = new ByteArrayOutputStream();
+        try (GZIPOutputStream gos = new GZIPOutputStream(member1)) {
+            gos.write("instant,path,status,latency_us\n2026-11-03T10:00:00Z,/search,200,1000\n2026-11-03T10:00:01Z,/search,503,9999\n"
+                    .getBytes(StandardCharsets.UTF_8));
+        }
+        ByteArrayOutputStream member2 = new ByteArrayOutputStream();
+        try (GZIPOutputStream gos = new GZIPOutputStream(member2)) {
+            gos.write("instant,path,status,latency_us\n2026-11-03T10:00:02Z,/search,200,2000\n"
+                    .getBytes(StandardCharsets.UTF_8));
+        }
+
+        Path gzPath = tempDir.resolve("pooled.csv.gz");
+        try (OutputStream outputStream = Files.newOutputStream(gzPath)) {
+            outputStream.write(member1.toByteArray());
+            outputStream.write(member2.toByteArray());
+        }
+
+        List<Long> latencies = SummaryStats.readLatencies(gzPath);
+        assertEquals(List.of(1000L, 2000L), latencies);
     }
 }

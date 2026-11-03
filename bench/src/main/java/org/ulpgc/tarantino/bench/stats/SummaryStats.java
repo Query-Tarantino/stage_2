@@ -2,8 +2,11 @@ package org.ulpgc.tarantino.bench.stats;
 
 import org.apache.commons.math3.distribution.TDistribution;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +14,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Locale;
+import java.util.zip.GZIPInputStream;
 
 /**
  * The figures of {@code summary.csv} (SPEC §9): mean, sample standard deviation, the half-width of the 95 % CI of the
@@ -81,8 +85,12 @@ public class SummaryStats {
     }
 
     public static List<Long> readLatencies(Path requestsCsv) throws IOException {
-        try (var lines = Files.lines(requestsCsv, StandardCharsets.UTF_8)) {
-            return lines.skip(1)
+        InputStream stream = Files.newInputStream(requestsCsv);
+        if (requestsCsv.getFileName().toString().endsWith(".gz")) {
+            stream = new GZIPInputStream(stream);
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            return reader.lines()
                     .map(line -> line.split(","))
                     .filter(parts -> parts.length >= 4 && "200".equals(parts[2].trim()))
                     .map(parts -> Long.parseLong(parts[3].trim()))
@@ -95,10 +103,11 @@ public class SummaryStats {
             Path runDir = Paths.get(args.length > 0 ? args[0] : "benchmarks/runs/latest");
             String config = args.length > 1 ? args[1] : "default";
             String sanitizedConfig = config.replaceAll("[^a-zA-Z0-9_=-]", "_");
+            Path specificGz = runDir.resolve("load").resolve(sanitizedConfig + ".csv.gz");
             Path specificCsv = runDir.resolve("load").resolve(sanitizedConfig + ".csv");
             Path requestsCsv = args.length > 2 && !args[2].isBlank()
                     ? Paths.get(args[2])
-                    : (Files.exists(specificCsv) ? specificCsv : runDir.resolve("load/requests.csv"));
+                    : (Files.exists(specificGz) ? specificGz : specificCsv);
             String metricName = args.length > 3 && !args[3].isBlank() ? args[3] : "search_latency";
             Path summaryCsv = runDir.resolve(FILE_NAME);
 

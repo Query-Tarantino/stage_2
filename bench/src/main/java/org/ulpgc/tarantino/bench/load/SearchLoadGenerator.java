@@ -6,6 +6,7 @@ import org.ulpgc.tarantino.bench.run.RunContext;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -24,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPOutputStream;
 
 public class SearchLoadGenerator {
 
@@ -71,13 +73,10 @@ public class SearchLoadGenerator {
     public void run(int concurrency, Duration warmupDuration, Duration measurementDuration, String configName)
             throws IOException, InterruptedException {
         Path loadDir = runContext.loadDirectory();
-        Path aggregateFile = loadDir.resolve("requests.csv");
-        boolean aggregateExists = Files.exists(aggregateFile);
-        Path configFile = null;
-        if (configName != null && !configName.isBlank()) {
-            String sanitizedConfig = configName.replaceAll("[^a-zA-Z0-9_=-]", "_");
-            configFile = loadDir.resolve(sanitizedConfig + ".csv");
-        }
+        String sanitizedConfig = (configName != null && !configName.isBlank())
+                ? configName.replaceAll("[^a-zA-Z0-9_=-]", "_")
+                : "default";
+        Path trialFile = loadDir.resolve(sanitizedConfig + ".csv.gz");
 
         LOGGER.info("Starting closed loop load generator: {} clients, warmup={}, measurement={}",
                 concurrency, warmupDuration, measurementDuration);
@@ -89,17 +88,11 @@ public class SearchLoadGenerator {
         CountDownLatch latch = new CountDownLatch(concurrency);
         Object writeLock = new Object();
 
-        try (BufferedWriter aggregateWriter = Files.newBufferedWriter(
-                aggregateFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-             BufferedWriter configWriter = configFile != null ? Files.newBufferedWriter(
-                     configFile, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null) {
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                new GZIPOutputStream(Files.newOutputStream(trialFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)),
+                StandardCharsets.UTF_8))) {
 
-            if (!aggregateExists) {
-                aggregateWriter.write("instant,path,status,latency_us\n");
-            }
-            if (configWriter != null) {
-                configWriter.write("instant,path,status,latency_us\n");
-            }
+            writer.write("instant,path,status,latency_us\n");
 
             try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
                 for (int clientIndex = 0; clientIndex < concurrency; clientIndex++) {
@@ -108,7 +101,7 @@ public class SearchLoadGenerator {
                             while (!stop.get()) {
                                 int nextQuery = queryIndex.getAndIncrement();
                                 String query = queries.get(Math.floorMod(nextQuery, queries.size()));
-                                executeRequest(client, query, aggregateWriter, configWriter, recording, writeLock);
+                                executeRequest(client, query, writer, recording, writeLock);
                             }
                         } catch (Exception exception) {
                             LOGGER.error("Client error in closed loop: {}", exception.getMessage());
@@ -138,8 +131,7 @@ public class SearchLoadGenerator {
     private void executeRequest(
             HttpClient client,
             String query,
-            BufferedWriter aggregateWriter,
-            BufferedWriter configWriter,
+            BufferedWriter writer,
             AtomicBoolean recording,
             Object writeLock) throws IOException, InterruptedException {
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
@@ -158,15 +150,10 @@ public class SearchLoadGenerator {
         }
         long latencyUs = (System.nanoTime() - startNanos) / 1000;
 
-        if (recording.get() && (aggregateWriter != null || configWriter != null)) {
+        if (recording.get() && writer != null) {
             String line = instant + "," + relativePath + "," + status + "," + latencyUs + "\n";
             synchronized (writeLock) {
-                if (aggregateWriter != null) {
-                    aggregateWriter.write(line);
-                }
-                if (configWriter != null) {
-                    configWriter.write(line);
-                }
+                writer.write(line);
             }
         }
     }
