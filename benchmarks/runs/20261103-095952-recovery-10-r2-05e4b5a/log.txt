@@ -1,0 +1,451 @@
+ Container stage_2-crawler-2 Stopping 
+ Container stage_2-nginx-1 Stopping 
+ Container stage_2-hazelcast-1 Stopping 
+ Container stage_2-control-1 Stopping 
+ Container stage_2-crawler-1 Stopping 
+ Container stage_2-indexer-1 Stopping 
+ Container stage_2-query-2 Stopping 
+ Container stage_2-query-1 Stopping 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-mongo-1 Stopping 
+ Container stage_2-hazelcast-1 Stopped 
+ Container stage_2-hazelcast-1 Removing 
+ Container stage_2-hazelcast-1 Removed 
+ Container stage_2-nginx-1 Stopped 
+ Container stage_2-nginx-1 Removing 
+ Container stage_2-nginx-1 Removed 
+ Container stage_2-crawler-1 Stopped 
+ Container stage_2-crawler-1 Removing 
+ Container stage_2-crawler-1 Removed 
+ Container stage_2-crawler-2 Stopped 
+ Container stage_2-crawler-2 Removing 
+ Container stage_2-crawler-2 Removed 
+ Container stage_2-query-2 Stopped 
+ Container stage_2-query-2 Removing 
+ Container stage_2-query-2 Removed 
+ Container stage_2-control-1 Stopped 
+ Container stage_2-control-1 Removing 
+ Container stage_2-control-1 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-mongo-1 Stopped 
+ Container stage_2-mongo-1 Removing 
+ Container stage_2-mongo-1 Removed 
+ Container stage_2-query-1 Stopped 
+ Container stage_2-query-1 Removing 
+ Container stage_2-query-1 Removed 
+ Container stage_2-indexer-1 Stopped 
+ Container stage_2-indexer-1 Removing 
+ Container stage_2-indexer-1 Removed 
+ Network stage_2_default Removing 
+ Volume stage_2_datalake Removing 
+ Volume stage_2_mongo-data Removing 
+ Volume stage_2_datalake Removed 
+ Volume stage_2_mongo-data Removed 
+ Network stage_2_default Removed 
+ Image stage_2-query Building 
+ Image stage_2-crawler Building 
+ Image stage_2-indexer Building 
+ Image stage_2-control Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.33kB done
+#1 DONE 0.0s
+
+#2 [crawler internal] load build definition from Dockerfile
+#2 transferring dockerfile: 344B done
+#2 DONE 0.0s
+
+#3 [control internal] load metadata for docker.io/library/eclipse-temurin:25-jre
+#3 DONE 0.1s
+
+#4 [control internal] load .dockerignore
+#4 transferring context: 180B done
+#4 DONE 0.0s
+
+#5 [crawler 1/4] FROM docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5
+#5 resolve docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5 0.0s done
+#5 DONE 0.0s
+
+#6 [query internal] load build context
+#6 transferring context: 16.49MB 5.0s
+#6 ...
+
+#7 [indexer internal] load build context
+#7 ...
+
+#6 [query internal] load build context
+#6 ...
+
+#8 [crawler internal] load build context
+#8 transferring context: 32.81MB 9.9s done
+#8 DONE 9.9s
+
+#9 [crawler 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [crawler 3/4] WORKDIR /app
+#10 CACHED
+
+#11 [crawler 4/4] COPY services/crawler/target/crawler-1.0-SNAPSHOT.jar /app/service.jar
+#11 CACHED
+
+#12 [crawler] exporting to image
+#12 exporting layers done
+#12 exporting manifest sha256:78379ebdcbe0ca3a9bafd0f93e941d91e9df54890fdb2b1a0bb24f3b790b28b9 done
+#12 exporting config sha256:542cf9345a40b18de7bd7ce062748a430e05a026d94fbd72f162b7985fa13b2d done
+#12 exporting attestation manifest sha256:4dff01266c73f9ff818bfb6a04b83e32d1057571c0f332a7938c9530aa17bee3 0.0s done
+#12 exporting manifest list sha256:c1b1fe88909051e3cc5da6f3e7e603dc3e38b1ea734b7cfa22ac348abca8d7fb 0.0s done
+#12 naming to docker.io/library/stage_2-crawler:latest done
+#12 unpacking to docker.io/library/stage_2-crawler:latest done
+#12 DONE 0.1s
+
+#6 [query internal] load build context
+#6 transferring context: 32.81MB 10.0s done
+#6 DONE 10.0s
+
+#13 [control internal] load build context
+#13 transferring context: 32.83MB 10.0s done
+#13 DONE 10.0s
+
+#14 [control 4/4] COPY services/control/target/control-1.0-SNAPSHOT.jar /app/service.jar
+#14 CACHED
+
+#7 [indexer internal] load build context
+#7 transferring context: 32.82MB 10.0s done
+#7 DONE 10.0s
+
+#15 [query 4/4] COPY services/query/target/query-1.0-SNAPSHOT.jar /app/service.jar
+#15 CACHED
+
+#9 [indexer 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [indexer 3/4] WORKDIR /app
+#10 CACHED
+
+#16 [indexer 4/4] COPY services/indexer/target/indexer-1.0-SNAPSHOT.jar /app/service.jar
+#16 CACHED
+
+#17 [crawler] resolving provenance for metadata file
+#17 DONE 0.0s
+
+#18 [query] exporting to image
+#18 exporting layers done
+#18 exporting manifest sha256:e5bf37fc20cc913df806f4188d59a2fbaf7040343596216514a915b732e58915 done
+#18 exporting config sha256:57f5cf29d3ab32fb81a43a1ca21d9fa440b7007f3d31aa47747a08287b948463 done
+#18 exporting attestation manifest sha256:61624a3051f895d22d0e687bfa3db87502c3c4b2ed1252037fbe2a13c42b182f 0.0s done
+#18 exporting manifest list sha256:3f03194aab0f42d6c31be74aa989e5b40aff1f393b50d725ef3c929527d5989a 0.0s done
+#18 naming to docker.io/library/stage_2-query:latest done
+#18 unpacking to docker.io/library/stage_2-query:latest done
+#18 DONE 0.1s
+
+#19 [control] exporting to image
+#19 exporting layers done
+#19 exporting manifest sha256:32b6e2f04273607bfede6cc03a322e6f5562c576132ee9ea260ad6a059114ccd done
+#19 exporting config sha256:2ee1e292d810a4c98a6f6ece1d942a2a70809f03684e905227c70d65fd7d65e8 done
+#19 exporting attestation manifest sha256:d96267c87bd11f60651424c29789119b212f4cf5d70921970e5f8bebe25dfea8 0.0s done
+#19 exporting manifest list sha256:d2cce26e477f594a9236f9c41e2bdbb48e065e235d4362816c6a41724bb1c3c4 0.0s done
+#19 naming to docker.io/library/stage_2-control:latest done
+#19 unpacking to docker.io/library/stage_2-control:latest 0.0s done
+#19 DONE 0.1s
+
+#20 [indexer] exporting to image
+#20 exporting layers done
+#20 exporting manifest sha256:2cc63e9314ff4d8a41d2e3ae9cb1c6a9d93b510a22f01571c63d3e7d533e463c 0.0s done
+#20 exporting config sha256:2c5a66bc73755eb8c34a1892173bd38f9af9250cde88684a600cd713fa07bc2b done
+#20 exporting attestation manifest sha256:68c6ba4290716277c9499e800fe2b3d319722ed40d81f86897748115070d265c 0.0s done
+#20 exporting manifest list sha256:db6b21262d6d7d5c1696a0c1fa0e388f52be10a25186f60dc9c3467b6df51841 0.0s done
+#20 naming to docker.io/library/stage_2-indexer:latest done
+#20 unpacking to docker.io/library/stage_2-indexer:latest done
+#20 DONE 0.1s
+
+#21 [control] resolving provenance for metadata file
+#21 DONE 0.0s
+
+#22 [query] resolving provenance for metadata file
+#22 DONE 0.0s
+
+#23 [indexer] resolving provenance for metadata file
+#23 DONE 0.0s
+ Image stage_2-crawler Built 
+ Image stage_2-indexer Built 
+ Image stage_2-query Built 
+ Image stage_2-control Built 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-2 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-query-1 Creating 
+ Container stage_2-crawler-2 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-query-1 Created 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-query-2 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-2 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-crawler-2 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-control-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-crawler-2 Started 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-query-2 Starting 
+ Container stage_2-control-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-query-2 Started 
+ Container stage_2-bench-run-ea0ccad8552e Creating 
+ Container stage_2-bench-run-ea0ccad8552e Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - INDEXING reached 1
+ Container stage_2-indexer-2 Paused 
+ Container stage_2-indexer-1 Paused 
+ Container stage_2-indexer-2 Unpaused 
+ Container stage_2-indexer-1 Unpaused 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Started run 20261103-095952-recovery-10-r2-05e4b5a in benchmarks\runs\20261103-095952-recovery-10-r2-05e4b5a\manifest.json
+Opened run 20261103-095952-recovery-10-r2-05e4b5a with failed_at 2026-11-03T09:59:41.949Z
+ Container stage_2-bench-run-2184898b2db9 Creating 
+ Container stage_2-bench-run-2184898b2db9 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@6c6cb480, com.mongodb.Jep395RecordCodecProvider@3c46e67a, com.mongodb.KotlinCodecProvider@c730b35, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+[cluster-6ae9b09b43526bbefa6d979a-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=23775222, minRoundTripTimeNanos=0}
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2730 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2720 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2710 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2695 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2680 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2670 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2660 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2650 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2635 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2625 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2615 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2605 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2590 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2580 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2580 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2565 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2555 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2540 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2525 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2510 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2495 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2480 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2465 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2455 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2435 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2420 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2410 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2395 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2380 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2370 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2360 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2340 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2325 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2315 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2305 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2290 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2275 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2265 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2255 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2245 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2230 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2220 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2205 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2195 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2180 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2180 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2175 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2175 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2170 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2160 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2160 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2145 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2135 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2125 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2110 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2100 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2095 books are still DOWNLOADED, 5 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2080 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2070 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2060 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2040 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2030 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2020 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [2005 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1995 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1975 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1960 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1950 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1935 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1920 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1910 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1890 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1875 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1865 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1850 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1840 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1830 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1820 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1810 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1790 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1780 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1770 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1750 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1725 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1715 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1700 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1690 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1680 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1665 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1655 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1640 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1630 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1615 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1605 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1590 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1580 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1570 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1555 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1540 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1535 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1525 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1505 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1490 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1480 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1465 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1450 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1440 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1430 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1405 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1375 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1365 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1355 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1340 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1325 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1310 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1305 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1290 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1280 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1260 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1245 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1240 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1225 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1210 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1200 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1185 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1170 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1145 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1125 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1100 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1090 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1075 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1065 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1050 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1035 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1025 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1010 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [1000 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [980 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [970 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [950 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [940 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [920 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [915 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [895 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [890 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [875 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [855 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [850 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [830 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [820 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [805 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [790 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [780 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [770 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [760 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [750 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [735 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [725 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [705 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [685 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [670 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [655 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [645 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [630 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [620 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [605 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [590 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [575 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [565 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [555 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [545 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [525 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [515 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [500 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [485 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [470 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [455 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [445 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [425 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [410 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [395 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [385 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [370 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [355 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [345 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [330 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [315 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [300 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [290 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [275 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [265 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [245 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [230 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [210 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [195 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [185 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [170 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [155 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [135 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [120 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [105 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [90 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [80 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [55 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [25 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 2 checks fail: [5 books are still DOWNLOADED, 10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryCommand - Not recovered yet, 1 checks fail: [10 books are still INDEXING]
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - Recovered in 312.624 s; checks in benchmarks/runs/20261103-095952-recovery-10-r2-05e4b5a/checks.json
+[main] INFO org.ulpgc.tarantino.bench.coordination.CoordinationTool - Wrote the coordination times of 2800 published books to benchmarks\runs\20261103-095952-recovery-10-r2-05e4b5a\coordination.csv
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Finished run 20261103-095952-recovery-10-r2-05e4b5a in benchmarks\runs\20261103-095952-recovery-10-r2-05e4b5a\manifest.json

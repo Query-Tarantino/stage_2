@@ -1,0 +1,111 @@
+query-1  | 2026-11-03T09:54:25.933918643Z Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+query-1  | 2026-11-03T09:54:26.111564080Z [main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@4ba2ca36, com.mongodb.Jep395RecordCodecProvider@3444d69d, com.mongodb.KotlinCodecProvider@1372ed45, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+query-1  | 2026-11-03T09:54:26.431909112Z [main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+query-1  | 2026-11-03T09:54:26.497837914Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+query-1  | 2026-11-03T09:54:26.498384054Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+query-1  | 2026-11-03T09:54:26.536402183Z [main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+query-1  | 2026-11-03T09:54:26.536522096Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+query-1  | 2026-11-03T09:54:26.539763663Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+query-2  | 2026-11-03T09:54:27.112871845Z Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+query-1  | 2026-11-03T09:54:26.551229948Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Exception during initial connection to [hazelcast]:5701: com.hazelcast.core.HazelcastException: java.io.IOException: Connection refused (connect failed) to address hazelcast/172.18.0.6:5701
+query-1  | 2026-11-03T09:54:26.551366618Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1000 ms, attempt: 1, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-03T09:54:26.642891603Z [main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+query-1  | 2026-11-03T09:54:26.913411027Z [main] INFO io.javalin.Javalin - Starting Javalin ...
+query-1  | 2026-11-03T09:54:26.914976536Z [main] INFO org.eclipse.jetty.server.Server - jetty-11.0.25; built: 2025-03-13T00:15:57.301Z; git: a2e9fae3ad8320f2a713d4fa29bba356a99d1295; jvm 25.0.4.1+1-LTS
+query-1  | 2026-11-03T09:54:26.946530637Z [main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+query-1  | 2026-11-03T09:54:26.959030292Z [main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@561b7d53{/,null,AVAILABLE}
+query-2  | 2026-11-03T09:54:27.352932301Z [main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@4ba2ca36, com.mongodb.Jep395RecordCodecProvider@3444d69d, com.mongodb.KotlinCodecProvider@1372ed45, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+query-1  | 2026-11-03T09:54:26.972503102Z [main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@6a638c79{HTTP/1.1, (http/1.1)}{0.0.0.0:7003}
+query-2  | 2026-11-03T09:54:27.383178311Z [cluster-6ae9af5378d557a78a732e64-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=22963959, minRoundTripTimeNanos=0}
+query-1  | 2026-11-03T09:54:26.974523207Z [main] INFO org.eclipse.jetty.server.Server - Started Server@a62c7cd{STARTING}[11.0.25,sto=0] @1039ms
+query-1  | 2026-11-03T09:54:26.974537682Z [main] INFO io.javalin.Javalin - Javalin started in 115ms \o/
+query-1  | 2026-11-03T09:54:26.975207522Z [main] INFO io.javalin.Javalin - Listening on http://localhost:7003/
+query-1  | 2026-11-03T09:54:26.983743675Z [main] INFO io.javalin.Javalin - You are running Javalin 6.7.0 (released June 22, 2025. Your Javalin version is 498 days old. Consider checking for a newer version.).
+query-1  | 2026-11-03T09:54:27.013688399Z [main] INFO org.mongodb.driver.cluster - Waiting for server to become available for operation update with ID 3. Remaining time: 29994 ms. Selector: WritableServerSelector, topology description: {type=UNKNOWN, servers=[{address=mongo:27017, type=UNKNOWN, state=CONNECTING}].
+query-2  | 2026-11-03T09:54:27.725312298Z [main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+query-1  | 2026-11-03T09:54:27.552100753Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+query-1  | 2026-11-03T09:54:27.560491250Z WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+query-2  | 2026-11-03T09:54:27.790100054Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+query-2  | 2026-11-03T09:54:27.792779426Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+query-1  | 2026-11-03T09:54:27.560526321Z WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/service.jar)
+query-1  | 2026-11-03T09:54:27.560528533Z WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+query-1  | 2026-11-03T09:54:27.560530068Z WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+query-1  | 2026-11-03T09:54:30.079715501Z [cluster-6ae9af528ce64ced3b92f753-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+query-2  | 2026-11-03T09:54:27.828807968Z [main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+query-2  | 2026-11-03T09:54:27.829970411Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+query-2  | 2026-11-03T09:54:27.833778547Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+query-1  | 2026-11-03T09:54:30.079747174Z com.mongodb.MongoSocketException: mongo: Name or service not known
+query-1  | 2026-11-03T09:54:30.079750939Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+query-2  | 2026-11-03T09:54:27.868277853Z WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+query-2  | 2026-11-03T09:54:27.868312500Z WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/service.jar)
+query-1  | 2026-11-03T09:54:30.079752287Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+query-1  | 2026-11-03T09:54:30.079753613Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+query-2  | 2026-11-03T09:54:27.868317672Z WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+query-2  | 2026-11-03T09:54:27.868319443Z WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+query-2  | 2026-11-03T09:54:27.966810393Z [main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+query-2  | 2026-11-03T09:54:28.273087416Z [main] INFO io.javalin.Javalin - Starting Javalin ...
+query-2  | 2026-11-03T09:54:28.274144061Z [main] INFO org.eclipse.jetty.server.Server - jetty-11.0.25; built: 2025-03-13T00:15:57.301Z; git: a2e9fae3ad8320f2a713d4fa29bba356a99d1295; jvm 25.0.4.1+1-LTS
+query-1  | 2026-11-03T09:54:30.079781794Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+query-1  | 2026-11-03T09:54:30.079785423Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+query-1  | 2026-11-03T09:54:30.079786854Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+query-1  | 2026-11-03T09:54:30.079788060Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+query-2  | 2026-11-03T09:54:28.298915243Z [main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+query-1  | 2026-11-03T09:54:30.079820860Z Caused by: java.net.UnknownHostException: mongo: Name or service not known
+query-1  | 2026-11-03T09:54:30.079823232Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+query-1  | 2026-11-03T09:54:30.079832037Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Unknown Source)
+query-1  | 2026-11-03T09:54:30.079879701Z 	at java.base/java.net.InetAddress$PlatformResolver.lookupByName(Unknown Source)
+query-1  | 2026-11-03T09:54:30.079884925Z 	at java.base/java.net.InetAddress.getAddressesFromNameService(Unknown Source)
+query-1  | 2026-11-03T09:54:30.079885521Z 	at java.base/java.net.InetAddress$NameServiceAddresses.get(Unknown Source)
+query-1  | 2026-11-03T09:54:30.079885983Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+query-1  | 2026-11-03T09:54:30.079886845Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+query-2  | 2026-11-03T09:54:28.314090924Z [main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@18b8d173{/,null,AVAILABLE}
+query-1  | 2026-11-03T09:54:30.079893919Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+query-1  | 2026-11-03T09:54:30.079897964Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+query-2  | 2026-11-03T09:54:28.320372025Z [main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@22e5f96e{HTTP/1.1, (http/1.1)}{0.0.0.0:7003}
+query-2  | 2026-11-03T09:54:28.321133992Z [main] INFO org.eclipse.jetty.server.Server - Started Server@9b21bd3{STARTING}[11.0.25,sto=0] @1208ms
+query-2  | 2026-11-03T09:54:28.321255127Z [main] INFO io.javalin.Javalin - Javalin started in 125ms \o/
+query-1  | 2026-11-03T09:54:30.079898547Z 	... 6 more
+query-1  | 2026-11-03T09:54:30.581923286Z [cluster-6ae9af528ce64ced3b92f753-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+query-1  | 2026-11-03T09:54:30.581943630Z com.mongodb.MongoSocketException: mongo
+query-1  | 2026-11-03T09:54:30.581945302Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+query-2  | 2026-11-03T09:54:28.322687831Z [main] INFO io.javalin.Javalin - Listening on http://localhost:7003/
+query-2  | 2026-11-03T09:54:28.329733465Z [main] INFO io.javalin.Javalin - You are running Javalin 6.7.0 (released June 22, 2025. Your Javalin version is 498 days old. Consider checking for a newer version.).
+query-1  | 2026-11-03T09:54:30.581946752Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+query-1  | 2026-11-03T09:54:30.581947881Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+query-1  | 2026-11-03T09:54:30.581949039Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+query-2  | 2026-11-03T09:54:28.364981409Z [main] INFO org.ulpgc.tarantino.common.startup.Startup - Waiting for Hazelcast
+query-2  | 2026-11-03T09:54:31.768801736Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+query-1  | 2026-11-03T09:54:30.581949582Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+query-2  | 2026-11-03T09:54:31.768824468Z 	Member [172.18.0.6]:5701 - 773d3672-635f-428d-823a-f77bc2f3bd64
+query-2  | 2026-11-03T09:54:31.768827181Z }
+query-1  | 2026-11-03T09:54:30.581950794Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+query-1  | 2026-11-03T09:54:30.581951755Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+query-2  | 2026-11-03T09:54:31.768829989Z 
+query-2  | 2026-11-03T09:54:31.771837758Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.6]:5701:773d3672-635f-428d-823a-f77bc2f3bd64, server version: 5.7.0, local address: /172.18.0.10:53943
+query-1  | 2026-11-03T09:54:30.582047125Z Caused by: java.net.UnknownHostException: mongo
+query-1  | 2026-11-03T09:54:30.582052750Z 	at java.base/java.net.InetAddress$CachedLookup.get(Unknown Source)
+query-2  | 2026-11-03T09:54:31.772748862Z [hz.client_1.internal-6] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+query-2  | 2026-11-03T09:54:41.771577237Z [hz.client_1.internal-1] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+query-1  | 2026-11-03T09:54:30.582053556Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+query-1  | 2026-11-03T09:54:30.582054495Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+query-2  | 2026-11-03T09:54:41.771595525Z 
+query-2  | 2026-11-03T09:54:41.771597356Z Client Connectivity [1] {
+query-2  | 2026-11-03T09:54:41.771599573Z 	Member [172.18.0.6]:5701 - 773d3672-635f-428d-823a-f77bc2f3bd64 - connected
+query-1  | 2026-11-03T09:54:30.582055009Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+query-1  | 2026-11-03T09:54:30.582059028Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+query-2  | 2026-11-03T09:54:41.771601763Z }
+query-1  | 2026-11-03T09:54:30.582059545Z 	... 6 more
+query-2  | 2026-11-03T09:54:41.771603004Z 
+query-1  | 2026-11-03T09:54:31.781437258Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+query-1  | 2026-11-03T09:54:31.781467822Z 	Member [172.18.0.6]:5701 - 773d3672-635f-428d-823a-f77bc2f3bd64
+query-1  | 2026-11-03T09:54:31.781469922Z }
+query-1  | 2026-11-03T09:54:31.781471784Z 
+query-1  | 2026-11-03T09:54:31.785211111Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.6]:5701:773d3672-635f-428d-823a-f77bc2f3bd64, server version: 5.7.0, local address: /172.18.0.4:60365
+query-1  | 2026-11-03T09:54:31.787511953Z [hz.client_1.internal-5] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+query-1  | 2026-11-03T09:54:40.589398350Z [cluster-6ae9af528ce64ced3b92f753-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=6807097, minRoundTripTimeNanos=0}
+query-1  | 2026-11-03T09:54:41.785864903Z [hz.client_1.internal-3] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+query-1  | 2026-11-03T09:54:41.785888727Z 
+query-1  | 2026-11-03T09:54:41.785890196Z Client Connectivity [1] {
+query-1  | 2026-11-03T09:54:41.785891757Z 	Member [172.18.0.6]:5701 - 773d3672-635f-428d-823a-f77bc2f3bd64 - connected
+query-1  | 2026-11-03T09:54:41.785893112Z }
+query-1  | 2026-11-03T09:54:41.785894340Z 
