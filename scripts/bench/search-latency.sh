@@ -44,10 +44,8 @@ run_jmh() {
         -Dexec.executable=java \
         -Dexec.classpathScope=test \
         "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark \"${absolute_run_dir}\""
-    if [[ -f "${run_dir}/jmh/query.json" ]]; then
-        echo "Converting JMH JSON to CSV..."
-        java -jar "$BENCH_JAR" jmh-csv "${run_dir}/jmh/query.json" "${run_dir}/jmh/query.csv"
-    fi
+    echo "Converting JMH JSON to CSV..."
+    java -jar "$BENCH_JAR" jmh-csv "${run_dir}/jmh/query.json" "${run_dir}/jmh/query.csv"
 }
 
 ingest_corpus() {
