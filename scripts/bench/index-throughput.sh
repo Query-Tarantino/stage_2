@@ -23,6 +23,26 @@ state_hypotheses() {
     echo "H3: batches of 250 fit in -Xmx512m without OutOfMemoryError but spend more time in GC than batches of 100, which adds to the flattening of H1"
 }
 
+run_jmh() {
+    local absolute_run_dir
+    absolute_run_dir=$(host_path "$(cd "$run_dir" && pwd)")
+    mvn -DskipTests install
+    TARANTINO_MIRROR=$(host_path "$PWD/$MIRROR_DIR") TARANTINO_WORKLOAD=$(host_path "$PWD/workload") \
+        mvn -f services/indexer/pom.xml exec:exec \
+        -Dexec.executable=java \
+        -Dexec.classpathScope=test \
+        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.indexer.benchmarks.IndexerBenchmarks \"$absolute_run_dir\""
+    java -jar "$BENCH_JAR" jmh-csv "$run_dir/jmh/indexer.json" "$run_dir/jmh/indexer.csv"
+}
+
+host_path() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        echo "$1"
+    fi
+}
+
 ingest_corpus() {
     "${COMPOSE[@]}" up -d --wait
     wait_for PUBLISHED "$(expected_books)"
@@ -86,6 +106,7 @@ main() {
     open_run index-throughput "$0" "$@"
     state_hypotheses
     check_corpus
+    run_jmh
     build_stack
     ingest_corpus
     start_stats
