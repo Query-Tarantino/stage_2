@@ -35,6 +35,13 @@ services:
       HZ_CLUSTERNAME: tarantino
     restart: "no"
 
+  activemq:
+    image: apache/activemq-classic:6.1.8
+    profiles: ["activemq"]
+    volumes:
+      - ./activemq/activemq.xml:/opt/apache-activemq/conf/activemq.xml:ro
+    restart: "no"
+
   crawler:
     build:
       context: .
