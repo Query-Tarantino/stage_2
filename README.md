@@ -108,6 +108,30 @@ Run the index throughput benchmark, which ingests the corpus once and rebuilds t
 ./scripts/bench/index-throughput.sh
 ```
 
+### Coordination modes and campaign
+
+`TARANTINO_COORDINATION` selects how the services coordinate (`SPEC.md` §11). With it unset the stack runs in
+`hazelcast`, as above. Each other mode starts with its Compose override after the usual files:
+
+| Mode | Start |
+| --- | --- |
+| `hazelcast` | `docker compose -f docker-compose.yml -f docker-compose.mirror.yml up -d --build` |
+| `activemq` | `COMPOSE_PROFILES=activemq docker compose -f docker-compose.yml -f docker-compose.mirror.yml -f docker-compose.activemq.yml up -d --build` |
+| `activemq-persistent` | `COMPOSE_PROFILES=activemq docker compose -f docker-compose.yml -f docker-compose.mirror.yml -f docker-compose.activemq.yml -f docker-compose.activemq-persistent.yml up -d --build` |
+| `polling` | `docker compose -f docker-compose.yml -f docker-compose.mirror.yml -f docker-compose.polling.yml up -d --build` |
+| `orchestrator` | `docker compose -f docker-compose.yml -f docker-compose.mirror.yml -f docker-compose.orchestrator.yml up -d --build` |
+
+The benchmark and recovery scripts take the mode from `TARANTINO_VARIANT`, `hazelcast` by default, and add its files
+themselves: `TARANTINO_VARIANT=polling scripts/recovery/01-crawler-after-claim.sh 2`.
+
+| Experiment | Command |
+| --- | --- |
+| `publication-visibility`: listener against periodic refresh | `scripts/bench/publication-visibility.sh` |
+| `broker-latency`: Hazelcast against ActiveMQ, in isolation | `scripts/bench/broker-latency.sh` |
+| `recovery-delay`: how lost work comes back, over recovery runs | `scripts/bench/recovery-delay.sh benchmarks/runs/<recovery run>...` |
+| `coordination-variants`: every mode with 1, 2 and 3 replicas | `scripts/bench/coordination-variants.sh` |
+| `campaign`: every experiment and the recovery matrix in every mode | `scripts/bench/all.sh --dry-run`, then `scripts/bench/all.sh` |
+
 ## Corpus
 
 `scripts/fill_cache.sh` copies the benchmark corpus, the first 2,800 downloadable books of
