@@ -1,0 +1,49 @@
+name: Mirror
+description: Fills benchmarks/mirror with the first downloadable books of a candidate list, cached by the list and the count
+
+inputs:
+  candidates:
+    description: File with one candidate book id per line, in order
+    required: true
+  books:
+    description: How many downloadable books to keep; every candidate when empty
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Count the books of the mirror
+      id: count
+      shell: bash
+      env:
+        CANDIDATES: ${{ inputs.candidates }}
+        BOOKS: ${{ inputs.books }}
+      run: echo "books=${BOOKS:-$(grep -c . "$CANDIDATES")}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the mirror
+      id: mirror
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: benchmarks/mirror
+        key: mirror-${{ steps.count.outputs.books }}-${{ hashFiles(inputs.candidates) }}
+
+    - name: Download the books into the mirror
+      if: steps.mirror.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        CANDIDATES: ${{ inputs.candidates }}
+        TARANTINO_CACHE_BOOKS: ${{ steps.count.outputs.books }}
+        TARANTINO_CACHE_SOURCE: http
+        TARANTINO_WORKLOAD: ${{ runner.temp }}/mirror-workload
+      run: |
+        mkdir -p "$TARANTINO_WORKLOAD"
+        cp "$CANDIDATES" "$TARANTINO_WORKLOAD/book_ids.txt"
+        scripts/fill_cache.sh
+
+    - name: Save the mirror
+      if: steps.mirror.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: benchmarks/mirror
+        key: ${{ steps.mirror.outputs.cache-primary-key }}

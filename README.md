@@ -41,10 +41,10 @@ Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` a
 `workload/conformance/` that still apply (`SPEC.md` §10).
 
 GitHub Actions runs `mvn clean verify`, the functional checks against the stack with the 20 sample books and the
-workflow and shell linters on every push, and fails if the MongoDB tests were skipped. CodeQL scans every pull
-request to `dev` and `main`. Every row of the failure matrix runs with 1, 2 and 3 replicas on every pull request to
-`main`, and to `dev` when it changes `scripts/recovery/`; those runs are test runs (`SPEC.md` §9), kept as workflow
-artifacts and never committed. The workflows are in `.github/workflows/`.
+workflow and shell linters on every push, and fails if the MongoDB tests were skipped. CodeQL scans every pull request
+to `dev` and `main`. Every row of the failure matrix runs with 1, 2 and 3 replicas on the benchmark corpus, as the
+official runs do, on every pull request to `main`, and to `dev` when it changes `scripts/recovery/`; those runs are
+test runs (`SPEC.md` §9), kept as workflow artifacts and never committed. The workflows are in `.github/workflows/`.
 
 ## Running
 

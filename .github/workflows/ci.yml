@@ -88,8 +88,10 @@ jobs:
         with:
           name: jars
 
-      - name: Fill the mirror of the sample books
-        uses: ./.github/actions/sample-mirror
+      - name: Fill the mirror with the sample books
+        uses: ./.github/actions/mirror
+        with:
+          candidates: workload/sample_ids.txt
 
       - name: Start the stack
         run: docker compose up -d --build --wait --wait-timeout 300
