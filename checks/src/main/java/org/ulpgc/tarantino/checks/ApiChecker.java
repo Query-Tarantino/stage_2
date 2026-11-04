@@ -19,17 +19,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 import static org.ulpgc.tarantino.checks.Assertions.assertEquals;
 import static org.ulpgc.tarantino.checks.Assertions.assertTrue;
+import static org.ulpgc.tarantino.checks.SearchResults.containsBook;
 
 public class ApiChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiChecker.class);
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
-    private static final int MAX_WAIT_SECONDS = 60;
 
     private final CheckedClient client;
     private final String frontEndUrl;
@@ -38,6 +37,8 @@ public class ApiChecker {
     private final List<JsonNode> sampleBooks = new ArrayList<>();
     private final HealthChecks health;
     private final NginxChecks nginx;
+    private final OperationalChecks operational;
+    private final PublicationWait publication;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         Api api = Api.of(client, frontEndUrl, operationalUrl);
@@ -46,6 +47,8 @@ public class ApiChecker {
         this.operationalUrl = api.operationalUrl();
         this.health = new HealthChecks(client);
         this.nginx = new NginxChecks(api);
+        this.operational = new OperationalChecks(api);
+        this.publication = new PublicationWait(api);
         Path stopwordsPath = findStopwordsPath();
         Set<String> stopwords = Files.exists(stopwordsPath)
                 ? new FileStopwordsLoader(stopwordsPath).stopwords()
@@ -60,187 +63,16 @@ public class ApiChecker {
         LOGGER.info("Starting API conformance checks");
         health.check();
         nginx.check();
-        checkOperationalEndpoints();
-        ensurePublishedAndRefreshed(sampleIds);
-        checkStatusEndpoints();
-        checkIdempotency(sampleIds);
+        operational.checkSummaries();
+        publication.ensurePublished(sampleIds);
+        operational.checkBookStatuses();
+        operational.checkIdempotency(sampleIds);
         checkBooksEndpoints(sampleIds);
         checkFiltersSummary();
         checkSearchParametersOrder();
         checkSearchEndpoints();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
-    }
-
-    public void checkOperationalEndpoints() throws IOException, InterruptedException {
-        LOGGER.info("Checking operational status endpoints");
-        CheckedClient.Response listResponse = client.get(operationalUrl + "/ingest/list");
-        assertEquals(200, listResponse.status());
-        assertTrue(listResponse.json().has("books"));
-
-        CheckedClient.Response indexStatus = client.get(operationalUrl + "/index/status");
-        assertEquals(200, indexStatus.status());
-        assertTrue(indexStatus.json().has("generation"));
-        assertTrue(indexStatus.json().has("books_indexed"));
-
-        CheckedClient.Response controlStatus = client.get(operationalUrl + "/control/status");
-        assertEquals(200, controlStatus.status());
-        assertTrue(controlStatus.json().has("books"));
-        assertTrue(controlStatus.json().has("queues"));
-    }
-
-    public void checkStatusEndpoints() throws IOException, InterruptedException {
-        LOGGER.info("Checking status endpoints and operational errors");
-        CheckedClient.Response ingestStatus200 = client.get(operationalUrl + "/ingest/status/1342");
-        assertEquals(200, ingestStatus200.status());
-        assertEquals(1342, ingestStatus200.json().get("book_id").asInt());
-
-        CheckedClient.Response indexStatus200 = client.get(operationalUrl + "/index/status/1342");
-        assertEquals(200, indexStatus200.status());
-        assertEquals(1342, indexStatus200.json().get("book_id").asInt());
-
-        assertProblem(operationalUrl + "/ingest/status/999999", 404, "BOOK_NOT_FOUND", null);
-        assertProblem(operationalUrl + "/index/status/999999", 404, "BOOK_NOT_FOUND", null);
-
-        assertProblem(operationalUrl + "/ingest/status/0", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(operationalUrl + "/ingest/status/abc", 400, "INVALID_PARAMETER", "book_id");
-
-        assertProblem(operationalUrl + "/index/status/0", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(operationalUrl + "/index/status/abc", 400, "INVALID_PARAMETER", "book_id");
-
-        assertPostProblem(operationalUrl + "/ingest/0", 400, "INVALID_PARAMETER", "book_id");
-        assertPostProblem(operationalUrl + "/index/update/0", 400, "INVALID_PARAMETER", "book_id");
-        assertPostProblem(operationalUrl + "/index/update/999999", 404, "BOOK_NOT_FOUND", null);
-    }
-
-    private record BookStatusCheck(int bookId, String statusUrl) {}
-
-    public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
-        LOGGER.info("Ensuring all sample books are published");
-        List<BookStatusCheck> pendingChecks = new ArrayList<>();
-        for (int bookId : sampleIds) {
-            CheckedClient.Response ingestResponse = client.post(operationalUrl + "/ingest/" + bookId, "");
-            assertTrue(ingestResponse.status() == 200 || ingestResponse.status() == 202);
-            if (ingestResponse.status() == 202) {
-                String location = ingestResponse.header("Location");
-                assertTrue(location != null && !location.isBlank());
-                String statusUrl = operationalUrl + (location.startsWith("/") ? location : "/" + location);
-                pendingChecks.add(new BookStatusCheck(bookId, statusUrl));
-            } else {
-                String bookStatus = ingestResponse.json().get("status").asText();
-                if (!"PUBLISHED".equals(bookStatus)) {
-                    pendingChecks.add(new BookStatusCheck(bookId, operationalUrl + "/ingest/status/" + bookId));
-                }
-            }
-        }
-        for (BookStatusCheck pendingCheck : pendingChecks) {
-            waitForPublished(pendingCheck.bookId(), pendingCheck.statusUrl());
-        }
-        waitForSnapshotRefresh(sampleIds);
-    }
-
-    private void waitForPublished(int bookId, String statusUrl) throws IOException, InterruptedException {
-        long deadline = System.currentTimeMillis() + (MAX_WAIT_SECONDS * 1000L);
-        while (System.currentTimeMillis() < deadline) {
-            CheckedClient.Response response = client.get(statusUrl);
-            if (response.status() == 200 && response.json() != null && response.json().has("status")) {
-                String status = response.json().get("status").asText();
-                if ("PUBLISHED".equals(status)) {
-                    return;
-                }
-                if ("FAILED".equals(status)) {
-                    String reason = response.json().has("last_error") ? response.json().get("last_error").asText() : "unknown";
-                    throw new AssertionError("Book " + bookId + " failed ingestion: " + reason);
-                }
-            }
-            Thread.sleep(1000);
-        }
-        throw new AssertionError("Timed out waiting for book " + bookId + " to reach PUBLISHED at " + statusUrl);
-    }
-
-    private void waitForSnapshotRefresh(List<Integer> sampleIds) throws IOException, InterruptedException {
-        int snapshotSeconds = Integer.parseInt(System.getenv().getOrDefault("TARANTINO_SNAPSHOT_SECONDS", "5"));
-        long filtersDeadline = System.currentTimeMillis() + (MAX_WAIT_SECONDS * 1000L);
-        int consecutiveSuccesses = 0;
-        while (System.currentTimeMillis() < filtersDeadline && consecutiveSuccesses < 10) {
-            try {
-                CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
-                if (response.status() == 200 && response.json() != null && response.json().has("total_books")
-                        && response.json().get("total_books").asInt() >= sampleIds.size()) {
-                    consecutiveSuccesses++;
-                } else {
-                    consecutiveSuccesses = 0;
-                }
-            } catch (IOException exception) {
-                consecutiveSuccesses = 0;
-            }
-            Thread.sleep(200);
-        }
-        if (consecutiveSuccesses < 10) {
-            throw new AssertionError("Snapshot not refreshed on all replicas: search/filters did not return total_books >= "
-                    + sampleIds.size() + " across 10 consecutive requests");
-        }
-
-        for (int bookId : sampleIds) {
-            long bookDeadline = System.currentTimeMillis() + ((snapshotSeconds + 2) * 1000L);
-            boolean visible = false;
-            while (System.currentTimeMillis() < bookDeadline) {
-                CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
-                if (response.status() == 200) {
-                    visible = true;
-                    break;
-                }
-                Thread.sleep(500);
-            }
-            if (!visible) {
-                throw new AssertionError("Book " + bookId + " not visible in /books/" + bookId + " within snapshot refresh");
-            }
-        }
-
-        long searchDeadline = System.currentTimeMillis() + ((snapshotSeconds + 2) * 1000L);
-        boolean searchVisible = false;
-        while (System.currentTimeMillis() < searchDeadline) {
-            try {
-                CheckedClient.Response response = client.get(frontEndUrl + "/search?q=pride");
-                if (response.status() == 200 && response.json() != null && response.json().has("results")
-                        && containsBook(response.json().get("results"), 1342)) {
-                    searchVisible = true;
-                    break;
-                }
-            } catch (IOException exception) {
-            }
-            Thread.sleep(200);
-        }
-        if (!searchVisible) {
-            throw new AssertionError("Book 1342 not found by /search?q=pride within snapshot refresh");
-        }
-    }
-
-    public void checkIdempotency(List<Integer> sampleIds) throws IOException, InterruptedException {
-        LOGGER.info("Verifying idempotency for published sample books");
-        for (int bookId : sampleIds) {
-            CheckedClient.Response ingestResponse = client.post(operationalUrl + "/ingest/" + bookId, "");
-            assertEquals(200, ingestResponse.status());
-            assertTrue(ingestResponse.header("Location") == null);
-            assertEquals("PUBLISHED", ingestResponse.json().get("status").asText());
-
-            CheckedClient.Response updateResponse = client.post(operationalUrl + "/index/update/" + bookId, "");
-            assertEquals(200, updateResponse.status());
-            assertTrue(updateResponse.header("Location") == null);
-            assertEquals("PUBLISHED", updateResponse.json().get("status").asText());
-        }
-
-        CheckedClient.Response listResponse = client.get(operationalUrl + "/ingest/list");
-        assertEquals(200, listResponse.status());
-        JsonNode booksNode = listResponse.json().get("books");
-        assertTrue(booksNode != null && booksNode.isArray());
-        List<Integer> ingestedBooks = StreamSupport.stream(booksNode.spliterator(), false)
-                .map(JsonNode::asInt)
-                .toList();
-        assertEquals(ingestedBooks.size(), listResponse.json().get("count").asInt());
-        assertTrue(ingestedBooks.containsAll(sampleIds));
-        IntStream.range(1, ingestedBooks.size()).forEach(index ->
-                assertTrue(ingestedBooks.get(index) > ingestedBooks.get(index - 1)));
     }
 
     public void checkBooksEndpoints(List<Integer> sampleIds) throws IOException, InterruptedException {
@@ -476,7 +308,7 @@ public class ApiChecker {
     public void generateExpected(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
         LOGGER.info("Generating expected answers to {}", expectedPath);
         List<Integer> targetIds = (sampleIds != null && !sampleIds.isEmpty()) ? sampleIds : readSampleIds();
-        ensurePublishedAndRefreshed(targetIds);
+        publication.ensurePublished(targetIds);
         ObjectNode root = MAPPER.createObjectNode();
         root.put("total_books", targetIds.size());
         ArrayNode sampleIdsArray = root.putArray("sample_ids");
@@ -639,15 +471,6 @@ public class ApiChecker {
                 .orElse(Paths.get("workload/sample_ids.txt"));
     }
 
-    private static boolean containsBook(JsonNode resultsNode, int bookId) {
-        if (resultsNode == null || !resultsNode.isArray()) {
-            return false;
-        }
-        return StreamSupport.stream(resultsNode.spliterator(), false)
-                .filter(resultNode -> resultNode.has("book_id"))
-                .anyMatch(resultNode -> resultNode.get("book_id").asInt() == bookId);
-    }
-
     private void assertProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
         CheckedClient.Response response = client.get(url);
         assertEquals(expectedStatus, response.status());
@@ -661,16 +484,4 @@ public class ApiChecker {
         }
     }
 
-    private void assertPostProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.post(url, "");
-        assertEquals(expectedStatus, response.status());
-        if (expectedCode != null) {
-            assertTrue(response.json() != null && response.json().has("code"));
-            assertEquals(expectedCode, response.json().get("code").asText());
-        }
-        if (expectedParam != null) {
-            assertTrue(response.json() != null && response.json().has("parameter"));
-            assertEquals(expectedParam, response.json().get("parameter").asText());
-        }
-    }
 }
