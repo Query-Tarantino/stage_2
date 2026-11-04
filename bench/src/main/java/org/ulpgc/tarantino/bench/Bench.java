@@ -10,6 +10,7 @@ import org.ulpgc.tarantino.bench.explain.ExplainPlanExporter;
 import org.ulpgc.tarantino.bench.index.IndexTool;
 import org.ulpgc.tarantino.bench.ingest.IngestTool;
 import org.ulpgc.tarantino.bench.jmh.JmhCsvConverter;
+import org.ulpgc.tarantino.bench.load.SearchLatencyTool;
 import org.ulpgc.tarantino.bench.load.SearchLoadGenerator;
 import org.ulpgc.tarantino.bench.manifest.ManifestTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryTool;
@@ -33,6 +34,7 @@ public final class Bench {
     private static final Logger LOGGER = LoggerFactory.getLogger(Bench.class);
     private static final Map<String, ToIntFunction<List<String>>> COMMANDS = new TreeMap<>(Map.ofEntries(
             Map.entry("load", ofMain(SearchLoadGenerator::main)),
+            Map.entry("search-latency", SearchLatencyTool::run),
             Map.entry("jmh-csv", ofMain(JmhCsvConverter::main)),
             Map.entry("summary", ofMain(SummaryStats::main)),
             Map.entry("explain", ofMain(ExplainPlanExporter::main)),
