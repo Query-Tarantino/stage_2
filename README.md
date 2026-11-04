@@ -1,5 +1,8 @@
 # Query Tarantino · Stage 2
 
+[![CI](https://github.com/Query-Tarantino/stage_2/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Query-Tarantino/stage_2/actions/workflows/ci.yml?query=branch%3Adev)
+[![CodeQL](https://github.com/Query-Tarantino/stage_2/actions/workflows/codeql.yml/badge.svg?branch=dev)](https://github.com/Query-Tarantino/stage_2/actions/workflows/codeql.yml?query=branch%3Adev)
+
 Search engine over [Project Gutenberg](https://www.gutenberg.org/) books in Java 25, with Javalin and Jackson.
 `crawler` downloads books, `indexer` indexes them in batches, `query` searches them with TF-IDF and `control`
 seeds and reconciles. The services coordinate through Hazelcast, keep the texts in a datalake and the source
@@ -36,6 +39,10 @@ mvn -pl services/indexer -am verify           # one module with what it needs
 
 Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` also runs the cases of
 `workload/conformance/` that still apply (`SPEC.md` §10).
+
+GitHub Actions runs `mvn clean verify`, the functional checks against the stack with the 20 sample books and the
+workflow and shell linters on every push, and fails if the MongoDB tests were skipped. CodeQL scans every pull
+request to `dev` and `main`. The workflows are in `.github/workflows/`.
 
 ## Running
 
