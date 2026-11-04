@@ -36,6 +36,7 @@ public final class CrawlerFactory {
     private CrawlerFactory() {
     }
 
+    /** One worker for one thread, with its own queue handles (SPEC §11.1). */
     public static DownloadWorker downloadWorker(TarantinoConfig config, Connections connections) {
         Broker broker = connections.broker().orElseThrow();
         BookTasks downloads = broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD);
