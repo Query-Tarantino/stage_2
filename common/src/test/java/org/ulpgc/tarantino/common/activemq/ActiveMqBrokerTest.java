@@ -1,6 +1,8 @@
 package org.ulpgc.tarantino.common.activemq;
 
+import org.apache.activemq.broker.BrokerPlugin;
 import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.plugin.StatisticsBrokerPlugin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.common.messaging.BookTasks;
@@ -13,6 +15,7 @@ import java.net.ServerSocket;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -52,11 +55,27 @@ class ActiveMqBrokerTest {
         assertEquals("activemq", broker.name());
     }
 
+    @Test
+    void readsQueueSizesFromTheStatisticsPluginEvenBeyondABrowsePage() throws Exception {
+        int port = freePort();
+        server = startServer(port);
+        broker = ActiveMqBroker.connect("failover:(tcp://localhost:" + port + ")?timeout=1000", false, 100);
+        awaitConnected();
+
+        assertEquals(0, broker.size(MessagingContracts.BOOKS_TO_INDEX));
+        try (BookTasks indexing = broker.queue(MessagingContracts.BOOKS_TO_INDEX)) {
+            IntStream.rangeClosed(1, 450).forEach(bookId -> indexing.offer(new BookTask(bookId, ENQUEUED_AT)));
+        }
+
+        assertEquals(450, broker.size(MessagingContracts.BOOKS_TO_INDEX));
+    }
+
     static BrokerService startServer(int port) throws Exception {
         BrokerService service = new BrokerService();
         service.setPersistent(false);
         service.setUseJmx(false);
         service.setBrokerName("test-" + port);
+        service.setPlugins(new BrokerPlugin[]{new StatisticsBrokerPlugin()});
         service.addConnector("tcp://localhost:" + port);
         service.start();
         return service;

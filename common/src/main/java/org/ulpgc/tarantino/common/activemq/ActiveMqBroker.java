@@ -2,6 +2,12 @@ package org.ulpgc.tarantino.common.activemq;
 
 import jakarta.jms.Connection;
 import jakarta.jms.JMSException;
+import jakarta.jms.MapMessage;
+import jakarta.jms.Message;
+import jakarta.jms.MessageConsumer;
+import jakarta.jms.MessageProducer;
+import jakarta.jms.Session;
+import jakarta.jms.TemporaryQueue;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.transport.TransportListener;
@@ -30,6 +36,9 @@ public final class ActiveMqBroker implements Broker {
     private static final Logger LOGGER = LoggerFactory.getLogger(ActiveMqBroker.class);
     private static final int RETRY_SECONDS = 2;
     private static final int DOWNLOAD_PREFETCH = 1;
+    private static final String STATISTICS_PREFIX = "ActiveMQ.Statistics.Destination.";
+    private static final String SIZE = "size";
+    private static final Duration STATISTICS_TIMEOUT = Duration.ofSeconds(2);
 
     private final ActiveMQConnectionFactory factory;
     private final boolean persistent;
@@ -62,9 +71,32 @@ public final class ActiveMqBroker implements Broker {
         return new ActiveMqAnnouncements(started());
     }
 
+    /**
+     * The {@code size} the statistics plugin answers for the queue, on a session of its own; a {@code QueueBrowser} would
+     * stop at {@code maxBrowsePageSize}. A producer on the queue first makes sure the broker has it, because the plugin
+     * does not answer for a queue it does not know.
+     */
     @Override
     public int size(String queue) {
-        throw new UnsupportedOperationException("Queue sizes need the statistics plugin");
+        try (Session session = started().createSession(false, Session.AUTO_ACKNOWLEDGE);
+             MessageProducer ensureQueue = session.createProducer(session.createQueue(queue));
+             MessageProducer request = session.createProducer(session.createQueue(STATISTICS_PREFIX + queue))) {
+            TemporaryQueue replies = session.createTemporaryQueue();
+            MessageConsumer statistics = session.createConsumer(replies);
+            Message question = session.createMessage();
+            question.setJMSReplyTo(replies);
+            request.send(question);
+            return size(queue, (MapMessage) statistics.receive(STATISTICS_TIMEOUT.toMillis()));
+        } catch (JMSException e) {
+            throw ActiveMqBookTasks.unavailable(e);
+        }
+    }
+
+    private static int size(String queue, MapMessage statistics) throws JMSException {
+        if (statistics == null) {
+            throw new BrokerUnavailableException("ActiveMQ sent no statistics for " + queue, null);
+        }
+        return Math.toIntExact(statistics.getLong(SIZE));
     }
 
     @Override
