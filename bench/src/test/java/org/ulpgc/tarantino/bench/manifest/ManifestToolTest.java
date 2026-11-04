@@ -45,7 +45,7 @@ class ManifestToolTest {
         Manifest manifest = Manifest.readFrom(runDirectory);
         assertEquals(ManifestTool.DONE, started);
         assertTrue(runId.matches("\\d{8}-\\d{6}-recovery-04-r2-3f2a9c1"), runId);
-        assertEquals(new GitState("3f2a9c1", true), manifest.git());
+        assertEquals(new GitState("3f2a9c1", true, "arch-testing"), manifest.git());
         assertEquals(List.of("scripts/recovery/04-indexer-after-claim.sh", "2"), manifest.command());
         assertEquals(new DockerState("28.3.2", "Docker Desktop", 8, 8_222_093_312L), manifest.docker());
         assertEquals(Map.of("control", new ServiceConfiguration(1, "jdk-25.0.1+8", "-Xmx512m",
@@ -112,6 +112,7 @@ class ManifestToolTest {
         Map<List<String>, String> outputs = Map.of(
                 GitState.SHORT_COMMIT, "3f2a9c1\n",
                 GitState.CHANGED_FILES, "",
+                GitState.BRANCH, "arch-testing\n",
                 DockerState.INFO, DOCKER_INFO,
                 ServiceConfiguration.CONTAINER_IDS, controlContainerIds,
                 inspect, controlContainers);
