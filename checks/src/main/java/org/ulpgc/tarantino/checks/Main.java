@@ -6,68 +6,54 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
+/**
+ * {@code java -jar checks/target/checks-1.0-SNAPSHOT.jar [--generate-expected]}: runs the functional API checks
+ * (SPEC §9) against the stack at {@code TARANTINO_FRONTEND_URL} and {@code TARANTINO_OPERATIONAL_URL}, or writes
+ * {@code checks/expected.json} again.
+ */
 public class Main {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+    private static final String OPENAPI = "api/openapi.yaml";
+    private static final String SAMPLE_IDS = "workload/sample_ids.txt";
+    private static final String EXPECTED = "checks/expected.json";
+    private static final String GENERATE_EXPECTED = "--generate-expected";
 
     public static void main(String[] args) {
         try {
-            Path openApiPath = findFile("api/openapi.yaml");
-            Path sampleIdsPath = findFile("workload/sample_ids.txt");
-            List<Integer> sampleIds = Files.readAllLines(sampleIdsPath).stream()
-                    .map(String::trim)
-                    .filter(line -> !line.isEmpty())
-                    .map(Integer::parseInt)
-                    .toList();
-            String frontEndUrl = System.getenv().getOrDefault("TARANTINO_FRONTEND_URL", "http://localhost:8080");
-            String operationalUrl = System.getenv().getOrDefault("TARANTINO_OPERATIONAL_URL", "http://localhost:8081");
-
-            OpenApiValidator validator = OpenApiValidator.load(openApiPath);
-            CheckedClient client = new CheckedClient(validator);
-            ApiChecker checker = new ApiChecker(client, frontEndUrl, operationalUrl);
-
-            Path expectedPath = resolveExpectedPath();
-            boolean generateExpected = List.of(args).contains("--generate-expected");
-            if (generateExpected) {
-                checker.generateExpected(sampleIds, expectedPath);
-                LOGGER.info("Expected answers successfully generated at {}", expectedPath);
-                return;
-            }
-
-            checker.checkAll(sampleIds, expectedPath);
-            LOGGER.info("All checks completed successfully");
-        } catch (Exception exception) {
-            LOGGER.error("Checks failed: {}", exception.getMessage(), exception);
+            run(List.of(args));
+        } catch (Exception | AssertionError failure) {
+            LOGGER.error("Checks failed: {}", failure.getMessage(), failure);
             System.exit(1);
         }
     }
 
-    private static Path resolveExpectedPath() {
-        List<Path> candidates = List.of(
-                Paths.get("expected.json"),
-                Paths.get("checks/expected.json"),
-                Paths.get("check/expected.json"),
-                Paths.get("../checks/expected.json"),
-                Paths.get("../check/expected.json")
-        );
-        return candidates.stream()
-                .filter(Files::exists)
-                .findFirst()
-                .orElse(Paths.get("checks/expected.json"));
+    private static void run(List<String> args) throws IOException, InterruptedException {
+        List<Integer> sampleIds = sampleIds(repositoryFile(SAMPLE_IDS));
+        Path expectedPath = RepositoryFiles.find(EXPECTED).orElse(Path.of(EXPECTED));
+        ApiChecker checker = new ApiChecker(new CheckedClient(OpenApiValidator.load(repositoryFile(OPENAPI))),
+                System.getenv().getOrDefault("TARANTINO_FRONTEND_URL", "http://localhost:8080"),
+                System.getenv().getOrDefault("TARANTINO_OPERATIONAL_URL", "http://localhost:8081"));
+        if (args.contains(GENERATE_EXPECTED)) {
+            checker.generateExpected(sampleIds, expectedPath);
+            LOGGER.info("Expected answers successfully generated at {}", expectedPath);
+            return;
+        }
+        checker.checkAll(sampleIds, expectedPath);
+        LOGGER.info("All checks completed successfully");
     }
 
-    private static Path findFile(String relativePath) {
-        List<Path> candidates = List.of(
-                Paths.get(relativePath),
-                Paths.get("../" + relativePath),
-                Paths.get("../../" + relativePath)
-        );
-        return candidates.stream()
-                .filter(Files::exists)
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Could not find file: " + relativePath));
+    private static List<Integer> sampleIds(Path sampleIdsFile) throws IOException {
+        return Files.readAllLines(sampleIdsFile).stream()
+                .map(String::trim)
+                .filter(line -> !line.isEmpty())
+                .map(Integer::parseInt)
+                .toList();
+    }
+
+    private static Path repositoryFile(String relativePath) {
+        return RepositoryFiles.find(relativePath).orElseThrow(() -> new IllegalStateException("Could not find file: " + relativePath));
     }
 }
