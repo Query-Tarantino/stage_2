@@ -10,7 +10,7 @@ import java.util.Optional;
  * A handle on one queue of SPEC §4.2 that carries each {@link BookTask} as {@code TarantinoJson} text. A handle belongs
  * to one thread.
  */
-public interface BookTasks {
+public interface BookTasks extends AutoCloseable {
 
     void offer(BookTask task);
 
@@ -22,4 +22,9 @@ public interface BookTasks {
 
     /** Acknowledges what this handle received since the last call; only persistent ActiveMQ needs it (SPEC §11.2). */
     void acknowledge();
+
+    /** Releases what the handle holds; an HTTP handler closes the handle it took for one message (SPEC §11.2). */
+    @Override
+    default void close() {
+    }
 }
