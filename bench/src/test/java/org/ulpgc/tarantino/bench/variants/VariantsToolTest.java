@@ -28,6 +28,7 @@ class VariantsToolTest {
         trial("mode-polling-replicas-1-rep-2", 10, 5);
         Files.write(run.resolve("summary.csv"), List.of("metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
                 "download_queue_wait,\"mode=polling,replicas=1\",10.00,1.00,1.00,10.00,12.00,12.00,ms"));
+        System.setProperty("java.awt.headless", "true");
 
         assertEquals(0, VariantsTool.run(List.of(run.toString())));
 
@@ -37,6 +38,7 @@ class VariantsToolTest {
         List<String> variants = Files.readAllLines(run.resolve(VariantsTool.VARIANTS_FILE));
         assertTrue(variants.contains("polling,download_queue_wait,\"mode=polling,replicas=1\",10.00,1.00,1.00,10.00,12.00,12.00,ms"), variants.toString());
         assertTrue(variants.stream().anyMatch(row -> row.startsWith("hazelcast,pipeline_throughput,\"mode=hazelcast,replicas=1\",5.00")), variants.toString());
+        assertTrue(Files.exists(run.resolve("charts/pipeline-throughput-pairs.png")));
     }
 
     private void trial(String name, int books, int seconds) throws IOException {

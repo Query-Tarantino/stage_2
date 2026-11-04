@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.bench.variants;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.bench.charts.VariantsCharts;
 import org.ulpgc.tarantino.bench.containers.ContainerStats;
 import org.ulpgc.tarantino.bench.coordination.TransitionLine;
 import org.ulpgc.tarantino.bench.coordination.TransitionLogs;
@@ -62,6 +63,7 @@ public final class VariantsTool {
         write(runDirectory.resolve(VARIANTS_FILE), "mode," + SUMMARY_HEADER,
                 Stream.concat(summaryRows(runDirectory), measuredRows(trials)).toList());
         write(runDirectory.resolve(PAIRS_FILE), ModePair.HEADER, pairs.stream().map(ModePair::row).toList());
+        VariantsCharts.write(runDirectory, trials, pairs);
         LOGGER.info("Compared {} trials in {} pairs of modes", trials.size(), pairs.size());
         return DONE;
     }

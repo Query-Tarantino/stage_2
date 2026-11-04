@@ -42,6 +42,18 @@ final class RunChart {
         }
     }
 
+    /** A picture drawn without XChart, with the same footer. */
+    static Path write(BufferedImage picture, Path runDirectory, String name) {
+        Path file = runDirectory.resolve(DIRECTORY).resolve(name + "." + FORMAT);
+        try {
+            Files.createDirectories(file.getParent());
+            ImageIO.write(withFooter(picture, FOOTER + runDirectory.getFileName()), FORMAT, file.toFile());
+            return file;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     private static BufferedImage withFooter(BufferedImage plot, String footer) {
         BufferedImage image = new BufferedImage(plot.getWidth(), plot.getHeight() + FOOTER_HEIGHT, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics();
