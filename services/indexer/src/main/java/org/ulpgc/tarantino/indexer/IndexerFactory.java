@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.indexer;
 import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.Coordination;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
+import org.ulpgc.tarantino.common.http.InternalTasks;
 import org.ulpgc.tarantino.common.messaging.BookTasks;
 import org.ulpgc.tarantino.common.messaging.Broker;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
@@ -18,6 +19,7 @@ import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.adapters.datalake.batch.BatchBasedDatalakeReader;
 import org.ulpgc.tarantino.indexer.adapters.broker.BrokerIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.http.BookRoutes;
+import org.ulpgc.tarantino.indexer.adapters.local.LocalIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.http.IndexRoutes;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoBatchStore;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexStatus;
@@ -40,12 +42,17 @@ public final class IndexerFactory {
     private IndexerFactory() {
     }
 
-    /** The batch loop of the configured mode (SPEC §11.1). */
-    public static Runnable indexWorker(TarantinoConfig config, Connections connections) {
+    /** The batch loop of the configured mode (SPEC §11.1); in mode {@code orchestrator} it gathers from {@code localIndex}. */
+    public static Runnable indexWorker(TarantinoConfig config, Connections connections, LocalIndexQueue localIndex) {
         MongoBatchStore batches = new MongoBatchStore(connections.database(), config.lease(), Replica.name());
         if (config.coordination() == Coordination.POLLING) {
             return new PollingIndexWorker(batches, indexCommand(config, connections, batches, batch -> {
             }), config.indexBatch(), config.batchTimeout(), config.poll());
+        }
+        if (config.coordination() == Coordination.ORCHESTRATOR) {
+            return new IndexWorker(new BatchCollector(localIndex, config.indexBatch(), config.batchTimeout(), Clock.systemUTC()),
+                    indexCommand(config, connections, batches, batch -> {
+                    }));
         }
         Broker broker = connections.broker().orElseThrow();
         BatchCollector collector = new BatchCollector(new BrokerIndexQueue(broker.queue(MessagingContracts.BOOKS_TO_INDEX)),
@@ -61,9 +68,24 @@ public final class IndexerFactory {
     }
 
     public static Consumer<Javalin> routes(Connections connections) {
+        return routes(connections, booksToIndex(connections));
+    }
+
+    /**
+     * The routes of the mode: in mode {@code orchestrator}, {@code POST /index/update} offers to {@code localIndex} and
+     * {@code POST /internal/index} exists (SPEC §11.4).
+     */
+    public static Consumer<Javalin> routes(TarantinoConfig config, Connections connections, LocalIndexQueue localIndex) {
+        if (config.coordination() != Coordination.ORCHESTRATOR) {
+            return routes(connections);
+        }
+        return routes(connections, localIndex::offer)
+                .andThen(app -> InternalTasks.register(app, InternalTasks.INDEX, localIndex::offer));
+    }
+
+    private static Consumer<Javalin> routes(Connections connections, BooksToIndex booksToIndex) {
         IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()), new MongoIndexStatus(connections.database()));
-        BookRoutes books = new BookRoutes(new BookStates(connections.database())::state, booksToIndex(connections),
-                Clock.systemUTC());
+        BookRoutes books = new BookRoutes(new BookStates(connections.database())::state, booksToIndex, Clock.systemUTC());
         return app -> {
             index.register(app);
             books.register(app);
