@@ -1,0 +1,484 @@
+{
+  "explainVersion": "1",
+  "queryPlanner": {
+    "namespace": "tarantino.postings_g1",
+    "indexFilterSet": false,
+    "parsedQuery": {
+      "$and": [
+        {
+          "batch_id": {
+            "$in": [
+              {
+                "$oid": "6aeb3cdc5fa5156839580a85"
+              },
+              {
+                "$oid": "6aeb3ce35fa5156839580a86"
+              },
+              {
+                "$oid": "6aeb3ce75fa5156839580a87"
+              },
+              {
+                "$oid": "6aeb3cec5fa5156839580a88"
+              },
+              {
+                "$oid": "6aeb3cee5fa5156839580a89"
+              },
+              {
+                "$oid": "6aeb3cf15fa5156839580a8a"
+              },
+              {
+                "$oid": "6aeb3cf55fa5156839580a8b"
+              },
+              {
+                "$oid": "6aeb3cfc5fa5156839580a8c"
+              },
+              {
+                "$oid": "6aeb3d005fa5156839580a8d"
+              },
+              {
+                "$oid": "6aeb3d035fa5156839580a8e"
+              },
+              {
+                "$oid": "6aeb3d065fa5156839580a8f"
+              },
+              {
+                "$oid": "6aeb3d095fa5156839580a90"
+              },
+              {
+                "$oid": "6aeb3d0c5fa5156839580a91"
+              },
+              {
+                "$oid": "6aeb3d0f5fa5156839580a92"
+              },
+              {
+                "$oid": "6aeb3d125fa5156839580a93"
+              },
+              {
+                "$oid": "6aeb3d155fa5156839580a94"
+              },
+              {
+                "$oid": "6aeb3d185fa5156839580a95"
+              },
+              {
+                "$oid": "6aeb3d1a5fa5156839580a96"
+              },
+              {
+                "$oid": "6aeb3d1d5fa5156839580a97"
+              },
+              {
+                "$oid": "6aeb3d215fa5156839580a98"
+              },
+              {
+                "$oid": "6aeb3d255fa5156839580a99"
+              },
+              {
+                "$oid": "6aeb3d295fa5156839580a9a"
+              },
+              {
+                "$oid": "6aeb3d2d5fa5156839580a9b"
+              },
+              {
+                "$oid": "6aeb3d315fa5156839580a9c"
+              },
+              {
+                "$oid": "6aeb3d345fa5156839580a9d"
+              },
+              {
+                "$oid": "6aeb3d385fa5156839580a9e"
+              },
+              {
+                "$oid": "6aeb3d3b5fa5156839580a9f"
+              },
+              {
+                "$oid": "6aeb3d3f5fa5156839580aa0"
+              }
+            ]
+          }
+        },
+        {
+          "term": {
+            "$in": [
+              "love",
+              "night"
+            ]
+          }
+        }
+      ]
+    },
+    "queryHash": "D39CF3BF",
+    "planCacheKey": "CB75440F",
+    "optimizationTimeMillis": 1,
+    "maxIndexedOrSolutionsReached": false,
+    "maxIndexedAndSolutionsReached": false,
+    "maxScansToExplodeReached": false,
+    "winningPlan": {
+      "stage": "PROJECTION_SIMPLE",
+      "transformBy": {
+        "term": 1,
+        "book_ids": 1,
+        "tfs": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "inputStage": {
+          "stage": "IXSCAN",
+          "keyPattern": {
+            "term": 1,
+            "batch_id": 1
+          },
+          "indexName": "term_1_batch_id_1",
+          "isMultiKey": false,
+          "multiKeyPaths": {
+            "term": [],
+            "batch_id": []
+          },
+          "isUnique": true,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "term": [
+              "[\"love\", \"love\"]",
+              "[\"night\", \"night\"]"
+            ],
+            "batch_id": [
+              "[ObjectId('6aeb3cdc5fa5156839580a85'), ObjectId('6aeb3cdc5fa5156839580a85')]",
+              "[ObjectId('6aeb3ce35fa5156839580a86'), ObjectId('6aeb3ce35fa5156839580a86')]",
+              "[ObjectId('6aeb3ce75fa5156839580a87'), ObjectId('6aeb3ce75fa5156839580a87')]",
+              "[ObjectId('6aeb3cec5fa5156839580a88'), ObjectId('6aeb3cec5fa5156839580a88')]",
+              "[ObjectId('6aeb3cee5fa5156839580a89'), ObjectId('6aeb3cee5fa5156839580a89')]",
+              "[ObjectId('6aeb3cf15fa5156839580a8a'), ObjectId('6aeb3cf15fa5156839580a8a')]",
+              "[ObjectId('6aeb3cf55fa5156839580a8b'), ObjectId('6aeb3cf55fa5156839580a8b')]",
+              "[ObjectId('6aeb3cfc5fa5156839580a8c'), ObjectId('6aeb3cfc5fa5156839580a8c')]",
+              "[ObjectId('6aeb3d005fa5156839580a8d'), ObjectId('6aeb3d005fa5156839580a8d')]",
+              "[ObjectId('6aeb3d035fa5156839580a8e'), ObjectId('6aeb3d035fa5156839580a8e')]",
+              "[ObjectId('6aeb3d065fa5156839580a8f'), ObjectId('6aeb3d065fa5156839580a8f')]",
+              "[ObjectId('6aeb3d095fa5156839580a90'), ObjectId('6aeb3d095fa5156839580a90')]",
+              "[ObjectId('6aeb3d0c5fa5156839580a91'), ObjectId('6aeb3d0c5fa5156839580a91')]",
+              "[ObjectId('6aeb3d0f5fa5156839580a92'), ObjectId('6aeb3d0f5fa5156839580a92')]",
+              "[ObjectId('6aeb3d125fa5156839580a93'), ObjectId('6aeb3d125fa5156839580a93')]",
+              "[ObjectId('6aeb3d155fa5156839580a94'), ObjectId('6aeb3d155fa5156839580a94')]",
+              "[ObjectId('6aeb3d185fa5156839580a95'), ObjectId('6aeb3d185fa5156839580a95')]",
+              "[ObjectId('6aeb3d1a5fa5156839580a96'), ObjectId('6aeb3d1a5fa5156839580a96')]",
+              "[ObjectId('6aeb3d1d5fa5156839580a97'), ObjectId('6aeb3d1d5fa5156839580a97')]",
+              "[ObjectId('6aeb3d215fa5156839580a98'), ObjectId('6aeb3d215fa5156839580a98')]",
+              "[ObjectId('6aeb3d255fa5156839580a99'), ObjectId('6aeb3d255fa5156839580a99')]",
+              "[ObjectId('6aeb3d295fa5156839580a9a'), ObjectId('6aeb3d295fa5156839580a9a')]",
+              "[ObjectId('6aeb3d2d5fa5156839580a9b'), ObjectId('6aeb3d2d5fa5156839580a9b')]",
+              "[ObjectId('6aeb3d315fa5156839580a9c'), ObjectId('6aeb3d315fa5156839580a9c')]",
+              "[ObjectId('6aeb3d345fa5156839580a9d'), ObjectId('6aeb3d345fa5156839580a9d')]",
+              "[ObjectId('6aeb3d385fa5156839580a9e'), ObjectId('6aeb3d385fa5156839580a9e')]",
+              "[ObjectId('6aeb3d3b5fa5156839580a9f'), ObjectId('6aeb3d3b5fa5156839580a9f')]",
+              "[ObjectId('6aeb3d3f5fa5156839580aa0'), ObjectId('6aeb3d3f5fa5156839580aa0')]"
+            ]
+          }
+        }
+      }
+    },
+    "rejectedPlans": [
+      {
+        "stage": "PROJECTION_SIMPLE",
+        "transformBy": {
+          "term": 1,
+          "book_ids": 1,
+          "tfs": 1
+        },
+        "inputStage": {
+          "stage": "FETCH",
+          "filter": {
+            "term": {
+              "$in": [
+                "love",
+                "night"
+              ]
+            }
+          },
+          "inputStage": {
+            "stage": "IXSCAN",
+            "keyPattern": {
+              "batch_id": 1
+            },
+            "indexName": "batch_id_1",
+            "isMultiKey": false,
+            "multiKeyPaths": {
+              "batch_id": []
+            },
+            "isUnique": false,
+            "isSparse": false,
+            "isPartial": false,
+            "indexVersion": 2,
+            "direction": "forward",
+            "indexBounds": {
+              "batch_id": [
+                "[ObjectId('6aeb3cdc5fa5156839580a85'), ObjectId('6aeb3cdc5fa5156839580a85')]",
+                "[ObjectId('6aeb3ce35fa5156839580a86'), ObjectId('6aeb3ce35fa5156839580a86')]",
+                "[ObjectId('6aeb3ce75fa5156839580a87'), ObjectId('6aeb3ce75fa5156839580a87')]",
+                "[ObjectId('6aeb3cec5fa5156839580a88'), ObjectId('6aeb3cec5fa5156839580a88')]",
+                "[ObjectId('6aeb3cee5fa5156839580a89'), ObjectId('6aeb3cee5fa5156839580a89')]",
+                "[ObjectId('6aeb3cf15fa5156839580a8a'), ObjectId('6aeb3cf15fa5156839580a8a')]",
+                "[ObjectId('6aeb3cf55fa5156839580a8b'), ObjectId('6aeb3cf55fa5156839580a8b')]",
+                "[ObjectId('6aeb3cfc5fa5156839580a8c'), ObjectId('6aeb3cfc5fa5156839580a8c')]",
+                "[ObjectId('6aeb3d005fa5156839580a8d'), ObjectId('6aeb3d005fa5156839580a8d')]",
+                "[ObjectId('6aeb3d035fa5156839580a8e'), ObjectId('6aeb3d035fa5156839580a8e')]",
+                "[ObjectId('6aeb3d065fa5156839580a8f'), ObjectId('6aeb3d065fa5156839580a8f')]",
+                "[ObjectId('6aeb3d095fa5156839580a90'), ObjectId('6aeb3d095fa5156839580a90')]",
+                "[ObjectId('6aeb3d0c5fa5156839580a91'), ObjectId('6aeb3d0c5fa5156839580a91')]",
+                "[ObjectId('6aeb3d0f5fa5156839580a92'), ObjectId('6aeb3d0f5fa5156839580a92')]",
+                "[ObjectId('6aeb3d125fa5156839580a93'), ObjectId('6aeb3d125fa5156839580a93')]",
+                "[ObjectId('6aeb3d155fa5156839580a94'), ObjectId('6aeb3d155fa5156839580a94')]",
+                "[ObjectId('6aeb3d185fa5156839580a95'), ObjectId('6aeb3d185fa5156839580a95')]",
+                "[ObjectId('6aeb3d1a5fa5156839580a96'), ObjectId('6aeb3d1a5fa5156839580a96')]",
+                "[ObjectId('6aeb3d1d5fa5156839580a97'), ObjectId('6aeb3d1d5fa5156839580a97')]",
+                "[ObjectId('6aeb3d215fa5156839580a98'), ObjectId('6aeb3d215fa5156839580a98')]",
+                "[ObjectId('6aeb3d255fa5156839580a99'), ObjectId('6aeb3d255fa5156839580a99')]",
+                "[ObjectId('6aeb3d295fa5156839580a9a'), ObjectId('6aeb3d295fa5156839580a9a')]",
+                "[ObjectId('6aeb3d2d5fa5156839580a9b'), ObjectId('6aeb3d2d5fa5156839580a9b')]",
+                "[ObjectId('6aeb3d315fa5156839580a9c'), ObjectId('6aeb3d315fa5156839580a9c')]",
+                "[ObjectId('6aeb3d345fa5156839580a9d'), ObjectId('6aeb3d345fa5156839580a9d')]",
+                "[ObjectId('6aeb3d385fa5156839580a9e'), ObjectId('6aeb3d385fa5156839580a9e')]",
+                "[ObjectId('6aeb3d3b5fa5156839580a9f'), ObjectId('6aeb3d3b5fa5156839580a9f')]",
+                "[ObjectId('6aeb3d3f5fa5156839580aa0'), ObjectId('6aeb3d3f5fa5156839580aa0')]"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "executionStats": {
+    "executionSuccess": true,
+    "nReturned": 56,
+    "executionTimeMillis": 1,
+    "totalKeysExamined": 58,
+    "totalDocsExamined": 56,
+    "executionStages": {
+      "stage": "PROJECTION_SIMPLE",
+      "nReturned": 56,
+      "executionTimeMillisEstimate": 0,
+      "works": 59,
+      "advanced": 56,
+      "needTime": 1,
+      "needYield": 0,
+      "saveState": 0,
+      "restoreState": 0,
+      "isEOF": 1,
+      "transformBy": {
+        "term": 1,
+        "book_ids": 1,
+        "tfs": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "nReturned": 56,
+        "executionTimeMillisEstimate": 0,
+        "works": 59,
+        "advanced": 56,
+        "needTime": 1,
+        "needYield": 0,
+        "saveState": 0,
+        "restoreState": 0,
+        "isEOF": 1,
+        "docsExamined": 56,
+        "alreadyHasObj": 0,
+        "inputStage": {
+          "stage": "IXSCAN",
+          "nReturned": 56,
+          "executionTimeMillisEstimate": 0,
+          "works": 58,
+          "advanced": 56,
+          "needTime": 1,
+          "needYield": 0,
+          "saveState": 0,
+          "restoreState": 0,
+          "isEOF": 1,
+          "keyPattern": {
+            "term": 1,
+            "batch_id": 1
+          },
+          "indexName": "term_1_batch_id_1",
+          "isMultiKey": false,
+          "multiKeyPaths": {
+            "term": [],
+            "batch_id": []
+          },
+          "isUnique": true,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "term": [
+              "[\"love\", \"love\"]",
+              "[\"night\", \"night\"]"
+            ],
+            "batch_id": [
+              "[ObjectId('6aeb3cdc5fa5156839580a85'), ObjectId('6aeb3cdc5fa5156839580a85')]",
+              "[ObjectId('6aeb3ce35fa5156839580a86'), ObjectId('6aeb3ce35fa5156839580a86')]",
+              "[ObjectId('6aeb3ce75fa5156839580a87'), ObjectId('6aeb3ce75fa5156839580a87')]",
+              "[ObjectId('6aeb3cec5fa5156839580a88'), ObjectId('6aeb3cec5fa5156839580a88')]",
+              "[ObjectId('6aeb3cee5fa5156839580a89'), ObjectId('6aeb3cee5fa5156839580a89')]",
+              "[ObjectId('6aeb3cf15fa5156839580a8a'), ObjectId('6aeb3cf15fa5156839580a8a')]",
+              "[ObjectId('6aeb3cf55fa5156839580a8b'), ObjectId('6aeb3cf55fa5156839580a8b')]",
+              "[ObjectId('6aeb3cfc5fa5156839580a8c'), ObjectId('6aeb3cfc5fa5156839580a8c')]",
+              "[ObjectId('6aeb3d005fa5156839580a8d'), ObjectId('6aeb3d005fa5156839580a8d')]",
+              "[ObjectId('6aeb3d035fa5156839580a8e'), ObjectId('6aeb3d035fa5156839580a8e')]",
+              "[ObjectId('6aeb3d065fa5156839580a8f'), ObjectId('6aeb3d065fa5156839580a8f')]",
+              "[ObjectId('6aeb3d095fa5156839580a90'), ObjectId('6aeb3d095fa5156839580a90')]",
+              "[ObjectId('6aeb3d0c5fa5156839580a91'), ObjectId('6aeb3d0c5fa5156839580a91')]",
+              "[ObjectId('6aeb3d0f5fa5156839580a92'), ObjectId('6aeb3d0f5fa5156839580a92')]",
+              "[ObjectId('6aeb3d125fa5156839580a93'), ObjectId('6aeb3d125fa5156839580a93')]",
+              "[ObjectId('6aeb3d155fa5156839580a94'), ObjectId('6aeb3d155fa5156839580a94')]",
+              "[ObjectId('6aeb3d185fa5156839580a95'), ObjectId('6aeb3d185fa5156839580a95')]",
+              "[ObjectId('6aeb3d1a5fa5156839580a96'), ObjectId('6aeb3d1a5fa5156839580a96')]",
+              "[ObjectId('6aeb3d1d5fa5156839580a97'), ObjectId('6aeb3d1d5fa5156839580a97')]",
+              "[ObjectId('6aeb3d215fa5156839580a98'), ObjectId('6aeb3d215fa5156839580a98')]",
+              "[ObjectId('6aeb3d255fa5156839580a99'), ObjectId('6aeb3d255fa5156839580a99')]",
+              "[ObjectId('6aeb3d295fa5156839580a9a'), ObjectId('6aeb3d295fa5156839580a9a')]",
+              "[ObjectId('6aeb3d2d5fa5156839580a9b'), ObjectId('6aeb3d2d5fa5156839580a9b')]",
+              "[ObjectId('6aeb3d315fa5156839580a9c'), ObjectId('6aeb3d315fa5156839580a9c')]",
+              "[ObjectId('6aeb3d345fa5156839580a9d'), ObjectId('6aeb3d345fa5156839580a9d')]",
+              "[ObjectId('6aeb3d385fa5156839580a9e'), ObjectId('6aeb3d385fa5156839580a9e')]",
+              "[ObjectId('6aeb3d3b5fa5156839580a9f'), ObjectId('6aeb3d3b5fa5156839580a9f')]",
+              "[ObjectId('6aeb3d3f5fa5156839580aa0'), ObjectId('6aeb3d3f5fa5156839580aa0')]"
+            ]
+          },
+          "keysExamined": 58,
+          "seeks": 2,
+          "dupsTested": 0,
+          "dupsDropped": 0
+        }
+      }
+    }
+  },
+  "command": {
+    "find": "postings_g1",
+    "filter": {
+      "$and": [
+        {
+          "term": {
+            "$in": [
+              "love",
+              "night"
+            ]
+          }
+        },
+        {
+          "batch_id": {
+            "$in": [
+              {
+                "$oid": "6aeb3cdc5fa5156839580a85"
+              },
+              {
+                "$oid": "6aeb3ce35fa5156839580a86"
+              },
+              {
+                "$oid": "6aeb3ce75fa5156839580a87"
+              },
+              {
+                "$oid": "6aeb3cec5fa5156839580a88"
+              },
+              {
+                "$oid": "6aeb3cee5fa5156839580a89"
+              },
+              {
+                "$oid": "6aeb3cf15fa5156839580a8a"
+              },
+              {
+                "$oid": "6aeb3cf55fa5156839580a8b"
+              },
+              {
+                "$oid": "6aeb3cfc5fa5156839580a8c"
+              },
+              {
+                "$oid": "6aeb3d005fa5156839580a8d"
+              },
+              {
+                "$oid": "6aeb3d035fa5156839580a8e"
+              },
+              {
+                "$oid": "6aeb3d065fa5156839580a8f"
+              },
+              {
+                "$oid": "6aeb3d095fa5156839580a90"
+              },
+              {
+                "$oid": "6aeb3d0c5fa5156839580a91"
+              },
+              {
+                "$oid": "6aeb3d0f5fa5156839580a92"
+              },
+              {
+                "$oid": "6aeb3d125fa5156839580a93"
+              },
+              {
+                "$oid": "6aeb3d155fa5156839580a94"
+              },
+              {
+                "$oid": "6aeb3d185fa5156839580a95"
+              },
+              {
+                "$oid": "6aeb3d1a5fa5156839580a96"
+              },
+              {
+                "$oid": "6aeb3d1d5fa5156839580a97"
+              },
+              {
+                "$oid": "6aeb3d215fa5156839580a98"
+              },
+              {
+                "$oid": "6aeb3d255fa5156839580a99"
+              },
+              {
+                "$oid": "6aeb3d295fa5156839580a9a"
+              },
+              {
+                "$oid": "6aeb3d2d5fa5156839580a9b"
+              },
+              {
+                "$oid": "6aeb3d315fa5156839580a9c"
+              },
+              {
+                "$oid": "6aeb3d345fa5156839580a9d"
+              },
+              {
+                "$oid": "6aeb3d385fa5156839580a9e"
+              },
+              {
+                "$oid": "6aeb3d3b5fa5156839580a9f"
+              },
+              {
+                "$oid": "6aeb3d3f5fa5156839580aa0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "projection": {
+      "term": 1,
+      "book_ids": 1,
+      "tfs": 1
+    },
+    "maxTimeMS": 0,
+    "$db": "tarantino"
+  },
+  "serverInfo": {
+    "host": "cd85a345c3db",
+    "port": 27017,
+    "version": "7.0.45",
+    "gitVersion": "a52313e13ab55c9bddf7c3ff91dab286fa381796"
+  },
+  "serverParameters": {
+    "internalQueryFacetBufferSizeBytes": 104857600,
+    "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+    "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+    "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+    "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+    "internalQueryProhibitBlockingMergeOnMongoS": 0,
+    "internalQueryMaxAddToSetBytes": 104857600,
+    "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+    "internalQueryFrameworkControl": "forceClassicEngine"
+  },
+  "ok": 1.0
+}

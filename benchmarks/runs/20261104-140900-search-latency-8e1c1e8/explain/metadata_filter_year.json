@@ -1,0 +1,148 @@
+{
+  "explainVersion": "1",
+  "queryPlanner": {
+    "namespace": "tarantino.metadata_g1",
+    "indexFilterSet": false,
+    "parsedQuery": {
+      "year": {
+        "$eq": 1998
+      }
+    },
+    "queryHash": "C563F24C",
+    "planCacheKey": "4789DEFF",
+    "optimizationTimeMillis": 0,
+    "maxIndexedOrSolutionsReached": false,
+    "maxIndexedAndSolutionsReached": false,
+    "maxScansToExplodeReached": false,
+    "winningPlan": {
+      "stage": "PROJECTION_SIMPLE",
+      "transformBy": {
+        "_id": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "inputStage": {
+          "stage": "IXSCAN",
+          "keyPattern": {
+            "year": 1
+          },
+          "indexName": "year_1",
+          "isMultiKey": false,
+          "multiKeyPaths": {
+            "year": []
+          },
+          "isUnique": false,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "year": [
+              "[1998, 1998]"
+            ]
+          }
+        }
+      }
+    },
+    "rejectedPlans": []
+  },
+  "executionStats": {
+    "executionSuccess": true,
+    "nReturned": 311,
+    "executionTimeMillis": 0,
+    "totalKeysExamined": 311,
+    "totalDocsExamined": 311,
+    "executionStages": {
+      "stage": "PROJECTION_SIMPLE",
+      "nReturned": 311,
+      "executionTimeMillisEstimate": 0,
+      "works": 312,
+      "advanced": 311,
+      "needTime": 0,
+      "needYield": 0,
+      "saveState": 0,
+      "restoreState": 0,
+      "isEOF": 1,
+      "transformBy": {
+        "_id": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "nReturned": 311,
+        "executionTimeMillisEstimate": 0,
+        "works": 312,
+        "advanced": 311,
+        "needTime": 0,
+        "needYield": 0,
+        "saveState": 0,
+        "restoreState": 0,
+        "isEOF": 1,
+        "docsExamined": 311,
+        "alreadyHasObj": 0,
+        "inputStage": {
+          "stage": "IXSCAN",
+          "nReturned": 311,
+          "executionTimeMillisEstimate": 0,
+          "works": 312,
+          "advanced": 311,
+          "needTime": 0,
+          "needYield": 0,
+          "saveState": 0,
+          "restoreState": 0,
+          "isEOF": 1,
+          "keyPattern": {
+            "year": 1
+          },
+          "indexName": "year_1",
+          "isMultiKey": false,
+          "multiKeyPaths": {
+            "year": []
+          },
+          "isUnique": false,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "year": [
+              "[1998, 1998]"
+            ]
+          },
+          "keysExamined": 311,
+          "seeks": 1,
+          "dupsTested": 0,
+          "dupsDropped": 0
+        }
+      }
+    }
+  },
+  "command": {
+    "find": "metadata_g1",
+    "filter": {
+      "year": 1998
+    },
+    "projection": {
+      "_id": 1
+    },
+    "maxTimeMS": 0,
+    "$db": "tarantino"
+  },
+  "serverInfo": {
+    "host": "cd85a345c3db",
+    "port": 27017,
+    "version": "7.0.45",
+    "gitVersion": "a52313e13ab55c9bddf7c3ff91dab286fa381796"
+  },
+  "serverParameters": {
+    "internalQueryFacetBufferSizeBytes": 104857600,
+    "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+    "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+    "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+    "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+    "internalQueryProhibitBlockingMergeOnMongoS": 0,
+    "internalQueryMaxAddToSetBytes": 104857600,
+    "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+    "internalQueryFrameworkControl": "forceClassicEngine"
+  },
+  "ok": 1.0
+}

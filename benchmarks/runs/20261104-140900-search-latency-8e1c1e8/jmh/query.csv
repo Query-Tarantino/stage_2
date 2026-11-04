@@ -1,0 +1,4 @@
+"Benchmark","Mode","Score","Score Error (99.9%)","Unit","Forks","Warmup Iterations","Measurement Iterations","JVM Args"
+"org.ulpgc.tarantino.query.benchmarks.SearchBenchmark.searchWithFilters","avgt",12.2676,0.1155,"us/op",3,5,10,"-Xmx1g"
+"org.ulpgc.tarantino.query.benchmarks.SearchBenchmark.searchWithoutFilters","avgt",44.8609,0.2114,"us/op",3,5,10,"-Xmx1g"
+"org.ulpgc.tarantino.query.benchmarks.SearchBenchmark.tfidfRanking","avgt",60.2451,0.3546,"us/op",3,5,10,"-Xmx1g"

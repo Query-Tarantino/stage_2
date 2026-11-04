@@ -1,0 +1,165 @@
+{
+  "explainVersion": "1",
+  "queryPlanner": {
+    "namespace": "tarantino.metadata_g1",
+    "indexFilterSet": false,
+    "parsedQuery": {
+      "_id": {
+        "$in": [
+          11,
+          84,
+          1342
+        ]
+      }
+    },
+    "queryHash": "F984FB4C",
+    "planCacheKey": "292A02DD",
+    "optimizationTimeMillis": 0,
+    "maxIndexedOrSolutionsReached": false,
+    "maxIndexedAndSolutionsReached": false,
+    "maxScansToExplodeReached": false,
+    "winningPlan": {
+      "stage": "PROJECTION_SIMPLE",
+      "transformBy": {
+        "title": 1,
+        "author": 1,
+        "languages": 1,
+        "year": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "inputStage": {
+          "stage": "IXSCAN",
+          "keyPattern": {
+            "_id": 1
+          },
+          "indexName": "_id_",
+          "isMultiKey": false,
+          "isUnique": true,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "_id": [
+              "[11, 11]",
+              "[84, 84]",
+              "[1342, 1342]"
+            ]
+          }
+        }
+      }
+    },
+    "rejectedPlans": []
+  },
+  "executionStats": {
+    "executionSuccess": true,
+    "nReturned": 3,
+    "executionTimeMillis": 0,
+    "totalKeysExamined": 6,
+    "totalDocsExamined": 3,
+    "executionStages": {
+      "stage": "PROJECTION_SIMPLE",
+      "nReturned": 3,
+      "executionTimeMillisEstimate": 0,
+      "works": 6,
+      "advanced": 3,
+      "needTime": 2,
+      "needYield": 0,
+      "saveState": 0,
+      "restoreState": 0,
+      "isEOF": 1,
+      "transformBy": {
+        "title": 1,
+        "author": 1,
+        "languages": 1,
+        "year": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "nReturned": 3,
+        "executionTimeMillisEstimate": 0,
+        "works": 6,
+        "advanced": 3,
+        "needTime": 2,
+        "needYield": 0,
+        "saveState": 0,
+        "restoreState": 0,
+        "isEOF": 1,
+        "docsExamined": 3,
+        "alreadyHasObj": 0,
+        "inputStage": {
+          "stage": "IXSCAN",
+          "nReturned": 3,
+          "executionTimeMillisEstimate": 0,
+          "works": 6,
+          "advanced": 3,
+          "needTime": 2,
+          "needYield": 0,
+          "saveState": 0,
+          "restoreState": 0,
+          "isEOF": 1,
+          "keyPattern": {
+            "_id": 1
+          },
+          "indexName": "_id_",
+          "isMultiKey": false,
+          "isUnique": true,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "_id": [
+              "[11, 11]",
+              "[84, 84]",
+              "[1342, 1342]"
+            ]
+          },
+          "keysExamined": 6,
+          "seeks": 3,
+          "dupsTested": 0,
+          "dupsDropped": 0
+        }
+      }
+    }
+  },
+  "command": {
+    "find": "metadata_g1",
+    "filter": {
+      "_id": {
+        "$in": [
+          1342,
+          84,
+          11
+        ]
+      }
+    },
+    "projection": {
+      "title": 1,
+      "author": 1,
+      "languages": 1,
+      "year": 1
+    },
+    "maxTimeMS": 0,
+    "$db": "tarantino"
+  },
+  "serverInfo": {
+    "host": "cd85a345c3db",
+    "port": 27017,
+    "version": "7.0.45",
+    "gitVersion": "a52313e13ab55c9bddf7c3ff91dab286fa381796"
+  },
+  "serverParameters": {
+    "internalQueryFacetBufferSizeBytes": 104857600,
+    "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+    "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+    "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+    "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+    "internalQueryProhibitBlockingMergeOnMongoS": 0,
+    "internalQueryMaxAddToSetBytes": 104857600,
+    "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+    "internalQueryFrameworkControl": "forceClassicEngine"
+  },
+  "ok": 1.0
+}
