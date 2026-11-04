@@ -669,7 +669,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 | `09-crawler-paused.sh` | `crawler` stopped longer than its lease | `mirror` | After `bench wait DOWNLOADING`, `docker compose pause crawler` for 10 s, then `unpause` |
 | `10-indexer-paused.sh` | `indexer` stopped longer than its lease | `mirror` | After `bench wait INDEXING`, `docker compose pause indexer` for 10 s, then `unpause` |
 | `11-control-killed.sh` | `control` | `mirror` | `docker compose kill control` once `bench wait QUEUED` returns, while it seeds, then `docker compose start control` |
-| `12-hazelcast-restarted.sh` | Hazelcast | `mirror` | After `bench wait books-to-download`, `docker compose restart hazelcast` |
+| `12-broker-restarted.sh` | The broker of the mode (§11) | `mirror` | After `bench wait books-to-download`, `docker compose restart hazelcast`, or `activemq` in both `activemq` modes |
 | `13-mongo-stopped.sh` | MongoDB | `sample_ids.txt` | `docker compose stop mongo` as soon as `docker compose up -d` returns, then `start` 10 s later |
 | `14-query-replica-killed.sh` | A `query` replica | `sample_ids.txt` | `docker kill` of one replica while `bench` queries `/search` |
 

@@ -101,7 +101,7 @@ jobs:
           - 09-crawler-paused
           - 10-indexer-paused
           - 11-control-killed
-          - 12-hazelcast-restarted
+          - 12-broker-restarted
           - 13-mongo-stopped
           - 14-query-replica-killed
         replicas: [1, 2, 3]

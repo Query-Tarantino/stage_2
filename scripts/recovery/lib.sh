@@ -14,6 +14,7 @@ readonly CRASH_EXIT_CODE=1
 readonly CRASH_EXIT_TIMEOUT_SECONDS=120
 readonly PAUSE_LONGER_THAN_LEASE_SECONDS=10
 readonly WRONG_USAGE=2
+readonly VARIANT="${TARANTINO_VARIANT:-hazelcast}"
 SERVICES=(mongo hazelcast crawler indexer query control nginx)
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml --env-file scripts/recovery/recovery.env)
 readonly SERVICES COMPOSE
@@ -50,6 +51,14 @@ read_replicas() {
 recovery_run() {
     trap close_run EXIT
     "$@"
+}
+
+broker_of_mode() {
+    case $VARIANT in
+        hazelcast) echo hazelcast ;;
+        activemq | activemq-persistent) echo activemq ;;
+        *) echo "" ;;
+    esac
 }
 
 seed_mirror() {
