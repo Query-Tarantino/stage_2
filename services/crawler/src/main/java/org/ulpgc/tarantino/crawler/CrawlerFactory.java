@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.crawler;
 
 import io.javalin.Javalin;
+import org.ulpgc.tarantino.common.config.Coordination;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.messaging.BookTasks;
@@ -23,6 +24,7 @@ import org.ulpgc.tarantino.crawler.adapters.mongo.MongoIngestRequests;
 import org.ulpgc.tarantino.crawler.commands.DownloadBookCommand;
 import org.ulpgc.tarantino.crawler.commands.DownloadWorker;
 import org.ulpgc.tarantino.crawler.commands.IngestBookCommand;
+import org.ulpgc.tarantino.crawler.commands.PollingDownloadWorker;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 import org.ulpgc.tarantino.crawler.ports.TaskQueue;
@@ -37,17 +39,27 @@ public final class CrawlerFactory {
     private CrawlerFactory() {
     }
 
-    /** One worker for one thread, with its own queue handles (SPEC §11.1). */
-    public static DownloadWorker downloadWorker(TarantinoConfig config, Connections connections) {
+    /** One worker for one thread, with its own queue handles in the modes with a broker (SPEC §11.1). */
+    public static Runnable downloadWorker(TarantinoConfig config, Connections connections) {
+        MongoBookClaims claims = new MongoBookClaims(connections.database(), config.lease(), config.maxAttempts());
+        Consumer<CrashPoint> crashPoints = new CrashPoints(config.crashAt())::hit;
+        if (config.coordination() == Coordination.POLLING) {
+            return new PollingDownloadWorker(claims, downloadCommand(config, claims, task -> {
+            }, task -> {
+            }, crashPoints), config.poll());
+        }
         Broker broker = connections.broker().orElseThrow();
         BookTasks downloads = broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD);
         BookTasks indexing = broker.queue(MessagingContracts.BOOKS_TO_INDEX);
-        Consumer<CrashPoint> crashPoints = new CrashPoints(config.crashAt())::hit;
-        Function<BooleanSupplier, Lease> heartbeats = renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal);
-        MongoBookClaims claims = new MongoBookClaims(connections.database(), config.lease(), config.maxAttempts());
-        DownloadBookCommand download = new DownloadBookCommand(claims, ingestCommand(config), downloads::offer, indexing::offer,
-                new TransitionLog(), Clock.systemUTC(), crashPoints, heartbeats);
+        DownloadBookCommand download = downloadCommand(config, claims, downloads::offer, indexing::offer, crashPoints);
         return new DownloadWorker(new BrokerDownloadQueue(downloads), download, crashPoints);
+    }
+
+    private static DownloadBookCommand downloadCommand(TarantinoConfig config, MongoBookClaims claims, TaskQueue downloads,
+                                                       TaskQueue indexing, Consumer<CrashPoint> crashPoints) {
+        Function<BooleanSupplier, Lease> heartbeats = renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal);
+        return new DownloadBookCommand(claims, ingestCommand(config), downloads, indexing, new TransitionLog(), Clock.systemUTC(),
+                crashPoints, heartbeats);
     }
 
     /**
@@ -60,9 +72,11 @@ public final class CrawlerFactory {
                 Clock.systemUTC())::register;
     }
 
+    /** In mode {@code polling} nothing is enqueued: a {@code QUEUED} book is polled (SPEC §11.3). */
     private static TaskQueue downloadQueueOnEachUse(Connections connections) {
-        Broker broker = connections.broker().orElseThrow();
-        return task -> broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD).offer(task);
+        return connections.broker().<TaskQueue>map(broker -> task -> broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD).offer(task))
+                .orElse(task -> {
+                });
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {
