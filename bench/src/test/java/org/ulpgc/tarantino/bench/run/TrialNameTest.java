@@ -39,6 +39,14 @@ class TrialNameTest {
     }
 
     @Test
+    void readsAModeOrBrokerWhoseValueEndsInPersistence() {
+        assertEquals(Map.of("mode", "activemq-persistent", "replicas", "3"),
+                TrialName.factors("mode-activemq-persistent-replicas-3-rep-2"));
+        assertEquals("broker=activemq-nonpersistent,consumers=8", TrialName.configuration("broker-activemq-nonpersistent-consumers-8-rep-1"));
+        assertEquals(2, TrialName.repetition("mode-activemq-persistent-replicas-3-rep-2"));
+    }
+
+    @Test
     void ordersTrialsByTheNumericValueOfEachFactorAndThenByRepetition() {
         List<String> trials = List.of("replicas-1-workers-16-rep-1", "replicas-2-workers-8-rep-1", "replicas-1-workers-8-rep-10",
                 "replicas-1-workers-4-rep-1", "replicas-1-workers-8-rep-2");
