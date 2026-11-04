@@ -1,0 +1,7 @@
+metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit
+index_throughput,"batch=1,replicas=1",5.46,0.08,0.10,5.45,5.54,5.54,books/s
+index_throughput,"batch=10,replicas=1",12.41,0.28,0.35,12.44,12.62,12.62,books/s
+index_throughput,"batch=100,replicas=1",28.65,0.95,1.18,28.85,29.46,29.46,books/s
+index_throughput,"batch=100,replicas=2",47.40,3.37,4.19,48.62,50.34,50.34,books/s
+index_throughput,"batch=100,replicas=3",60.53,2.94,3.65,60.07,64.27,64.27,books/s
+index_throughput,"batch=250,replicas=1",32.96,0.91,1.13,32.81,34.49,34.49,books/s
