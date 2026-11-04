@@ -9,6 +9,7 @@ import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
+import org.ulpgc.tarantino.crawler.model.ClaimedBook;
 import org.ulpgc.tarantino.crawler.ports.BookClaims;
 import org.ulpgc.tarantino.crawler.ports.DownloadQueue;
 
@@ -94,6 +95,11 @@ class DownloadWorkerTest {
     }
 
     private final class RecordingClaims implements BookClaims {
+
+        @Override
+        public Optional<ClaimedBook> claimNext() {
+            return Optional.empty();
+        }
 
         @Override
         public Optional<String> claim(int bookId) {

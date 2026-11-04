@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.crawler.ports;
 
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookStatus;
+import org.ulpgc.tarantino.crawler.model.ClaimedBook;
 
 import java.util.Optional;
 
@@ -10,6 +11,9 @@ public interface BookClaims {
 
     /** “Claim a book”: the new {@code claim_id}, or empty if the book was not {@code QUEUED}. */
     Optional<String> claim(int bookId);
+
+    /** “Claim the next book”, mode {@code polling}: the oldest {@code QUEUED} book, now claimed, or empty if none waits. */
+    Optional<ClaimedBook> claimNext();
 
     /** “Renew a book”: false if the lease was lost. */
     boolean renew(int bookId, String claimId);

@@ -6,11 +6,13 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.ReturnDocument;
+import com.mongodb.client.model.Sorts;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
+import org.ulpgc.tarantino.crawler.model.ClaimedBook;
 import org.ulpgc.tarantino.crawler.ports.BookClaims;
 
 import java.time.Duration;
@@ -35,7 +37,7 @@ import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.set;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.setThenUnset;
 
 /**
- * “Claim a book”, “Renew a book”, “Finish a download” and “Fail a download” (SPEC §5.1), each a single conditional
+ * “Claim a book”, “Claim the next book”, “Renew a book”, “Finish a download” and “Fail a download” (SPEC §5.1), each a single conditional
  * write.
  */
 public class MongoBookClaims implements BookClaims {
@@ -55,13 +57,28 @@ public class MongoBookClaims implements BookClaims {
     @Override
     public Optional<String> claim(int bookId) {
         String claimId = UUID.randomUUID().toString();
-        Document change = new Document(STATUS, BookStatus.DOWNLOADING.name())
+        Bson queued = Filters.and(Filters.eq(ID, bookId), Filters.eq(STATUS, BookStatus.QUEUED.name()));
+        return states.updateOne(queued, set(claimChange(claimId))).getMatchedCount() == 1 ? Optional.of(claimId) : Optional.empty();
+    }
+
+    /** “Claim the next book”: the oldest {@code QUEUED} book by {@code enqueued_at} and {@code _id}, claimed in the same write. */
+    @Override
+    public Optional<ClaimedBook> claimNext() {
+        String claimId = UUID.randomUUID().toString();
+        FindOneAndUpdateOptions oldestFirst = new FindOneAndUpdateOptions()
+                .sort(Sorts.ascending(ENQUEUED_AT, ID))
+                .returnDocument(ReturnDocument.AFTER)
+                .projection(Projections.include(ENQUEUED_AT));
+        return Optional.ofNullable(states.findOneAndUpdate(Filters.eq(STATUS, BookStatus.QUEUED.name()), set(claimChange(claimId)), oldestFirst))
+                .map(state -> new ClaimedBook(state.getInteger(ID), claimId, state.getDate(ENQUEUED_AT).toInstant()));
+    }
+
+    private Document claimChange(String claimId) {
+        return new Document(STATUS, BookStatus.DOWNLOADING.name())
                 .append(CLAIM_ID, claimId)
                 .append(LEASE_UNTIL, nowPlus(lease))
                 .append(ATTEMPTS, new Document("$add", List.of("$" + ATTEMPTS, 1)))
                 .append(UPDATED_AT, NOW);
-        Bson queued = Filters.and(Filters.eq(ID, bookId), Filters.eq(STATUS, BookStatus.QUEUED.name()));
-        return states.updateOne(queued, set(change)).getMatchedCount() == 1 ? Optional.of(claimId) : Optional.empty();
     }
 
     /** “Renew a book”: one more lease from now; false if the lease was lost. */

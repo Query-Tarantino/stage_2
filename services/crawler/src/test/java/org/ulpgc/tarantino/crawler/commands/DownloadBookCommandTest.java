@@ -8,6 +8,7 @@ import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
+import org.ulpgc.tarantino.crawler.model.ClaimedBook;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
 import org.ulpgc.tarantino.crawler.ports.BookClaims;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
@@ -247,6 +248,11 @@ class DownloadBookCommandTest {
         private BookStatus failedDownloadsEnd = BookStatus.QUEUED;
         private boolean leaseLost;
         private boolean mongoDown;
+
+        @Override
+        public Optional<ClaimedBook> claimNext() {
+            return Optional.empty();
+        }
 
         @Override
         public Optional<String> claim(int bookId) {
