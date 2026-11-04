@@ -12,6 +12,7 @@ import org.ulpgc.tarantino.bench.ingest.IngestTool;
 import org.ulpgc.tarantino.bench.jmh.JmhCsvConverter;
 import org.ulpgc.tarantino.bench.load.SearchLoadGenerator;
 import org.ulpgc.tarantino.bench.manifest.ManifestTool;
+import org.ulpgc.tarantino.bench.recovery.RecoveryDelayTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryTool;
 import org.ulpgc.tarantino.bench.resources.ResourceTool;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
@@ -50,7 +51,8 @@ public final class Bench {
             Map.entry("recovery", RecoveryTool::recovery),
             Map.entry("recovery-compare", RecoveryTool::compare),
             Map.entry("recovery-chart", ChartsTool::recovery),
-            Map.entry("visibility", VisibilityTool::run)));
+            Map.entry("visibility", VisibilityTool::run),
+            Map.entry("recovery-delay", RecoveryDelayTool::run)));
 
     private Bench() {
     }
