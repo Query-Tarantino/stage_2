@@ -55,3 +55,81 @@ jobs:
           check_name: Test report
           detailed_summary: true
 
+
+      - name: Keep the jars for the end-to-end checks
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: jars
+          path: |
+            services/*/target/*-1.0-SNAPSHOT.jar
+            checks/target/checks-1.0-SNAPSHOT.jar
+            !**/target/original-*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  e2e:
+    name: End-to-end checks
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.mirror.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: jars
+
+      - name: Restore the mirror of the sample books
+        id: mirror
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: benchmarks/mirror
+          key: sample-mirror-${{ hashFiles('workload/sample_ids.txt') }}
+
+      - name: Download the sample books into the mirror
+        if: steps.mirror.outputs.cache-hit != 'true'
+        env:
+          TARANTINO_CACHE_SOURCE: http
+          TARANTINO_WORKLOAD: ${{ runner.temp }}/sample-workload
+        run: |
+          mkdir -p "$TARANTINO_WORKLOAD"
+          cp workload/sample_ids.txt "$TARANTINO_WORKLOAD/book_ids.txt"
+          TARANTINO_CACHE_BOOKS=$(grep -c . workload/sample_ids.txt) scripts/fill_cache.sh
+
+      - name: Save the mirror of the sample books
+        if: steps.mirror.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: benchmarks/mirror
+          key: ${{ steps.mirror.outputs.cache-primary-key }}
+
+      - name: Start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Run the functional API checks
+        run: java -jar checks/target/checks-1.0-SNAPSHOT.jar
+
+      - name: Collect the service logs
+        if: ${{ failure() }}
+        run: docker compose logs --no-color --timestamps > compose.log
+
+      - name: Keep the service logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: compose-logs
+          path: compose.log
+          retention-days: 7
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: docker compose down -v
