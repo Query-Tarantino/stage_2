@@ -1,0 +1,1 @@
+control-1  | 2026-11-04T15:10:38.929213175Z [reconciliation] INFO org.ulpgc.tarantino.control.commands.CleanDatalakeCommand - Deleted 0 orphan temporaries from the datalake

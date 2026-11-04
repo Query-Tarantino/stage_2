@@ -1,0 +1,1 @@
+nginx-1  | 2026-11-04T14:18:23.063867102Z 2026/11/04 14:18:23 [error] 31#31: *793806 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.1, server: , request: "GET /search?q=ship+captain+sea+voyage HTTP/1.1", upstream: "http://172.18.0.7:7003/search?q=ship+captain+sea+voyage", host: "localhost:8080"
