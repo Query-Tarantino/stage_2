@@ -7,7 +7,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BookTask;
 
 import java.time.Instant;
@@ -37,8 +37,8 @@ class HazelcastQueueSizesTest {
     @Test
     void countsTheMessagesWaitingInEachQueue() {
         HazelcastQueueSizes sizes = new HazelcastQueueSizes(member);
-        enqueue(HazelcastContracts.BOOKS_TO_DOWNLOAD, List.of(1342, 84));
-        enqueue(HazelcastContracts.BOOKS_TO_INDEX, List.of(11));
+        enqueue(MessagingContracts.BOOKS_TO_DOWNLOAD, List.of(1342, 84));
+        enqueue(MessagingContracts.BOOKS_TO_INDEX, List.of(11));
 
         assertEquals(2, sizes.downloads());
         assertEquals(1, sizes.index());

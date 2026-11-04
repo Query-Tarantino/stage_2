@@ -8,6 +8,7 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -57,7 +58,7 @@ class HazelcastClientsTest {
         offerWhenConnected(connection.client(), "{\"book_id\":1342}");
 
         assertTrue(becomesTrue(connection::connected));
-        assertEquals("{\"book_id\":1342}", member.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).poll());
+        assertEquals("{\"book_id\":1342}", member.getQueue(MessagingContracts.BOOKS_TO_DOWNLOAD).poll());
     }
 
     private HazelcastInstance started(HazelcastInstance instance) {
@@ -76,7 +77,7 @@ class HazelcastClientsTest {
         Instant deadline = Instant.now().plusSeconds(30);
         while (true) {
             try {
-                client.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).offer(message);
+                client.getQueue(MessagingContracts.BOOKS_TO_DOWNLOAD).offer(message);
                 return;
             } catch (HazelcastClientOfflineException e) {
                 if (Instant.now().isAfter(deadline)) {

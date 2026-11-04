@@ -2,7 +2,7 @@ package org.ulpgc.tarantino.control.adapters.http;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.control.commands.ControlStatusCommand;
 import org.ulpgc.tarantino.control.model.ControlStatus;
@@ -32,8 +32,8 @@ public class ControlStatusRoutes {
 
         static StatusBody of(ControlStatus status) {
             Map<String, Integer> queues = new LinkedHashMap<>();
-            queues.put(HazelcastContracts.BOOKS_TO_DOWNLOAD, status.downloadQueue());
-            queues.put(HazelcastContracts.BOOKS_TO_INDEX, status.indexQueue());
+            queues.put(MessagingContracts.BOOKS_TO_DOWNLOAD, status.downloadQueue());
+            queues.put(MessagingContracts.BOOKS_TO_INDEX, status.indexQueue());
             return new StatusBody(status.generation(), status.books(), queues, status.lastReconciliation().orElse(null));
         }
     }

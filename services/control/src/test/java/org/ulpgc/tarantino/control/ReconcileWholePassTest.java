@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.TarantinoService;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BatchStatus;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookStatus;
@@ -91,8 +91,8 @@ class ReconcileWholePassTest {
         assertEquals(BookStatus.DOWNLOADED.name(), status(84));
         assertEquals(BookStatus.PUBLISHED.name(), status(11));
         assertEquals(0, collection(MongoCollections.postings(1)).countDocuments());
-        assertEquals(List.of(2701), enqueued(HazelcastContracts.BOOKS_TO_DOWNLOAD));
-        assertEquals(List.of(84), enqueued(HazelcastContracts.BOOKS_TO_INDEX));
+        assertEquals(List.of(2701), enqueued(MessagingContracts.BOOKS_TO_DOWNLOAD));
+        assertEquals(List.of(84), enqueued(MessagingContracts.BOOKS_TO_INDEX));
         assertTrue(reconcile.lastReconciliation().isPresent());
     }
 

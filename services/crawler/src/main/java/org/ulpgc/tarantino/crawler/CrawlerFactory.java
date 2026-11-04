@@ -5,7 +5,7 @@ import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.Lease;
@@ -38,8 +38,8 @@ public final class CrawlerFactory {
 
     public static DownloadWorker downloadWorker(TarantinoConfig config, Connections connections) {
         HazelcastInstance client = connections.hazelcast().client();
-        BookTaskQueue downloads = new BookTaskQueue(client, HazelcastContracts.BOOKS_TO_DOWNLOAD);
-        BookTaskQueue indexing = new BookTaskQueue(client, HazelcastContracts.BOOKS_TO_INDEX);
+        BookTaskQueue downloads = new BookTaskQueue(client, MessagingContracts.BOOKS_TO_DOWNLOAD);
+        BookTaskQueue indexing = new BookTaskQueue(client, MessagingContracts.BOOKS_TO_INDEX);
         Consumer<CrashPoint> crashPoints = new CrashPoints(config.crashAt())::hit;
         Function<BooleanSupplier, Lease> heartbeats = renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal);
         MongoBookClaims claims = new MongoBookClaims(connections.database(), config.lease(), config.maxAttempts());
@@ -59,7 +59,7 @@ public final class CrawlerFactory {
     }
 
     private static TaskQueue downloadQueueOnEachUse(Connections connections) {
-        return task -> new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_DOWNLOAD).offer(task);
+        return task -> new BookTaskQueue(connections.hazelcast().client(), MessagingContracts.BOOKS_TO_DOWNLOAD).offer(task);
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {

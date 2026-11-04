@@ -2,7 +2,7 @@ package org.ulpgc.tarantino.control;
 
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
@@ -120,11 +120,11 @@ public final class ControlFactory {
     }
 
     private static DownloadQueue downloadQueue(Connections connections) {
-        return task -> bookTasks(connections, HazelcastContracts.BOOKS_TO_DOWNLOAD).offer(task);
+        return task -> bookTasks(connections, MessagingContracts.BOOKS_TO_DOWNLOAD).offer(task);
     }
 
     private static IndexQueue indexQueue(Connections connections) {
-        return task -> bookTasks(connections, HazelcastContracts.BOOKS_TO_INDEX).offer(task);
+        return task -> bookTasks(connections, MessagingContracts.BOOKS_TO_INDEX).offer(task);
     }
 
     /** Looked up on every message, so the commands can be built before the Hazelcast client connects. */

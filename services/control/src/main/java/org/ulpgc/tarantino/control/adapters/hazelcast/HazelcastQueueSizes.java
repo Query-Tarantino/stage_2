@@ -1,7 +1,7 @@
 package org.ulpgc.tarantino.control.adapters.hazelcast;
 
 import com.hazelcast.core.HazelcastInstance;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.control.ports.QueueSizes;
 
 /**
@@ -18,11 +18,11 @@ public class HazelcastQueueSizes implements QueueSizes {
 
     @Override
     public int downloads() {
-        return client.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).size();
+        return client.getQueue(MessagingContracts.BOOKS_TO_DOWNLOAD).size();
     }
 
     @Override
     public int index() {
-        return client.getQueue(HazelcastContracts.BOOKS_TO_INDEX).size();
+        return client.getQueue(MessagingContracts.BOOKS_TO_INDEX).size();
     }
 }

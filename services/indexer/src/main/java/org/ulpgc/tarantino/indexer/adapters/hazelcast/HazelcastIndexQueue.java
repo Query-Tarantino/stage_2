@@ -2,7 +2,7 @@ package org.ulpgc.tarantino.indexer.adapters.hazelcast;
 
 import com.hazelcast.core.HazelcastInstance;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.indexer.ports.IndexQueue;
 
@@ -15,7 +15,7 @@ public class HazelcastIndexQueue implements IndexQueue {
     private final BookTaskQueue queue;
 
     public HazelcastIndexQueue(HazelcastInstance client) {
-        this.queue = new BookTaskQueue(client, HazelcastContracts.BOOKS_TO_INDEX);
+        this.queue = new BookTaskQueue(client, MessagingContracts.BOOKS_TO_INDEX);
     }
 
     @Override

@@ -5,7 +5,7 @@ import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.LeaseHeartbeat;
@@ -50,7 +50,7 @@ public final class IndexerFactory {
     public static Consumer<Javalin> routes(Connections connections) {
         IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()), new MongoIndexStatus(connections.database()));
         BookRoutes books = new BookRoutes(new BookStates(connections.database())::state,
-                task -> new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_INDEX).offer(task),
+                task -> new BookTaskQueue(connections.hazelcast().client(), MessagingContracts.BOOKS_TO_INDEX).offer(task),
                 Clock.systemUTC());
         return app -> {
             index.register(app);

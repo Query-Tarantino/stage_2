@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.TarantinoService;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
 import org.ulpgc.tarantino.common.http.TarantinoServer;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.TemporaryMongoDatabase;
 import org.ulpgc.tarantino.common.startup.Connections;
 
@@ -75,7 +75,7 @@ class CrawlerStartupTest {
         awaitConnected();
 
         assertEquals(202, send("POST", "/ingest/84").statusCode());
-        assertTrue(member.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).size() >= 1);
+        assertTrue(member.getQueue(MessagingContracts.BOOKS_TO_DOWNLOAD).size() >= 1);
     }
 
     private HazelcastInstance startMember(int port) {

@@ -1,6 +1,6 @@
 package org.ulpgc.tarantino.bench.recovery;
 
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BookStatus;
 
 import java.time.Clock;
@@ -44,7 +44,7 @@ public class WaitCommand {
         if (Arrays.stream(BookStatus.values()).anyMatch(state -> state.name().equals(target))) {
             return Optional.of(BOOKS);
         }
-        if (target.equals(HazelcastContracts.BOOKS_TO_DOWNLOAD) || target.equals(HazelcastContracts.BOOKS_TO_INDEX)) {
+        if (target.equals(MessagingContracts.BOOKS_TO_DOWNLOAD) || target.equals(MessagingContracts.BOOKS_TO_INDEX)) {
             return Optional.of(QUEUES);
         }
         return Optional.empty();
