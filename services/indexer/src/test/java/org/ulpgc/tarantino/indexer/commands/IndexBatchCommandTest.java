@@ -8,6 +8,7 @@ import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
+import org.ulpgc.tarantino.indexer.model.batch.ClaimedBook;
 import org.ulpgc.tarantino.indexer.model.book.BookMetadata;
 import org.ulpgc.tarantino.indexer.model.book.BookText;
 import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
@@ -242,6 +243,20 @@ class IndexBatchCommandTest {
         private final Set<Integer> marked = new HashSet<>();
         private final List<String> renewed = new ArrayList<>();
         private boolean leaseLost;
+
+        @Override
+        public Optional<ClaimedBook> claimNext(Batch batch) {
+            return downloaded.stream().sorted().findFirst().map(bookId -> {
+                downloaded.remove(bookId);
+                indexing.add(bookId);
+                return new ClaimedBook(bookId, ENQUEUED_AT);
+            });
+        }
+
+        @Override
+        public boolean anyDownloaded() {
+            return !downloaded.isEmpty();
+        }
 
         @Override
         public int writeGeneration() {

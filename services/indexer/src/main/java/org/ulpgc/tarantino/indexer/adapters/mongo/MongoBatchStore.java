@@ -18,6 +18,7 @@ import org.ulpgc.tarantino.common.mongo.IndexState;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.common.mongo.MongoIndexes;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
+import org.ulpgc.tarantino.indexer.model.batch.ClaimedBook;
 import org.ulpgc.tarantino.indexer.ports.BatchStore;
 
 import java.time.Duration;
@@ -33,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.BATCH_ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.BOOK_IDS;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.CLAIM_ID;
+import static org.ulpgc.tarantino.common.mongo.MongoFields.ENQUEUED_AT;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.GENERATION;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.LAST_ERROR;
@@ -91,16 +93,38 @@ public class MongoBatchStore implements BatchStore {
 
     @Override
     public List<Integer> claim(Batch batch, Collection<Integer> bookIds) {
-        Document change = new Document(STATUS, BookStatus.INDEXING.name())
-                .append(BATCH_ID, id(batch))
-                .append(GENERATION, batch.generation())
-                .append(UPDATED_AT, NOW);
-        states.updateMany(Filters.and(Filters.in(ID, bookIds), Filters.eq(STATUS, BookStatus.DOWNLOADED.name())), set(change));
+        states.updateMany(Filters.and(Filters.in(ID, bookIds), Filters.eq(STATUS, BookStatus.DOWNLOADED.name())), set(claimChange(batch)));
         return states.find(indexingIn(batch))
                 .projection(Projections.include(ID))
                 .sort(Sorts.ascending(ID))
                 .map(state -> state.getInteger(ID))
                 .into(new ArrayList<>());
+    }
+
+    @Override
+    public Optional<ClaimedBook> claimNext(Batch batch) {
+        FindOneAndUpdateOptions oldestFirst = new FindOneAndUpdateOptions()
+                .sort(Sorts.ascending(ENQUEUED_AT, ID))
+                .returnDocument(ReturnDocument.AFTER)
+                .projection(Projections.include(ENQUEUED_AT));
+        return Optional.ofNullable(states.findOneAndUpdate(downloaded(), set(claimChange(batch)), oldestFirst))
+                .map(state -> new ClaimedBook(state.getInteger(ID), state.getDate(ENQUEUED_AT).toInstant()));
+    }
+
+    @Override
+    public boolean anyDownloaded() {
+        return states.find(downloaded()).projection(Projections.include(ID)).limit(1).first() != null;
+    }
+
+    private static Document claimChange(Batch batch) {
+        return new Document(STATUS, BookStatus.INDEXING.name())
+                .append(BATCH_ID, id(batch))
+                .append(GENERATION, batch.generation())
+                .append(UPDATED_AT, NOW);
+    }
+
+    private static Bson downloaded() {
+        return Filters.eq(STATUS, BookStatus.DOWNLOADED.name());
     }
 
     @Override

@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.indexer.ports;
 
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
+import org.ulpgc.tarantino.indexer.model.batch.ClaimedBook;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -18,6 +19,12 @@ public interface BatchStore {
 
     /** “Claim its books”: the books that are now {@code INDEXING} in the batch, ascending. */
     List<Integer> claim(Batch batch, Collection<Integer> bookIds);
+
+    /** “Claim the next book for a batch”, mode {@code polling}: the oldest {@code DOWNLOADED} book, now in the batch, or empty. */
+    Optional<ClaimedBook> claimNext(Batch batch);
+
+    /** Whether any book is {@code DOWNLOADED}, so a polling indexer opens a batch only when there is work (SPEC §11.3). */
+    boolean anyDownloaded();
 
     /** “Renew a batch”: false if the lease was lost, because the batch is no longer {@code WRITING} with its {@code claim_id}. */
     boolean renew(Batch batch);
