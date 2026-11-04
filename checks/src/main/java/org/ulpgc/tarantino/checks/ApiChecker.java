@@ -7,8 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
-import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
-import org.ulpgc.tarantino.common.terms.Tokenizer;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,13 +15,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.stream.StreamSupport;
 
 import static org.ulpgc.tarantino.checks.Assertions.assertEquals;
 import static org.ulpgc.tarantino.checks.Assertions.assertTrue;
-import static org.ulpgc.tarantino.checks.SearchResults.containsBook;
 
 public class ApiChecker {
 
@@ -33,12 +28,14 @@ public class ApiChecker {
     private final CheckedClient client;
     private final String frontEndUrl;
     private final String operationalUrl;
-    private final Tokenizer tokenizer;
-    private final List<JsonNode> sampleBooks = new ArrayList<>();
+    private final SearchTerms terms;
     private final HealthChecks health;
     private final NginxChecks nginx;
     private final OperationalChecks operational;
     private final PublicationWait publication;
+    private final BookChecks books;
+    private final SearchParameterChecks parameters;
+    private final SearchChecks searches;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         Api api = Api.of(client, frontEndUrl, operationalUrl);
@@ -49,11 +46,10 @@ public class ApiChecker {
         this.nginx = new NginxChecks(api);
         this.operational = new OperationalChecks(api);
         this.publication = new PublicationWait(api);
-        Path stopwordsPath = findStopwordsPath();
-        Set<String> stopwords = Files.exists(stopwordsPath)
-                ? new FileStopwordsLoader(stopwordsPath).stopwords()
-                : Set.of();
-        this.tokenizer = new Tokenizer(stopwords);
+        this.terms = SearchTerms.fromRepository();
+        this.books = new BookChecks(api);
+        this.parameters = new SearchParameterChecks(api);
+        this.searches = new SearchChecks(api, terms);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -67,166 +63,12 @@ public class ApiChecker {
         publication.ensurePublished(sampleIds);
         operational.checkBookStatuses();
         operational.checkIdempotency(sampleIds);
-        checkBooksEndpoints(sampleIds);
-        checkFiltersSummary();
-        checkSearchParametersOrder();
-        checkSearchEndpoints();
+        List<JsonNode> sampleBooks = books.check(sampleIds);
+        searches.checkFilterSummary();
+        parameters.check();
+        searches.check(sampleBooks);
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
-    }
-
-    public void checkBooksEndpoints(List<Integer> sampleIds) throws IOException, InterruptedException {
-        LOGGER.info("Checking /books endpoints");
-        sampleBooks.clear();
-        for (int bookId : sampleIds) {
-            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
-            assertEquals(200, response.status());
-            assertEquals(bookId, response.json().get("book_id").asInt());
-            sampleBooks.add(response.json());
-        }
-
-        CheckedClient.Response book1342 = client.get(frontEndUrl + "/books/1342");
-        assertEquals(200, book1342.status());
-        assertEquals(1342, book1342.json().get("book_id").asInt());
-        assertEquals("Pride and Prejudice", book1342.json().get("title").asText());
-        assertEquals("Jane Austen", book1342.json().get("author").asText());
-        assertEquals("en", book1342.json().get("language").asText());
-        assertTrue(book1342.json().has("languages") && book1342.json().get("languages").isArray());
-        assertEquals("en", book1342.json().get("languages").get(0).asText());
-
-        CheckedClient.Response notFound = client.get(frontEndUrl + "/books/999999");
-        assertEquals(404, notFound.status());
-        assertEquals("BOOK_NOT_FOUND", notFound.json().get("code").asText());
-
-        assertProblem(frontEndUrl + "/books/0", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/-5", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/01", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/2147483648", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/abc", 400, "INVALID_PARAMETER", "book_id");
-    }
-
-    public void checkFiltersSummary() throws IOException, InterruptedException {
-        LOGGER.info("Checking /search/filters");
-        CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
-        assertEquals(200, response.status());
-        JsonNode json = response.json();
-        assertTrue(json.has("languages"));
-        assertTrue(json.has("years"));
-        assertTrue(json.has("total_books"));
-    }
-
-    public void checkSearchParametersOrder() throws IOException, InterruptedException {
-        LOGGER.info("Checking parameter validation in strict order");
-        assertProblem(frontEndUrl + "/search", 400, "MISSING_PARAMETER", "q");
-        assertProblem(frontEndUrl + "/search?q=", 400, "MISSING_PARAMETER", "q");
-        assertProblem(frontEndUrl + "/search?q=%20", 400, "MISSING_PARAMETER", "q");
-
-        assertProblem(frontEndUrl + "/search?q=pride&author=...!", 400, "INVALID_PARAMETER", "author");
-
-        assertProblem(frontEndUrl + "/search?q=pride&language=eng", 400, "INVALID_PARAMETER", "language");
-        assertProblem(frontEndUrl + "/search?q=pride&language=E", 400, "INVALID_PARAMETER", "language");
-        assertProblem(frontEndUrl + "/search?q=pride&language=12", 400, "INVALID_PARAMETER", "language");
-
-        assertProblem(frontEndUrl + "/search?q=pride&year=98", 400, "INVALID_PARAMETER", "year");
-        assertProblem(frontEndUrl + "/search?q=pride&year=19980", 400, "INVALID_PARAMETER", "year");
-        assertProblem(frontEndUrl + "/search?q=pride&year=abcd", 400, "INVALID_PARAMETER", "year");
-
-        assertProblem(frontEndUrl + "/search?q=pride&offset=-1", 400, "INVALID_PARAMETER", "offset");
-        assertProblem(frontEndUrl + "/search?q=pride&offset=abc", 400, "INVALID_PARAMETER", "offset");
-        assertProblem(frontEndUrl + "/search?q=pride&offset=99999999999999999999", 400, "INVALID_PARAMETER", "offset");
-
-        assertProblem(frontEndUrl + "/search?q=pride&limit=0", 400, "INVALID_PARAMETER", "limit");
-        assertProblem(frontEndUrl + "/search?q=pride&limit=101", 400, "INVALID_PARAMETER", "limit");
-        assertProblem(frontEndUrl + "/search?q=pride&limit=-5", 400, "INVALID_PARAMETER", "limit");
-        assertProblem(frontEndUrl + "/search?q=pride&limit=xyz", 400, "INVALID_PARAMETER", "limit");
-
-        assertProblem(frontEndUrl + "/search?q=&author=...!&language=bad&year=bad&offset=-1&limit=0", 400, "MISSING_PARAMETER", "q");
-        assertProblem(frontEndUrl + "/search?q=pride&author=...!&language=bad&year=bad&offset=-1&limit=0", 400, "INVALID_PARAMETER", "author");
-        assertProblem(frontEndUrl + "/search?q=pride&author=Austen&language=bad&year=bad&offset=-1&limit=0", 400, "INVALID_PARAMETER", "language");
-        assertProblem(frontEndUrl + "/search?q=pride&author=Austen&language=en&year=bad&offset=-1&limit=0", 400, "INVALID_PARAMETER", "year");
-        assertProblem(frontEndUrl + "/search?q=pride&author=Austen&language=en&year=1998&offset=-1&limit=0", 400, "INVALID_PARAMETER", "offset");
-    }
-
-    public void checkSearchEndpoints() throws IOException, InterruptedException {
-        LOGGER.info("Checking search endpoints");
-        CheckedClient.Response single = client.get(frontEndUrl + "/search?q=pride");
-        assertEquals(200, single.status());
-        assertEquals("pride", single.json().get("query").asText());
-        assertTrue(single.json().get("total").asInt() >= 1);
-        assertTrue(containsBook(single.json().get("results"), 1342));
-
-        CheckedClient.Response multiple = client.get(frontEndUrl + "/search?q=pride%20prejudice");
-        assertEquals(200, multiple.status());
-        assertEquals("pride prejudice", multiple.json().get("query").asText());
-        assertTrue(multiple.json().get("total").asInt() >= 1);
-        assertTrue(containsBook(multiple.json().get("results"), 1342));
-
-        CheckedClient.Response withAuthor = client.get(frontEndUrl + "/search?q=pride&author=Austen");
-        assertEquals(200, withAuthor.status());
-        assertEquals("Austen", withAuthor.json().get("filters").get("author").asText());
-        assertTrue(withAuthor.json().get("total").asInt() >= 1);
-        assertTrue(containsBook(withAuthor.json().get("results"), 1342));
-
-        CheckedClient.Response langEn = client.get(frontEndUrl + "/search?q=pride&language=en");
-        assertEquals(200, langEn.status());
-        assertEquals("en", langEn.json().get("filters").get("language").asText());
-        assertTrue(langEn.json().get("total").asInt() >= 1);
-        assertTrue(containsBook(langEn.json().get("results"), 1342));
-
-        checkLanguageFilter(sampleBooks, "de");
-        checkLanguageFilter(sampleBooks, "fr");
-
-        CheckedClient.Response langZz = client.get(frontEndUrl + "/search?q=pride&language=zz");
-        assertEquals(200, langZz.status());
-        assertEquals("zz", langZz.json().get("filters").get("language").asText());
-        assertEquals(0, langZz.json().get("total").asInt());
-        assertEquals(0, langZz.json().get("results").size());
-
-        CheckedClient.Response withYear = client.get(frontEndUrl + "/search?q=pride&year=1998");
-        assertEquals(200, withYear.status());
-        assertEquals(1998, withYear.json().get("filters").get("year").asInt());
-        assertTrue(withYear.json().get("total").asInt() >= 1);
-        assertTrue(containsBook(withYear.json().get("results"), 1342));
-
-        CheckedClient.Response combined = client.get(frontEndUrl + "/search?q=pride&author=Austen&language=en&year=1998");
-        assertEquals(200, combined.status());
-        assertEquals("Austen", combined.json().get("filters").get("author").asText());
-        assertEquals("en", combined.json().get("filters").get("language").asText());
-        assertEquals(1998, combined.json().get("filters").get("year").asInt());
-        assertTrue(combined.json().get("total").asInt() >= 1);
-        assertTrue(containsBook(combined.json().get("results"), 1342));
-
-        CheckedClient.Response page0 = client.get(frontEndUrl + "/search?q=pride&offset=0&limit=1");
-        assertEquals(200, page0.status());
-        assertEquals(0, page0.json().get("offset").asInt());
-        assertEquals(1, page0.json().get("limit").asInt());
-
-        CheckedClient.Response page1 = client.get(frontEndUrl + "/search?q=pride&offset=1&limit=1");
-        assertEquals(200, page1.status());
-        assertEquals(1, page1.json().get("offset").asInt());
-        assertEquals(1, page1.json().get("limit").asInt());
-        assertEquals(page0.json().get("total").asInt(), page1.json().get("total").asInt());
-
-        if (page0.json().get("total").asInt() >= 2) {
-            int firstBookId = page0.json().get("results").get(0).get("book_id").asInt();
-            int secondBookId = page1.json().get("results").get(0).get("book_id").asInt();
-            assertTrue(firstBookId != secondBookId);
-        }
-
-        CheckedClient.Response largeOffset = client.get(frontEndUrl + "/search?q=pride&offset=1000000000");
-        assertEquals(200, largeOffset.status());
-        assertEquals(1000000000, largeOffset.json().get("offset").asInt());
-        assertEquals(0, largeOffset.json().get("results").size());
-
-        CheckedClient.Response stopwords = client.get(frontEndUrl + "/search?q=the%20and");
-        assertEquals(200, stopwords.status());
-        assertEquals(0, stopwords.json().get("total").asInt());
-        assertEquals(0, stopwords.json().get("results").size());
-
-        CheckedClient.Response empty = client.get(frontEndUrl + "/search?q=pyromaniac%20liliput");
-        assertEquals(200, empty.status());
-        assertEquals(0, empty.json().get("total").asInt());
-        assertEquals(0, empty.json().get("results").size());
     }
 
     public void checkAgainstExpected(Path expectedPath) throws IOException, InterruptedException {
@@ -338,17 +180,8 @@ public class ApiChecker {
             }
         });
 
-        Optional<JsonNode> deBook = bookNodes.stream()
-                .filter(book -> book.has("languages") && StreamSupport.stream(book.get("languages").spliterator(), false)
-                        .anyMatch(langNode -> "de".equalsIgnoreCase(langNode.asText())))
-                .findFirst();
-        String deTerm = deBook.map(this::pickSearchTerm).orElse("faust");
-
-        Optional<JsonNode> frBook = bookNodes.stream()
-                .filter(book -> book.has("languages") && StreamSupport.stream(book.get("languages").spliterator(), false)
-                        .anyMatch(langNode -> "fr".equalsIgnoreCase(langNode.asText())))
-                .findFirst();
-        String frTerm = frBook.map(this::pickSearchTerm).orElse("monde");
+        String deTerm = SearchTerms.firstIn(bookNodes, "de").map(terms::termFor).orElse("faust");
+        String frTerm = SearchTerms.firstIn(bookNodes, "fr").map(terms::termFor).orElse("monde");
 
         record SearchCase(String name, String path) {}
         List<SearchCase> searchCases = List.of(
@@ -392,60 +225,6 @@ public class ApiChecker {
         LOGGER.info("Generated expected.json with {} books and {} queries", booksNode.size(), searchesNode.size());
     }
 
-    private void checkLanguageFilter(List<JsonNode> books, String language) throws IOException, InterruptedException {
-        Optional<JsonNode> match = books.stream()
-                .filter(book -> book.has("languages") && book.get("languages").isArray())
-                .filter(book -> StreamSupport.stream(book.get("languages").spliterator(), false)
-                        .anyMatch(langNode -> language.equalsIgnoreCase(langNode.asText())))
-                .findFirst();
-        if (match.isPresent()) {
-            JsonNode book = match.get();
-            String term = pickSearchTerm(book);
-            int bookId = book.get("book_id").asInt();
-            CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + term + "&language=" + language);
-            assertEquals(200, response.status());
-            assertEquals(language, response.json().get("filters").get("language").asText());
-            assertTrue(response.json().get("total").asInt() >= 1);
-            assertTrue(containsBook(response.json().get("results"), bookId));
-        }
-    }
-
-    private String pickSearchTerm(JsonNode book) {
-        if (book.has("title") && !book.get("title").isNull()) {
-            List<String> terms = tokenizer.distinctTerms(book.get("title").asText());
-            Optional<String> descriptive = terms.stream().filter(term -> term.length() > 2).findFirst();
-            if (descriptive.isPresent()) {
-                return descriptive.get();
-            }
-            if (!terms.isEmpty()) {
-                return terms.getFirst();
-            }
-        }
-        if (book.has("author") && !book.get("author").isNull()) {
-            List<String> terms = tokenizer.distinctTerms(book.get("author").asText());
-            Optional<String> descriptive = terms.stream().filter(term -> term.length() > 2).findFirst();
-            if (descriptive.isPresent()) {
-                return descriptive.get();
-            }
-            if (!terms.isEmpty()) {
-                return terms.getFirst();
-            }
-        }
-        return "pride";
-    }
-
-    private static Path findStopwordsPath() {
-        List<Path> candidates = List.of(
-                Paths.get("workload/stopwords.txt"),
-                Paths.get("../workload/stopwords.txt"),
-                Paths.get("../../workload/stopwords.txt")
-        );
-        return candidates.stream()
-                .filter(Files::exists)
-                .findFirst()
-                .orElse(Paths.get("workload/stopwords.txt"));
-    }
-
     private static List<Integer> readSampleIds() {
         Path path = findSampleIdsPath();
         try {
@@ -469,19 +248,6 @@ public class ApiChecker {
                 .filter(Files::exists)
                 .findFirst()
                 .orElse(Paths.get("workload/sample_ids.txt"));
-    }
-
-    private void assertProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.get(url);
-        assertEquals(expectedStatus, response.status());
-        if (expectedCode != null) {
-            assertTrue(response.json() != null && response.json().has("code"));
-            assertEquals(expectedCode, response.json().get("code").asText());
-        }
-        if (expectedParam != null) {
-            assertTrue(response.json() != null && response.json().has("parameter"));
-            assertEquals(expectedParam, response.json().get("parameter").asText());
-        }
     }
 
 }
