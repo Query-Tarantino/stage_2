@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Build and run every test
+        run: mvn -B -ntp clean verify
+
+      - name: Fail if the MongoDB tests were skipped
+        run: |
+          if grep -rl --include='TEST-*.xml' 'No MongoDB answers' .; then
+            echo "::error::MongoDB tests were skipped instead of running against Testcontainers"
+            exit 1
+          fi
+
+      - name: Publish the test report
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@4a26df3e2ae132254ba12a53f65a388d0961e786
+        with:
+          report_paths: "**/target/surefire-reports/TEST-*.xml"
+          check_name: Test report
+          detailed_summary: true
+
