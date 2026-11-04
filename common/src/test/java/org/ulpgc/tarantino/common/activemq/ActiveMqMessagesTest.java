@@ -68,6 +68,29 @@ class ActiveMqMessagesTest {
     }
 
     @Test
+    void givesAnUnacknowledgedPersistentMessageToAnotherConsumerWhenItsConsumerDies() {
+        persistentHandle().offer(new BookTask(1342, ENQUEUED_AT));
+        ActiveMqBookTasks dying = persistentHandle();
+        assertEquals(1342, dying.poll(WAIT).orElseThrow().bookId());
+
+        dying.close();
+
+        assertEquals(Optional.of(new BookTask(1342, ENQUEUED_AT)), persistentHandle().poll(WAIT));
+    }
+
+    @Test
+    void neverGivesAnAcknowledgedPersistentMessageAgain() {
+        persistentHandle().offer(new BookTask(1342, ENQUEUED_AT));
+        ActiveMqBookTasks worker = persistentHandle();
+        worker.poll(WAIT);
+
+        worker.acknowledge();
+        worker.close();
+
+        assertEquals(Optional.empty(), persistentHandle().poll(Duration.ofMillis(500)));
+    }
+
+    @Test
     void announcesEachPublishedBatchToEveryListener() throws Exception {
         ActiveMqAnnouncements announcements = new ActiveMqAnnouncements(connection);
         CompletableFuture<BatchPublished> first = new CompletableFuture<>();
@@ -84,6 +107,10 @@ class ActiveMqMessagesTest {
 
     private ActiveMqBookTasks handle() {
         return handle(1);
+    }
+
+    private ActiveMqBookTasks persistentHandle() {
+        return new ActiveMqBookTasks(connection, queue, 1, true);
     }
 
     private ActiveMqBookTasks handle(int prefetch) {
