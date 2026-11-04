@@ -1,5 +1,6 @@
 package org.ulpgc.tarantino.common.messaging;
 
+import org.ulpgc.tarantino.common.activemq.ActiveMqBroker;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.hazelcast.HazelcastBroker;
 import org.ulpgc.tarantino.common.hazelcast.HazelcastClients;
@@ -19,7 +20,7 @@ public final class Brokers {
         return switch (config.coordination()) {
             case HAZELCAST -> Optional.of(HazelcastBroker.of(HazelcastClients.connect(config.hazelcastMembers(),
                     config.hazelcastCluster())));
-            case ACTIVEMQ -> throw new UnsupportedOperationException("Mode activemq has no broker client yet");
+            case ACTIVEMQ -> Optional.of(ActiveMqBroker.connect(config.activeMq(), config.activeMqPersistent(), config.indexBatch()));
             case POLLING, ORCHESTRATOR -> Optional.empty();
         };
     }

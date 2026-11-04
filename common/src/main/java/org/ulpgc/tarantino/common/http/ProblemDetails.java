@@ -9,6 +9,7 @@ import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
+import org.ulpgc.tarantino.common.messaging.BrokerUnavailableException;
 import org.ulpgc.tarantino.common.model.ProblemCode;
 
 /**
@@ -34,6 +35,7 @@ public final class ProblemDetails {
         app.exception(MongoTimeoutException.class, (error, context) -> unavailable(context, MONGO_DOWN));
         app.exception(MongoSocketException.class, (error, context) -> unavailable(context, MONGO_DOWN));
         app.exception(HazelcastClientOfflineException.class, (error, context) -> unavailable(context, HAZELCAST_DOWN));
+        app.exception(BrokerUnavailableException.class, (error, context) -> unavailable(context, error.getMessage()));
         app.exception(Exception.class, (error, context) -> {
             LOGGER.error("Unexpected error answering {} {}", context.method(), context.path(), error);
             answer(context, HttpStatus.INTERNAL_SERVER_ERROR, null, null, null);
