@@ -1,201 +1,133 @@
 #!/usr/bin/env bash
-set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/trials.sh"
 
-readonly WORKLOAD_DIR="${TARANTINO_WORKLOAD:-workload}"
-readonly BENCHMARKS_DIR="${TARANTINO_BENCHMARKS:-benchmarks}"
-readonly RUNS_DIR="${BENCHMARKS_DIR}/runs"
-readonly CORPUS_SHA="${WORKLOAD_DIR}/corpus.sha256"
-readonly STOPWORDS_FILE="${WORKLOAD_DIR}/stopwords.txt"
-readonly CORPUS_CACHE="${TARANTINO_CACHE:-${BENCHMARKS_DIR}/cache}"
-readonly FRONTEND_URL="${TARANTINO_FRONTEND_URL:-http://localhost:8080}"
-readonly MONGO_URI="${TARANTINO_MONGO_URI:-mongodb://mongo:27017/tarantino}"
-readonly BENCH_JAR="bench/target/bench-1.0-SNAPSHOT.jar"
+readonly BASELINE_CLIENTS=32
+readonly BASELINE_THREADS=32
+readonly BASELINE_REPLICAS=1
+readonly FRONTEND_URL=http://localhost:8080
+readonly MONGO_URI=mongodb://mongo:27017/tarantino
+readonly CONTROL_STATUS_URL=http://localhost:8081/control/status
 
-readonly BASELINE_CLIENTS="${TARANTINO_BASELINE_CLIENTS:-32}"
-readonly BASELINE_THREADS="${TARANTINO_BASELINE_THREADS:-32}"
-readonly BASELINE_REPLICAS="${TARANTINO_BASELINE_REPLICAS:-1}"
+readonly CONFIGURATIONS=(
+    "1 32 1"
+    "8 32 1"
+    "32 32 1"
+    "64 32 1"
+    "32 8 1"
+    "32 128 1"
+    "32 32 2"
+    "32 32 3"
+)
 
-readonly CLIENTS_CONFIG="${TARANTINO_CLIENTS_LIST:-1 8 32 64}"
-readonly THREADS_CONFIG="${TARANTINO_THREADS_LIST:-8 32 128}"
-readonly REPLICAS_CONFIG="${TARANTINO_REPLICAS_LIST:-1 2 3}"
+trial_started_at=""
 
-STATS_PID=""
-
-ensure_bench_jar() {
-    if [[ ! -f "$BENCH_JAR" ]]; then
-        mvn -f bench/pom.xml package -DskipTests
-    fi
+state_hypotheses() {
+    echo "Factor: 8 configurations across concurrency (1 8 32 64 clients), worker threads (8 32 128) and query replicas (1 2 3), $REPETITIONS repetitions each, interleaved: repetition 1 of all configurations, then repetition 2, so thermal and JVM drift spread across every configuration"
+    echo "H1 (concurrency): At 1 and 8 clients, mean latency stays low and flat because requests easily fit on the 8 P-cores of the official machine with no queuing. At 32 clients, requests exceed the 8 P-cores and spill onto slower E-cores, causing queuing; throughput saturates and p95 latency grows significantly. At 64 clients, queuing dominates and latency increases roughly linearly with concurrency (Little's Law under saturation)"
+    echo "H2 (HTTP worker threads): With 8 threads, the JVM thread pool matches the 8 P-cores, avoiding E-core thread contention, but under 32 concurrent clients Jetty queues connections in the OS socket backlog, inflating latency tail. With 32 threads, Javalin handles the 32 clients concurrently, utilizing P-cores and spilling into E-cores with moderate context switching. With 128 threads, thread context switching and thread pool contention across the hybrid cores introduce overhead without throughput gains, increasing p95 and p99 jitter"
+    echo "H3 (query replicas): With 1 replica, a single JVM handles all search queries and MongoDB round-trips. Scaling to 2 and 3 replicas behind nginx distributes CPU-bound JSON parsing, TF-IDF ranking, and socket I/O across independent JVM heaps, decreasing mean and p95 latency under high concurrency (32 clients) as long as aggregate CPU fits within the 24 Docker CPUs"
 }
 
-verify_corpus() {
-    local run_directory=$1
-    java -jar "$BENCH_JAR" corpus check "$CORPUS_CACHE" "$CORPUS_SHA" "$STOPWORDS_FILE" "$run_directory"
-}
-
-save_service_logs() {
-    local run_directory=$1
-    echo "Saving service logs in ${run_directory}/logs..."
-    mkdir -p "${run_directory}/logs"
-    if command -v docker >/dev/null 2>&1; then
-        for service_name in crawler indexer query control nginx mongo hazelcast; do
-            docker compose logs --no-color --timestamps "$service_name" > "${run_directory}/logs/${service_name}.log" 2>/dev/null || true
-        done
-    fi
-}
-
-start_stats() {
-    local run_directory=$1
-    if command -v docker >/dev/null 2>&1; then
-        java -jar "$BENCH_JAR" stats "$run_directory" &
-        STATS_PID=$!
-    fi
-}
-
-stop_stats() {
-    if [[ -n "${STATS_PID:-}" ]]; then
-        kill "$STATS_PID" 2>/dev/null || true
-        wait "$STATS_PID" 2>/dev/null || true
-        STATS_PID=""
-    fi
-}
-
-wait_for_query_ready() {
-    local endpoint_url="${FRONTEND_URL}/search/filters"
-    local max_attempts=120
-    local attempt=0
-    local consecutive_successes=0
-    echo "Waiting for ${endpoint_url} to answer 200 with total_books > 0 across 10 consecutive requests..."
-    while (( attempt < max_attempts && consecutive_successes < 10 )); do
-        local status_code
-        status_code=$(curl -s -o /tmp/filters_check.json -w "%{http_code}" "${endpoint_url}" 2>/dev/null || echo "000")
-        if [[ "$status_code" == "200" && -f /tmp/filters_check.json ]]; then
-            local total_books
-            total_books=$(grep -o '"total_books":[0-9]*' /tmp/filters_check.json | cut -d: -f2 || echo 0)
-            if [[ -n "$total_books" && "$total_books" -gt 0 ]]; then
-                consecutive_successes=$((consecutive_successes + 1))
-            else
-                consecutive_successes=0
-            fi
-        else
-            consecutive_successes=0
-        fi
-        sleep 0.2
-        attempt=$((attempt + 1))
-    done
-    rm -f /tmp/filters_check.json
-    if (( consecutive_successes >= 10 )); then
-        echo "Query service is ready across all replicas"
-        return 0
-    fi
-    echo "Error: Query service did not answer 10 consecutive 200s with total_books > 0 within ${max_attempts} attempts" >&2
-    exit 1
-}
-
-export_explain() {
-    local run_directory=$1
-    echo "Saving explain plans in ${run_directory}/explain..."
-    if command -v docker >/dev/null 2>&1 && docker compose ps query | grep -q "query"; then
-        docker compose cp --index=1 "$BENCH_JAR" query:/tmp/bench.jar
-        docker compose exec -T --index=1 query java -cp "/tmp/bench.jar" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "/tmp/explain" "$MONGO_URI" 1
-        docker compose cp --index=1 query:/tmp/explain/. "${run_directory}/explain/"
-        docker compose exec -T --index=1 query rm -rf /tmp/bench.jar /tmp/explain
+to_windows_path() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$1"
     else
-        java -cp "$BENCH_JAR" org.ulpgc.tarantino.bench.explain.ExplainPlanExporter "${run_directory}/explain" "$MONGO_URI" 1
+        echo "$1"
     fi
 }
 
 run_jmh() {
-    local run_directory=$1
-    local abs_run_dir
-    abs_run_dir="$(cd "$run_directory" && pwd)"
+    local absolute_run_dir
+    absolute_run_dir=$(to_windows_path "$(cd "$run_dir" && pwd)")
     echo "Running JMH SearchBenchmark..."
-    mvn -DskipTests install
     mvn -f services/query/pom.xml exec:exec \
         -Dexec.executable=java \
         -Dexec.classpathScope=test \
-        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark ${abs_run_dir}"
-    if [[ -f "${run_directory}/jmh/query.json" ]]; then
-        echo "Converting JMH JSON to CSV..."
-        java -jar "$BENCH_JAR" jmh-csv "${run_directory}/jmh/query.json" "${run_directory}/jmh/query.csv"
-    fi
+        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.query.benchmarks.SearchBenchmark \"${absolute_run_dir}\""
+    echo "Converting JMH JSON to CSV..."
+    java -jar "$BENCH_JAR" jmh-csv "${run_dir}/jmh/query.json" "${run_dir}/jmh/query.csv"
 }
 
-measure_latency() {
-    local run_directory=$1
+ingest_corpus() {
+    echo "Ingesting mirror corpus until all books are PUBLISHED..."
+    "${COMPOSE[@]}" up -d --wait
+    wait_for PUBLISHED "$(expected_books)"
+}
 
-    echo "Setting up baseline configuration: replicas=${BASELINE_REPLICAS}, threads=${BASELINE_THREADS}"
-    TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d --scale "query=${BASELINE_REPLICAS}" query
-    wait_for_query_ready
+export_explain() {
+    local generation
+    generation=$(curl -fsS "$CONTROL_STATUS_URL" | grep -o '"generation":[0-9]*' | cut -d: -f2)
+    echo "Saving explain plans for generation $generation in ${run_dir}/explain..."
+    mkdir -p "${run_dir}/explain"
+    "${COMPOSE[@]}" run --rm -T bench explain "$run_dir/explain" "$MONGO_URI" "$generation"
+}
 
-    export_explain "$run_directory"
+search_trial_name() {
+    local clients=$1 threads=$2 replicas=$3 repetition=$4
+    echo "clients-$clients-threads-$threads-replicas-$replicas-rep-$repetition"
+}
 
-    echo "=== Series 1: Varying concurrent clients (${CLIENTS_CONFIG}) with threads=${BASELINE_THREADS}, replicas=${BASELINE_REPLICAS} ==="
-    echo "Hypothesis: As concurrent clients increase, throughput scales until concurrency saturation while mean and p95 latency increase due to queuing."
-    for client_count in $CLIENTS_CONFIG; do
-        local config_name="clients_${client_count}"
-        local series_config="series=clients,clients=${client_count},threads=${BASELINE_THREADS},replicas=${BASELINE_REPLICAS}"
-        echo "Running load test: ${series_config}"
-        java -jar "$BENCH_JAR" load "$FRONTEND_URL" "$run_directory" "$client_count" "$config_name"
-        java -jar "$BENCH_JAR" summary "$run_directory" "$series_config" "${run_directory}/load/${config_name}.csv" "search_latency"
+recreate_query() {
+    local replicas=$1 threads=$2
+    TARANTINO_HTTP_THREADS="$threads" "${COMPOSE[@]}" up -d --wait --force-recreate --scale "query=$replicas" query
+}
+
+save_trial_logs() {
+    local trial_logs="$run_dir/logs/$current_trial"
+    mkdir -p "$trial_logs"
+    local service
+    for service in "${SERVICES[@]}"; do
+        "${COMPOSE[@]}" logs --no-color --timestamps --since "$trial_started_at" "$service" > "$trial_logs/$service.log"
     done
+    current_trial=""
+}
 
-    echo "=== Series 2: Varying TARANTINO_HTTP_THREADS (${THREADS_CONFIG}) with clients=${BASELINE_CLIENTS}, replicas=${BASELINE_REPLICAS} ==="
-    echo "Hypothesis: Increasing Javalin HTTP worker threads improves concurrent request handling until CPU core saturation."
-    for thread_count in $THREADS_CONFIG; do
-        echo "Recreating query with TARANTINO_HTTP_THREADS=${thread_count}..."
-        TARANTINO_HTTP_THREADS="$thread_count" docker compose up -d --force-recreate --scale "query=${BASELINE_REPLICAS}" query
-        wait_for_query_ready
-        local config_name="threads_${thread_count}"
-        local series_config="series=threads,clients=${BASELINE_CLIENTS},threads=${thread_count},replicas=${BASELINE_REPLICAS}"
-        echo "Running load test: ${series_config}"
-        java -jar "$BENCH_JAR" load "$FRONTEND_URL" "$run_directory" "$BASELINE_CLIENTS" "$config_name"
-        java -jar "$BENCH_JAR" summary "$run_directory" "$series_config" "${run_directory}/load/${config_name}.csv" "search_latency"
+run_search_trial() {
+    local clients=$1 threads=$2 replicas=$3 repetition=$4
+    local trial
+    trial=$(search_trial_name "$clients" "$threads" "$replicas" "$repetition")
+    current_trial="$trial"
+    trial_started_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "=== Trial $trial: clients=$clients, threads=$threads, replicas=$replicas, rep=$repetition ==="
+    recreate_query "$replicas" "$threads"
+    record_trial
+    local trial_csv="$run_dir/load/${trial}.csv.gz"
+    java -jar "$BENCH_JAR" load "$FRONTEND_URL" "$run_dir" "$clients" "$trial"
+    local non_200
+    non_200=$(gzip -dc "$trial_csv" 2>/dev/null | awk -F',' 'NR > 1 && $3 != "200" { count++ } END { print count+0 }' || echo 0)
+    echo "Trial $trial non-200 responses: $non_200"
+    java -jar "$BENCH_JAR" summary "$run_dir" "$trial" "$trial_csv" search_latency
+    save_trial_logs
+}
+
+measure() {
+    local repetition
+    for repetition in $(seq 1 "$REPETITIONS"); do
+        echo "=== Interleaved Repetition $repetition of $REPETITIONS ==="
+        local cfg c t r
+        for cfg in "${CONFIGURATIONS[@]}"; do
+            read -r c t r <<< "$cfg"
+            run_search_trial "$c" "$t" "$r" "$repetition"
+        done
     done
+}
 
-    echo "Restoring baseline threads before series 3..."
-    TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d --force-recreate --scale "query=${BASELINE_REPLICAS}" query
-    wait_for_query_ready
-
-    echo "=== Series 3: Varying query replicas (${REPLICAS_CONFIG}) with clients=${BASELINE_CLIENTS}, threads=${BASELINE_THREADS} ==="
-    echo "Hypothesis: Scaling query replicas behind nginx distributes CPU-bound search operations, decreasing p95 latency under high load."
-    for replica_count in $REPLICAS_CONFIG; do
-        echo "Scaling query service to ${replica_count} replicas..."
-        TARANTINO_HTTP_THREADS="${BASELINE_THREADS}" docker compose up -d --scale "query=${replica_count}" query
-        wait_for_query_ready
-        local config_name="replicas_${replica_count}"
-        local series_config="series=replicas,clients=${BASELINE_CLIENTS},threads=${BASELINE_THREADS},replicas=${replica_count}"
-        echo "Running load test: ${series_config}"
-        java -jar "$BENCH_JAR" load "$FRONTEND_URL" "$run_directory" "$BASELINE_CLIENTS" "$config_name"
-        java -jar "$BENCH_JAR" summary "$run_directory" "$series_config" "${run_directory}/load/${config_name}.csv" "search_latency"
-    done
+summarise_run() {
+    :
 }
 
 main() {
-    ensure_bench_jar
-
-    local run_id
-    run_id=$(java -jar "$BENCH_JAR" manifest start "$RUNS_DIR" search-latency "$BASELINE_CLIENTS" -- "$0" "$@")
-    local run_directory="${RUNS_DIR}/${run_id}"
-
-    mkdir -p "${run_directory}/load" "${run_directory}/explain" "${run_directory}/jmh" "${run_directory}/logs"
-
-    exec > >(tee -a "${run_directory}/log.txt") 2>&1
-    trap stop_stats EXIT
-
-    verify_corpus "$run_directory"
-
-    run_jmh "$run_directory"
-
-    start_stats "$run_directory"
-    measure_latency "$run_directory"
-    stop_stats
-
-    save_service_logs "$run_directory"
-
-    java -jar "$BENCH_JAR" manifest finish "$run_directory"
-    java -jar "$BENCH_JAR" charts "$run_directory" || true
-
-    echo "Benchmark completed successfully. Results in ${run_directory}"
+    open_run search-latency "$0" "$@"
+    mkdir -p "$run_dir/load" "$run_dir/explain" "$run_dir/jmh"
+    state_hypotheses
+    check_corpus
+    mvn -DskipTests install
+    run_jmh
+    build_stack
+    ingest_corpus
+    export_explain
+    start_stats
+    measure
 }
 
 main "$@"
