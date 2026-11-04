@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.9 · November 3, 2026
+Version 1.9.1 · November 5, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -349,6 +349,7 @@ transition entity=book id=1342 from=QUEUED to=DOWNLOADING batch_id=- generation=
 - `enqueued_at` is the one from the `BookTask` when the transition comes from a message (claiming a download or a book for a batch); otherwise, `-`. When a batch drained several messages for the same book, it is the earliest of them.
 - `at` is `Instant.now()` when the write finishes, and `replica` is the container hostname.
 - It is only written when the conditional write matches. `bench` derives `coordination.csv` (§9) from these lines, searching from `transition`, because `slf4j-simple` puts its prefix in front.
+- After “Publish a batch”, the indexer writes the `INDEXING`→`PUBLISHED` line of every book of the batch; if `control` completed some of them first (§5.3, step 3), those books have two such lines. `bench` reads neither: a book is published at the `at` of its batch's `WRITING`→`PUBLISHED` line, the earliest one if there are several.
 
 ## 5. Conditional writes and reconciliation
 
@@ -680,7 +681,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 | `index.csv` | `index-throughput` only: one row per trial with its factors, its repetition, and the books, seconds and books per second of its whole window, from the first index claim to the last batch published, in the highest generation a batch of that trial was published in. `summary.csv` holds it as `index_throughput` |
 | `checks.json` | Recovery runs only: `GET /control/status` and the `/search` answers to `workload/queries.txt` once recovered (§8) |
 | `explain/` | `explain("executionStats")` of each measured Mongo query |
-| `summary.csv` | The figures the report cites: metric, configuration, mean, sample standard deviation, half-width of the 95 % CI of the mean with Student's t for n − 1 degrees of freedom, nearest-rank p50, p95 and p99, and unit. With only a few repetitions per configuration, p95 and p99 are the maximum, so the report does not cite them |
+| `summary.csv` | The figures the report cites: metric, configuration, mean, sample standard deviation, half-width of the 95 % CI of the mean, nearest-rank p50, p95 and p99, and unit. The mean, standard deviation and CI are always over the repetitions of one configuration, one value per repetition, with Student's t for n − 1 degrees of freedom, n being the number of repetitions; p50, p95 and p99 are over the pooled values of every repetition (books, `docker stats` refreshes or requests) when the metric has them, and over the repetition values otherwise, where with only a few repetitions p95 and p99 are the maximum and the report does not cite them. The one exception is `search_latency`, one row per `search-latency` trial over the requests of that trial. `bench search-latency <run>` adds, per configuration of `search-latency`, `search_latency_mean`, `search_latency_p50`, `search_latency_p95` and `search_latency_p99` in µs, from each repetition's mean or percentile, and `search_throughput` in requests/s, the answered requests per second of each repetition. `bench resources <run>` adds, per configuration and phase of `resource-usage`, `stack_cpu_total` in percent and `stack_memory_total` in MiB, every container of the stack added up per refresh, next to the `cpu_per_replica`, `cpu_total` and `memory_per_replica` of each service |
 | `charts/` | The run's XChart charts in PNG, each with its `run_id` in the footer |
 | `log.txt` | Full command output |
 
