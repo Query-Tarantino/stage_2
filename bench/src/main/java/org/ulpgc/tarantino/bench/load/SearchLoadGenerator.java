@@ -20,6 +20,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,6 +34,12 @@ public class SearchLoadGenerator {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     public static final Duration DEFAULT_WARMUP = Duration.ofSeconds(30);
     public static final Duration DEFAULT_MEASUREMENT = Duration.ofSeconds(120);
+    private static final String WARMUP_VARIABLE = "TARANTINO_WARMUP_SECONDS";
+    private static final String MEASUREMENT_VARIABLE = "TARANTINO_MEASUREMENT_SECONDS";
+    private static final String USAGE = "Usage: bench load <front-end url> <run directory> <clients> <trial>";
+    private static final int ARGUMENTS = 4;
+    private static final int FAILED = 1;
+    private static final int WRONG_USAGE = 2;
 
     private final String baseUrl;
     private final List<String> queries;
@@ -159,39 +166,32 @@ public class SearchLoadGenerator {
     }
 
     public static void main(String[] args) {
+        OptionalInt clients = args.length == ARGUMENTS ? positive(args[2]) : OptionalInt.empty();
+        if (clients.isEmpty()) {
+            LOGGER.error(USAGE);
+            System.exit(WRONG_USAGE);
+        }
         try {
-            String baseUrl = args.length > 0 ? args[0] : System.getenv().getOrDefault("TARANTINO_FRONTEND_URL", "http://localhost:8080");
-            Path runDir = args.length > 1 ? Paths.get(args[1]) : Paths.get("benchmarks/runs/latest");
-            int concurrency = args.length > 2 ? Integer.parseInt(args[2]) : Integer.parseInt(System.getenv().getOrDefault("TARANTINO_CONCURRENCY", "4"));
-
-            Duration warmup = Duration.ofSeconds(Integer.parseInt(System.getenv().getOrDefault("TARANTINO_WARMUP_SECONDS", "30")));
-            Duration measurement = Duration.ofSeconds(Integer.parseInt(System.getenv().getOrDefault("TARANTINO_MEASUREMENT_SECONDS", "120")));
-            String configName = null;
-
-            if (args.length >= 6) {
-                warmup = Duration.ofSeconds(Long.parseLong(args[3]));
-                measurement = Duration.ofSeconds(Long.parseLong(args[4]));
-                configName = args[5];
-            } else if (args.length == 5) {
-                try {
-                    warmup = Duration.ofSeconds(Long.parseLong(args[3]));
-                    measurement = Duration.ofSeconds(Long.parseLong(args[4]));
-                } catch (NumberFormatException ignored) {
-                    configName = args[4];
-                }
-            } else if (args.length == 4) {
-                configName = args[3];
-            }
-
-            Path queriesFile = findQueriesFile();
-            List<String> queries = loadQueries(queriesFile);
-            RunContext context = RunContext.fromPath(runDir);
-            SearchLoadGenerator generator = new SearchLoadGenerator(baseUrl, queries, context);
-            generator.run(concurrency, warmup, measurement, configName);
+            SearchLoadGenerator generator = new SearchLoadGenerator(args[0], loadQueries(findQueriesFile()), RunContext.fromPath(Paths.get(args[1])));
+            generator.run(clients.getAsInt(), seconds(WARMUP_VARIABLE, DEFAULT_WARMUP), seconds(MEASUREMENT_VARIABLE, DEFAULT_MEASUREMENT), args[3]);
         } catch (Exception exception) {
             LOGGER.error("Load generator failed: {}", exception.getMessage(), exception);
-            System.exit(1);
+            System.exit(FAILED);
         }
+    }
+
+    private static OptionalInt positive(String number) {
+        try {
+            int value = Integer.parseInt(number);
+            return value > 0 ? OptionalInt.of(value) : OptionalInt.empty();
+        } catch (NumberFormatException e) {
+            return OptionalInt.empty();
+        }
+    }
+
+    private static Duration seconds(String variable, Duration otherwise) {
+        String value = System.getenv(variable);
+        return value == null ? otherwise : Duration.ofSeconds(Long.parseLong(value));
     }
 
     private static Path findQueriesFile() {
