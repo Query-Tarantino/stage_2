@@ -59,6 +59,25 @@ public class SummaryStats {
         return new Metrics(count, mean, stdDev, ci95, p50, p95, p99);
     }
 
+    /**
+     * The {@code summary.csv} figures of one configuration (SPEC §9): {@code count} is the number of repetitions, the
+     * mean, standard deviation and 95 % CI are over the value of each repetition, with Student's t for {@code count - 1}
+     * degrees of freedom, and the nearest-rank percentiles are over the pooled values, so peaks still show.
+     */
+    public static Metrics overRepetitions(List<Double> repetitionMeans, List<? extends Number> pooled) {
+        Metrics repetitions = calculate(repetitionMeans);
+        Metrics values = calculate(pooled);
+        return new Metrics(repetitions.count(), repetitions.mean(), repetitions.stdDev(), repetitions.ci95(),
+                values.p50(), values.p95(), values.p99());
+    }
+
+    /** {@link #overRepetitions} with the mean of each non-empty repetition and every value of all of them pooled. */
+    public static Metrics ofRepetitions(List<? extends List<? extends Number>> valuesByRepetition) {
+        List<? extends List<? extends Number>> repetitions = valuesByRepetition.stream().filter(values -> !values.isEmpty()).toList();
+        return overRepetitions(repetitions.stream().map(values -> calculate(values).mean()).toList(),
+                repetitions.stream().<Number>flatMap(List::stream).toList());
+    }
+
     private static double studentT(int degreesOfFreedom) {
         return new TDistribution(degreesOfFreedom).inverseCumulativeProbability(UPPER_TAIL);
     }

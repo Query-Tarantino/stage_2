@@ -1,5 +1,6 @@
 package org.ulpgc.tarantino.bench.coordination;
 
+import org.apache.commons.math3.distribution.TDistribution;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
@@ -42,7 +43,7 @@ class CoordinationToolTest {
     }
 
     @Test
-    void summarisesEveryColumnPerConfigurationOverTheBooksOfAllItsRepetitions() throws IOException {
+    void summarisesEveryColumnPerConfigurationOverItsRepetitions() throws IOException {
         writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-1-rep-1"));
         writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-1-rep-2"));
         writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-2-rep-1"));
@@ -54,6 +55,21 @@ class CoordinationToolTest {
         assertEquals("download_queue_wait,\"replicas=1\",249.00,0.00,0.00,249.00,249.00,249.00,ms", summary.get(1));
         assertEquals("time_to_publication,\"replicas=1\",3400.00,0.00,0.00,3400.00,3400.00,3400.00,ms", summary.get(5));
         assertEquals("download_queue_wait,\"replicas=2\",249.00,0.00,0.00,249.00,249.00,249.00,ms", summary.get(6));
+    }
+
+    @Test
+    void takesTheCiOverTheMeanOfEachRepetitionAndThePercentilesOverAllTheirBooks() throws IOException {
+        writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-1-rep-1"), "10:00:00.250Z");
+        writeServiceLogsOfBook84(runDirectory.resolve("logs").resolve("replicas-1-rep-2"), "10:00:00.451Z");
+
+        CoordinationTool.run(List.of(runDirectory.toString()));
+
+        String[] downloadQueueWait = Files.readAllLines(runDirectory.resolve(SummaryStats.FILE_NAME)).get(1).split(",");
+        double standardDeviation = Math.sqrt(2 * Math.pow(100.5, 2));
+        assertEquals(349.5, Double.parseDouble(downloadQueueWait[2]), 0.01);
+        assertEquals(new TDistribution(1).inverseCumulativeProbability(0.975) * standardDeviation / Math.sqrt(2),
+                Double.parseDouble(downloadQueueWait[4]), 0.01);
+        assertEquals(List.of("249.00", "450.00", "450.00"), List.of(downloadQueueWait[5], downloadQueueWait[6], downloadQueueWait[7]));
     }
 
     @Test
@@ -71,12 +87,16 @@ class CoordinationToolTest {
     }
 
     private static void writeServiceLogsOfBook84(Path folder) throws IOException {
+        writeServiceLogsOfBook84(folder, "10:00:00.250Z");
+    }
+
+    private static void writeServiceLogsOfBook84(Path folder, String claimedAt) throws IOException {
         Path logs = Files.createDirectories(folder);
         Files.write(logs.resolve("control.log"), List.of(
                 "control-1  | 2026-10-21T10:00:00.002Z" + PREFIX + "entity=book id=84 from=- to=QUEUED batch_id=- generation=- enqueued_at=- at=2026-10-21T10:00:00Z replica=c",
                 "control-1  | 2026-10-21T10:00:01Z INFO Seeded 1 books"));
         Files.write(logs.resolve("crawler.log"), List.of(
-                "crawler-1  | 2026-10-21T10:00:00.5Z" + PREFIX + "entity=book id=84 from=QUEUED to=DOWNLOADING batch_id=- generation=- enqueued_at=2026-10-21T10:00:00.001Z at=2026-10-21T10:00:00.250Z replica=a",
+                "crawler-1  | 2026-10-21T10:00:00.5Z" + PREFIX + "entity=book id=84 from=QUEUED to=DOWNLOADING batch_id=- generation=- enqueued_at=2026-10-21T10:00:00.001Z at=2026-10-21T" + claimedAt + " replica=a",
                 "crawler-1  | 2026-10-21T10:00:02Z" + PREFIX + "entity=book id=84 from=DOWNLOADING to=DOWNLOADED batch_id=- generation=- enqueued_at=- at=2026-10-21T10:00:01.750Z replica=a"));
         Files.write(logs.resolve("indexer.log"), List.of(
                 "indexer-2  | 2026-10-21T10:00:02Z" + PREFIX + "entity=book id=84 from=DOWNLOADED to=INDEXING batch_id=b1 generation=1 enqueued_at=2026-10-21T10:00:01.751Z at=2026-10-21T10:00:01.900Z replica=b",
