@@ -37,7 +37,18 @@ public record TarantinoConfig(
         Duration cleanup,
         Duration snapshot,
         String corsOrigin,
-        Optional<CrashPoint> crashAt) {
+        Optional<CrashPoint> crashAt,
+        Coordination coordination,
+        boolean snapshotOnPublish,
+        String activeMq,
+        boolean activeMqPersistent,
+        Duration poll,
+        Duration orchestratorTick,
+        int orchestratorDownloadWindow,
+        int orchestratorIndexWindow,
+        String orchestratorTarget,
+        int localDownloadCapacity,
+        int localIndexCapacity) {
 
     /** The {@code TARANTINO_CANDIDATES} value that seeds every book of the local mirror. */
     public static final String MIRROR_CANDIDATES = "mirror";
@@ -74,7 +85,18 @@ public record TarantinoConfig(
                 variables.seconds("TARANTINO_CLEANUP_SECONDS", 3600),
                 variables.seconds("TARANTINO_SNAPSHOT_SECONDS", 5),
                 variables.text("TARANTINO_CORS_ORIGIN", "*"),
-                variables.optionalText("TARANTINO_CRASH_AT").map(point -> crashPoint(service, point)));
+                variables.optionalText("TARANTINO_CRASH_AT").map(point -> crashPoint(service, point)),
+                coordination(variables.text("TARANTINO_COORDINATION", Coordination.HAZELCAST.variableValue())),
+                variables.bool("TARANTINO_SNAPSHOT_ON_PUBLISH", true),
+                variables.text("TARANTINO_ACTIVEMQ", "failover:(tcp://localhost:61616)?timeout=1000"),
+                variables.bool("TARANTINO_ACTIVEMQ_PERSISTENT", false),
+                variables.millis("TARANTINO_POLL_MILLIS", 200),
+                variables.millis("TARANTINO_ORCHESTRATOR_TICK_MILLIS", 200),
+                variables.positive("TARANTINO_ORCHESTRATOR_DOWNLOAD_WINDOW", 512),
+                variables.positive("TARANTINO_ORCHESTRATOR_INDEX_WINDOW", 400),
+                variables.text("TARANTINO_ORCHESTRATOR_TARGET", "http://nginx:8082"),
+                variables.positive("TARANTINO_LOCAL_DOWNLOAD_CAPACITY", 256),
+                variables.positive("TARANTINO_LOCAL_INDEX_CAPACITY", 200));
         config.checkInvariants();
         return config;
     }
@@ -96,6 +118,11 @@ public record TarantinoConfig(
         if (!holds) {
             throw new InvalidConfigurationException(variable, reason);
         }
+    }
+
+    private static Coordination coordination(String value) {
+        return Coordination.of(value).orElseThrow(() -> new InvalidConfigurationException("TARANTINO_COORDINATION",
+                "must be hazelcast, activemq, polling or orchestrator, not " + value));
     }
 
     private static CrashPoint crashPoint(TarantinoService service, String point) {
