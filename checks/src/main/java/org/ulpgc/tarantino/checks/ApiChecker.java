@@ -256,60 +256,66 @@ public class ApiChecker {
     }
 
     private void waitForSnapshotRefresh(List<Integer> sampleIds) throws IOException, InterruptedException {
-        int snapshotSeconds = Integer.parseInt(System.getenv().getOrDefault("TARANTINO_SNAPSHOT_SECONDS", "5"));
+        long refreshMillis = (Integer.parseInt(System.getenv().getOrDefault("TARANTINO_SNAPSHOT_SECONDS", "5")) + 2) * 1000L;
+        waitForEveryReplicaToCount(sampleIds.size());
+        for (int bookId : sampleIds) {
+            waitForBook(bookId, refreshMillis);
+        }
+        waitForSearchToFindPrideAndPrejudice(refreshMillis);
+    }
+
+    private void waitForEveryReplicaToCount(int books) throws InterruptedException {
         long filtersDeadline = System.currentTimeMillis() + (MAX_WAIT_SECONDS * 1000L);
         int consecutiveSuccesses = 0;
         while (System.currentTimeMillis() < filtersDeadline && consecutiveSuccesses < 10) {
-            try {
-                CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
-                if (response.status() == 200 && response.json() != null && response.json().has("total_books")
-                        && response.json().get("total_books").asInt() >= sampleIds.size()) {
-                    consecutiveSuccesses++;
-                } else {
-                    consecutiveSuccesses = 0;
-                }
-            } catch (IOException exception) {
-                consecutiveSuccesses = 0;
-            }
+            consecutiveSuccesses = countsEveryBook(books) ? consecutiveSuccesses + 1 : 0;
             Thread.sleep(200);
         }
         if (consecutiveSuccesses < 10) {
             throw new AssertionError("Snapshot not refreshed on all replicas: search/filters did not return total_books >= "
-                    + sampleIds.size() + " across 10 consecutive requests");
+                    + books + " across 10 consecutive requests");
         }
+    }
 
-        for (int bookId : sampleIds) {
-            long bookDeadline = System.currentTimeMillis() + ((snapshotSeconds + 2) * 1000L);
-            boolean visible = false;
-            while (System.currentTimeMillis() < bookDeadline) {
-                CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
-                if (response.status() == 200) {
-                    visible = true;
-                    break;
-                }
-                Thread.sleep(500);
-            }
-            if (!visible) {
-                throw new AssertionError("Book " + bookId + " not visible in /books/" + bookId + " within snapshot refresh");
-            }
+    private boolean countsEveryBook(int books) throws InterruptedException {
+        try {
+            CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
+            return response.status() == 200 && response.json() != null && response.json().has("total_books")
+                    && response.json().get("total_books").asInt() >= books;
+        } catch (IOException exception) {
+            return false;
         }
+    }
 
-        long searchDeadline = System.currentTimeMillis() + ((snapshotSeconds + 2) * 1000L);
-        boolean searchVisible = false;
+    private void waitForBook(int bookId, long refreshMillis) throws IOException, InterruptedException {
+        long bookDeadline = System.currentTimeMillis() + refreshMillis;
+        while (System.currentTimeMillis() < bookDeadline) {
+            if (client.get(frontEndUrl + "/books/" + bookId).status() == 200) {
+                return;
+            }
+            Thread.sleep(500);
+        }
+        throw new AssertionError("Book " + bookId + " not visible in /books/" + bookId + " within snapshot refresh");
+    }
+
+    private void waitForSearchToFindPrideAndPrejudice(long refreshMillis) throws InterruptedException {
+        long searchDeadline = System.currentTimeMillis() + refreshMillis;
         while (System.currentTimeMillis() < searchDeadline) {
-            try {
-                CheckedClient.Response response = client.get(frontEndUrl + "/search?q=pride");
-                if (response.status() == 200 && response.json() != null && response.json().has("results")
-                        && containsBook(response.json().get("results"), 1342)) {
-                    searchVisible = true;
-                    break;
-                }
-            } catch (IOException exception) {
+            if (searchFindsPrideAndPrejudice()) {
+                return;
             }
             Thread.sleep(200);
         }
-        if (!searchVisible) {
-            throw new AssertionError("Book 1342 not found by /search?q=pride within snapshot refresh");
+        throw new AssertionError("Book 1342 not found by /search?q=pride within snapshot refresh");
+    }
+
+    private boolean searchFindsPrideAndPrejudice() throws InterruptedException {
+        try {
+            CheckedClient.Response response = client.get(frontEndUrl + "/search?q=pride");
+            return response.status() == 200 && response.json() != null && response.json().has("results")
+                    && containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE);
+        } catch (IOException exception) {
+            return false;
         }
     }
 
@@ -532,38 +538,41 @@ public class ApiChecker {
 
     private void checkBookAgainstExpected(Map.Entry<String, JsonNode> entry) {
         try {
-            String bookIdStr = entry.getKey();
             JsonNode bookExpected = entry.getValue();
-            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookIdStr);
+            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + entry.getKey());
             assertEquals(200, response.status());
-            if (bookExpected.has("title") && !bookExpected.get("title").isNull()) {
-                assertEquals(bookExpected.get("title").asText(), response.json().get("title").asText());
-            }
-            if (bookExpected.has("author") && !bookExpected.get("author").isNull()) {
-                assertEquals(bookExpected.get("author").asText(), response.json().get("author").asText());
-            }
-            if (bookExpected.has("language") && !bookExpected.get("language").isNull()) {
-                assertEquals(bookExpected.get("language").asText(), response.json().get("language").asText());
-            }
-            if (bookExpected.has("year") && !bookExpected.get("year").isNull()) {
+            List.of("title", "author", "language").forEach(field -> assertSameText(bookExpected, response.json(), field));
+            if (isPresent(bookExpected, "year")) {
                 assertEquals(bookExpected.get("year").asInt(), response.json().get("year").asInt());
             }
-            if (bookExpected.has("languages") && !bookExpected.get("languages").isNull()) {
+            if (isPresent(bookExpected, "languages")) {
                 assertEquals(bookExpected.get("languages"), response.json().get("languages"));
             }
             if (bookExpected.has("original_year")) {
-                JsonNode expectedOriginalYear = bookExpected.get("original_year");
-                JsonNode actualOriginalYear = response.json().get("original_year");
-                if (expectedOriginalYear.isNull()) {
-                    assertTrue(actualOriginalYear == null || actualOriginalYear.isNull());
-                } else {
-                    assertTrue(actualOriginalYear != null && !actualOriginalYear.isNull());
-                    assertEquals(expectedOriginalYear.asInt(), actualOriginalYear.asInt());
-                }
+                assertSameOriginalYear(bookExpected.get("original_year"), response.json().get("original_year"));
             }
         } catch (IOException | InterruptedException exception) {
             throw new RuntimeException(exception);
         }
+    }
+
+    private static boolean isPresent(JsonNode node, String field) {
+        return node.has(field) && !node.get(field).isNull();
+    }
+
+    private static void assertSameText(JsonNode expected, JsonNode actual, String field) {
+        if (isPresent(expected, field)) {
+            assertEquals(expected.get(field).asText(), actual.get(field).asText());
+        }
+    }
+
+    private static void assertSameOriginalYear(JsonNode expectedOriginalYear, JsonNode actualOriginalYear) {
+        if (expectedOriginalYear.isNull()) {
+            assertTrue(actualOriginalYear == null || actualOriginalYear.isNull());
+            return;
+        }
+        assertTrue(actualOriginalYear != null && !actualOriginalYear.isNull());
+        assertEquals(expectedOriginalYear.asInt(), actualOriginalYear.asInt());
     }
 
     public void generateExpected(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
