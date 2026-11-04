@@ -48,6 +48,18 @@ class RecoveryComparisonTest {
     }
 
     @Test
+    void comparesTheRunsOfARowAcrossEveryCoordinationMode() throws IOException {
+        String polling = "20261110-170000-recovery-04-polling-r1-3f2a9c1";
+        String persistent = "20261110-171000-recovery-04-activemq-persistent-r3-3f2a9c1";
+        run(R1, 20, 1342, 1.5);
+        run(polling, 20, 1342, 0.5);
+        run(persistent, 19, 1342, 3.0);
+
+        assertEquals(List.of(persistent + " has other books than " + R1 + ": {\"FAILED\":0,\"PUBLISHED\":19}"),
+                new RecoveryComparison(runs).differences("04"));
+    }
+
+    @Test
     void failsWithFewerThanTwoRuns() throws IOException {
         run(R1, 20, 1342, 1.5);
 
