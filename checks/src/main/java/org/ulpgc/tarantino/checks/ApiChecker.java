@@ -11,18 +11,19 @@ import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
+
+import static org.ulpgc.tarantino.checks.Assertions.assertEquals;
+import static org.ulpgc.tarantino.checks.Assertions.assertTrue;
 
 public class ApiChecker {
 
@@ -35,11 +36,16 @@ public class ApiChecker {
     private final String operationalUrl;
     private final Tokenizer tokenizer;
     private final List<JsonNode> sampleBooks = new ArrayList<>();
+    private final HealthChecks health;
+    private final NginxChecks nginx;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
+        Api api = Api.of(client, frontEndUrl, operationalUrl);
         this.client = client;
-        this.frontEndUrl = trimSlash(frontEndUrl);
-        this.operationalUrl = trimSlash(operationalUrl);
+        this.frontEndUrl = api.frontEndUrl();
+        this.operationalUrl = api.operationalUrl();
+        this.health = new HealthChecks(client);
+        this.nginx = new NginxChecks(api);
         Path stopwordsPath = findStopwordsPath();
         Set<String> stopwords = Files.exists(stopwordsPath)
                 ? new FileStopwordsLoader(stopwordsPath).stopwords()
@@ -52,8 +58,8 @@ public class ApiChecker {
             throw new AssertionError("Expected answers file not found at " + expectedPath);
         }
         LOGGER.info("Starting API conformance checks");
-        checkHealth();
-        checkNginxUnknownPaths();
+        health.check();
+        nginx.check();
         checkOperationalEndpoints();
         ensurePublishedAndRefreshed(sampleIds);
         checkStatusEndpoints();
@@ -64,107 +70,6 @@ public class ApiChecker {
         checkSearchEndpoints();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
-    }
-
-    public void checkNginxUnknownPaths() throws IOException, InterruptedException {
-        LOGGER.info("Checking nginx 404 Problem Details on unknown paths");
-        checkUnknownPath(frontEndUrl + "/unknown-path");
-        checkUnknownPath(operationalUrl + "/unknown-path");
-    }
-
-    private void checkUnknownPath(String url) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.getRaw(url);
-        assertEquals(404, response.status());
-        List<String> contentTypes = response.headers().get("Content-Type");
-        if (contentTypes == null || contentTypes.isEmpty()) {
-            contentTypes = response.headers().get("content-type");
-        }
-        assertTrue(contentTypes != null && !contentTypes.isEmpty());
-        assertTrue(contentTypes.getFirst().toLowerCase().startsWith("application/problem+json"));
-        assertTrue(response.json() != null);
-        client.validator().validateProblem(response.json());
-        assertEquals(404, response.json().get("status").asInt());
-        assertTrue(response.json().has("title"));
-        assertTrue(response.json().has("detail"));
-        assertTrue(!response.json().has("code"));
-    }
-
-    public void checkHealth() throws IOException, InterruptedException {
-        LOGGER.info("Checking /health on service ports");
-        Map<String, String> serviceByPort = Map.of(
-                "7001", "crawler",
-                "7002", "indexer",
-                "7003", "query",
-                "7004", "control"
-        );
-        for (Map.Entry<String, String> entry : serviceByPort.entrySet()) {
-            String port = entry.getKey();
-            String service = entry.getValue();
-            CheckedClient.Response response;
-            try {
-                response = client.get("http://localhost:" + port + "/health");
-            } catch (IOException exception) {
-                response = checkHealthViaDocker(service, port);
-            }
-            assertTrue(response.status() == 200 || response.status() == 503);
-            assertTrue(response.json() != null && response.json().has("status"));
-        }
-    }
-
-    private CheckedClient.Response checkHealthViaDocker(String service, String port) throws IOException, InterruptedException {
-        List<String> command = new ArrayList<>(List.of("docker", "compose"));
-        String composeFileEnv = System.getenv("COMPOSE_FILE");
-        if (composeFileEnv == null || composeFileEnv.isBlank()) {
-            findComposePath().ifPresent(composePath -> {
-                command.add("-f");
-                command.add(composePath.toString());
-            });
-        }
-        command.addAll(List.of("exec", "-T", service, "curl", "-isS", "http://localhost:" + port + "/health"));
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new IOException("docker compose exec failed for " + service + " with exit code " + exitCode + ": " + output);
-        }
-        return parseCurlResponse(output, "/health");
-    }
-
-    private static Optional<Path> findComposePath() {
-        List<Path> candidates = List.of(
-                Paths.get("docker-compose.yml"),
-                Paths.get("../docker-compose.yml"),
-                Paths.get("../../docker-compose.yml")
-        );
-        return candidates.stream().filter(Files::exists).findFirst();
-    }
-
-    private CheckedClient.Response parseCurlResponse(String rawOutput, String path) throws IOException {
-        String[] parts = rawOutput.split("\r?\n\r?\n", 2);
-        String headerSection = parts[0];
-        String body = parts.length > 1 ? parts[1].trim() : "";
-        String[] lines = headerSection.split("\r?\n");
-        int statusCode = 200;
-        Map<String, List<String>> headers = new LinkedHashMap<>();
-        for (int index = 0; index < lines.length; index++) {
-            String line = lines[index].trim();
-            if (index == 0) {
-                String[] tokens = line.split("\\s+");
-                if (tokens.length >= 2) {
-                    statusCode = Integer.parseInt(tokens[1]);
-                }
-            } else if (!line.isEmpty()) {
-                int colonIndex = line.indexOf(':');
-                if (colonIndex > 0) {
-                    String headerName = line.substring(0, colonIndex).trim();
-                    String headerValue = line.substring(colonIndex + 1).trim();
-                    headers.computeIfAbsent(headerName, key -> new ArrayList<>()).add(headerValue);
-                }
-            }
-        }
-        return client.validateAndWrap("GET", path, statusCode, headers, body);
     }
 
     public void checkOperationalEndpoints() throws IOException, InterruptedException {
@@ -767,21 +672,5 @@ public class ApiChecker {
             assertTrue(response.json() != null && response.json().has("parameter"));
             assertEquals(expectedParam, response.json().get("parameter").asText());
         }
-    }
-
-    private static void assertEquals(Object expected, Object actual) {
-        if (!expected.equals(actual)) {
-            throw new AssertionError("Expected " + expected + " but was " + actual);
-        }
-    }
-
-    private static void assertTrue(boolean condition) {
-        if (!condition) {
-            throw new AssertionError("Assertion condition was false");
-        }
-    }
-
-    private static String trimSlash(String url) {
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 }
