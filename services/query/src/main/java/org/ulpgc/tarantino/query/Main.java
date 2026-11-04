@@ -24,10 +24,15 @@ public class Main {
         refreshOnOneThread(config, connections, snapshots);
     }
 
-    /** At startup, every TARANTINO_SNAPSHOT_SECONDS and on each BatchPublished, which only asks the thread to refresh (SPEC §7). */
+    /**
+     * At startup, every TARANTINO_SNAPSHOT_SECONDS and, when the mode has a broker and TARANTINO_SNAPSHOT_ON_PUBLISH is
+     * true, on each BatchPublished, which only asks the thread to refresh (SPEC §7 and §11.1).
+     */
     private static void refreshOnOneThread(TarantinoConfig config, Connections connections, SnapshotRefresher snapshots) {
         ScheduledExecutorService refresher = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("snapshot").factory());
         refresher.scheduleWithFixedDelay(snapshots::refreshOrKeep, 0, config.snapshot().toMillis(), TimeUnit.MILLISECONDS);
-        connections.broker().orElseThrow().announcements().listen(batch -> refresher.execute(snapshots::refreshOrKeep));
+        connections.broker()
+                .filter(broker -> config.snapshotOnPublish())
+                .ifPresent(broker -> broker.announcements().listen(batch -> refresher.execute(snapshots::refreshOrKeep)));
     }
 }

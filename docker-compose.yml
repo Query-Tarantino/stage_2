@@ -81,6 +81,7 @@ services:
       <<: *tarantino-environment
       TARANTINO_WORKLOAD: /app/workload
       TARANTINO_CORS_ORIGIN: ${TARANTINO_CORS_ORIGIN:-*}
+      TARANTINO_SNAPSHOT_ON_PUBLISH: ${TARANTINO_SNAPSHOT_ON_PUBLISH:-true}
     volumes:
       - ./workload:/app/workload:ro
     healthcheck:
