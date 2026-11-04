@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.query.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.operations.SnapshotLog;
 import org.ulpgc.tarantino.query.model.SearchResult;
 import org.ulpgc.tarantino.query.model.Snapshot;
 import org.ulpgc.tarantino.query.model.Snapshot.BookFilter;
@@ -84,6 +85,27 @@ class SnapshotRefresherTest {
         refresher.refresh();
 
         assertEquals(new Snapshot(2, Set.of("c"), Set.of(1342)), refresher.current().orElseThrow());
+    }
+
+    @Test
+    void logsEachBatchOnceWhenItEntersTheSnapshotAndAllOfANewGeneration() {
+        List<String> logged = new ArrayList<>();
+        SnapshotRefresher logging = new SnapshotRefresher(batches, null, new SnapshotLog() {
+            @Override
+            public void write(String batchId, int generation) {
+                logged.add(batchId + "@" + generation);
+            }
+        });
+        batches.publish(1, "a", List.of(1342));
+        logging.refresh();
+        logging.refresh();
+        batches.publish(2, "b", List.of(84));
+        batches.publish(2, "c", List.of(11));
+        batches.generation = 2;
+
+        logging.refresh();
+
+        assertEquals(List.of("a@1", "b@2", "c@2"), logged);
     }
 
     @Test
