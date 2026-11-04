@@ -10,6 +10,7 @@ import org.ulpgc.tarantino.bench.explain.ExplainPlanExporter;
 import org.ulpgc.tarantino.bench.index.IndexTool;
 import org.ulpgc.tarantino.bench.ingest.IngestTool;
 import org.ulpgc.tarantino.bench.jmh.JmhCsvConverter;
+import org.ulpgc.tarantino.bench.latency.LatencyTool;
 import org.ulpgc.tarantino.bench.load.SearchLoadGenerator;
 import org.ulpgc.tarantino.bench.manifest.ManifestTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryTool;
@@ -43,6 +44,7 @@ public final class Bench {
             Map.entry("resources", ResourceTool::run),
             Map.entry("ingest-throughput", IngestTool::run),
             Map.entry("index-throughput", IndexTool::run),
+            Map.entry("search-latency", LatencyTool::run),
             Map.entry("charts", ChartsTool::run),
             Map.entry("instant", RecoveryTool::printInstant),
             Map.entry("wait", RecoveryTool::waitFor),
