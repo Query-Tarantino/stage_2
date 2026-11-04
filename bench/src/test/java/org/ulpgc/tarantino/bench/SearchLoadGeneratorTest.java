@@ -57,7 +57,7 @@ class SearchLoadGeneratorTest {
 
         List<String> queries = List.of("love", "night", "pride prejudice");
         SearchLoadGenerator generator = new SearchLoadGenerator("http://localhost:" + port, queries, context);
-        generator.run(2, Duration.ofMillis(20), Duration.ofMillis(150));
+        generator.run(2, Duration.ofMillis(20), Duration.ofMillis(150), "default");
 
         Path gzPath = context.loadDirectory().resolve("default.csv.gz");
         assertTrue(Files.exists(gzPath));

@@ -21,11 +21,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.OptionalInt;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
 public class SearchLoadGenerator {
@@ -40,6 +40,11 @@ public class SearchLoadGenerator {
     private static final int ARGUMENTS = 4;
     private static final int FAILED = 1;
     private static final int WRONG_USAGE = 2;
+    private static final String HEADER = "instant,path,status,latency_us\n";
+    private static final String TRIAL_SUFFIX = ".csv.gz";
+    private static final String UNSAFE_FILE_CHARACTERS = "[^a-zA-Z0-9_=-]";
+    private static final int UNANSWERED_STATUS = 500;
+    private static final long NANOS_PER_MICRO = 1_000;
 
     private final String baseUrl;
     private final List<String> queries;
@@ -65,104 +70,16 @@ public class SearchLoadGenerator {
         return colonIndex >= 0 ? line.substring(colonIndex + 1).trim() : line.trim();
     }
 
-    public void run(int concurrency) throws IOException, InterruptedException {
-        run(concurrency, DEFAULT_WARMUP, DEFAULT_MEASUREMENT, null);
-    }
-
-    public void run(int concurrency, String configName) throws IOException, InterruptedException {
-        run(concurrency, DEFAULT_WARMUP, DEFAULT_MEASUREMENT, configName);
-    }
-
-    public void run(int concurrency, Duration warmupDuration, Duration measurementDuration) throws IOException, InterruptedException {
-        run(concurrency, warmupDuration, measurementDuration, null);
-    }
-
-    public void run(int concurrency, Duration warmupDuration, Duration measurementDuration, String configName)
-            throws IOException, InterruptedException {
-        Path loadDir = runContext.loadDirectory();
-        String sanitizedConfig = (configName != null && !configName.isBlank())
-                ? configName.replaceAll("[^a-zA-Z0-9_=-]", "_")
-                : "default";
-        Path trialFile = loadDir.resolve(sanitizedConfig + ".csv.gz");
-
-        LOGGER.info("Starting closed loop load generator: {} clients, warmup={}, measurement={}",
-                concurrency, warmupDuration, measurementDuration);
-
-        HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
-        AtomicInteger queryIndex = new AtomicInteger(0);
-        AtomicBoolean recording = new AtomicBoolean(false);
-        AtomicBoolean stop = new AtomicBoolean(false);
-        CountDownLatch latch = new CountDownLatch(concurrency);
-        Object writeLock = new Object();
-
-        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-                new GZIPOutputStream(Files.newOutputStream(trialFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)),
-                StandardCharsets.UTF_8))) {
-
-            writer.write("instant,path,status,latency_us\n");
-
-            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                for (int clientIndex = 0; clientIndex < concurrency; clientIndex++) {
-                    executor.submit(() -> {
-                        try {
-                            while (!stop.get()) {
-                                int nextQuery = queryIndex.getAndIncrement();
-                                String query = queries.get(Math.floorMod(nextQuery, queries.size()));
-                                executeRequest(client, query, writer, recording, writeLock);
-                            }
-                        } catch (Exception exception) {
-                            LOGGER.error("Client error in closed loop: {}", exception.getMessage());
-                        } finally {
-                            latch.countDown();
-                        }
-                    });
-                }
-
-                if (!warmupDuration.isZero() && !warmupDuration.isNegative()) {
-                    LOGGER.info("Warmup phase running for {}", warmupDuration);
-                    Thread.sleep(warmupDuration.toMillis());
-                }
-
-                LOGGER.info("Measurement phase running for {}", measurementDuration);
-                recording.set(true);
-                Thread.sleep(measurementDuration.toMillis());
-
-                recording.set(false);
-                stop.set(true);
-                latch.await();
-            }
+    /** Runs {@code concurrency} closed-loop clients and writes the requests of the measurement to {@code load/<trial>.csv.gz}. */
+    public void run(int concurrency, Duration warmup, Duration measurement, String trial) throws IOException, InterruptedException {
+        Path trialFile = runContext.loadDirectory().resolve(trial.replaceAll(UNSAFE_FILE_CHARACTERS, "_") + TRIAL_SUFFIX);
+        LOGGER.info("Starting closed loop load generator: {} clients, warmup={}, measurement={}", concurrency, warmup, measurement);
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(
+                Files.newOutputStream(trialFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)), StandardCharsets.UTF_8))) {
+            writer.write(HEADER);
+            new ClosedLoop(writer).run(concurrency, warmup, measurement);
         }
-        LOGGER.info("Closed loop load generator completed successfully for {}", configName != null ? configName : "default");
-    }
-
-    private void executeRequest(
-            HttpClient client,
-            String query,
-            BufferedWriter writer,
-            AtomicBoolean recording,
-            Object writeLock) throws IOException, InterruptedException {
-        String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
-        String relativePath = "/search?q=" + encoded;
-        URI uri = URI.create(baseUrl + relativePath);
-        HttpRequest request = HttpRequest.newBuilder(uri).timeout(TIMEOUT).GET().build();
-
-        Instant instant = Instant.now();
-        long startNanos = System.nanoTime();
-        int status;
-        try {
-            HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-            status = response.statusCode();
-        } catch (Exception exception) {
-            status = 500;
-        }
-        long latencyUs = (System.nanoTime() - startNanos) / 1000;
-
-        if (recording.get() && writer != null) {
-            String line = instant + "," + relativePath + "," + status + "," + latencyUs + "\n";
-            synchronized (writeLock) {
-                writer.write(line);
-            }
-        }
+        LOGGER.info("Closed loop load generator completed successfully for {}", trial);
     }
 
     public static void main(String[] args) {
@@ -204,5 +121,75 @@ public class SearchLoadGenerator {
                 .filter(Files::exists)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Could not find workload/queries.txt"));
+    }
+
+    /** The clients of one trial, which only record their requests while the measurement runs. */
+    private final class ClosedLoop {
+
+        private final HttpClient client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
+        private final AtomicInteger queryIndex = new AtomicInteger();
+        private final AtomicBoolean recording = new AtomicBoolean();
+        private final AtomicBoolean stop = new AtomicBoolean();
+        private final BufferedWriter writer;
+
+        ClosedLoop(BufferedWriter writer) {
+            this.writer = writer;
+        }
+
+        void run(int concurrency, Duration warmup, Duration measurement) throws InterruptedException {
+            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+                IntStream.range(0, concurrency).forEach(clientIndex -> executor.submit(this::sendUntilStopped));
+                try {
+                    measure(warmup, measurement);
+                } finally {
+                    stop.set(true);
+                }
+            }
+        }
+
+        private void measure(Duration warmup, Duration measurement) throws InterruptedException {
+            LOGGER.info("Warmup phase running for {}", warmup);
+            Thread.sleep(warmup);
+            LOGGER.info("Measurement phase running for {}", measurement);
+            recording.set(true);
+            Thread.sleep(measurement);
+            recording.set(false);
+        }
+
+        private void sendUntilStopped() {
+            try {
+                while (!stop.get() && !Thread.currentThread().isInterrupted()) {
+                    send(queries.get(Math.floorMod(queryIndex.getAndIncrement(), queries.size())));
+                }
+            } catch (Exception exception) {
+                LOGGER.error("Client error in closed loop: {}", exception.getMessage());
+            }
+        }
+
+        private void send(String query) throws IOException {
+            String relativePath = "/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+            HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + relativePath)).timeout(TIMEOUT).GET().build();
+            Instant instant = Instant.now();
+            long startNanos = System.nanoTime();
+            int status = status(request);
+            long latencyUs = (System.nanoTime() - startNanos) / NANOS_PER_MICRO;
+            if (recording.get()) {
+                String line = instant + "," + relativePath + "," + status + "," + latencyUs + "\n";
+                synchronized (writer) {
+                    writer.write(line);
+                }
+            }
+        }
+
+        private int status(HttpRequest request) {
+            try {
+                return client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
+            } catch (IOException e) {
+                return UNANSWERED_STATUS;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return UNANSWERED_STATUS;
+            }
+        }
     }
 }
