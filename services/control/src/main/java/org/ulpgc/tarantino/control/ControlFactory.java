@@ -17,6 +17,7 @@ import org.ulpgc.tarantino.control.adapters.mongo.MongoIndexingBooks;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoLostMessages;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoOldGenerations;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoOutdatedBooks;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoQueueSizes;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoRebuilds;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoStatusCounts;
 import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
@@ -33,12 +34,14 @@ import org.ulpgc.tarantino.control.commands.SeedCommand;
 import org.ulpgc.tarantino.control.commands.SwitchGenerationCommand;
 import org.ulpgc.tarantino.control.ports.DownloadQueue;
 import org.ulpgc.tarantino.control.ports.IndexQueue;
+import org.ulpgc.tarantino.control.ports.QueueSizes;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class ControlFactory {
@@ -51,17 +54,17 @@ public final class ControlFactory {
                 new TransitionLog(), Clock.systemUTC());
     }
 
-    /** The steps of the reconciliation in the order of SPEC §5.3. */
+    /** The steps of the reconciliation in the order of SPEC §5.3; step 4 only in the modes with a broker (SPEC §11.1). */
     public static ReconcileCommand reconcileCommand(TarantinoConfig config, Connections connections) {
-        return new ReconcileCommand(List.of(
-                releaseExpiredDownloads(config, connections)::execute,
+        List<Runnable> steps = new ArrayList<>(List.of(releaseExpiredDownloads(config, connections)::execute,
                 abandonExpiredBatches(connections)::execute,
-                resolveIndexingBooks(connections)::execute,
-                requeueLostMessages(config, connections)::execute,
-                deleteAbandonedPostings(config, connections)::execute,
+                resolveIndexingBooks(connections)::execute));
+        connections.broker().ifPresent(broker -> steps.add(requeueLostMessages(config, connections)::execute));
+        steps.addAll(List.of(deleteAbandonedPostings(config, connections)::execute,
                 reindexOutdatedBooks(connections)::execute,
                 switchGeneration(connections)::execute,
-                dropOldGenerations(config, connections)::execute), Clock.systemUTC());
+                dropOldGenerations(config, connections)::execute));
+        return new ReconcileCommand(steps, Clock.systemUTC());
     }
 
     /** The datalake cleanup of SPEC §4.6, with the clock of the container, which is the host's. */
@@ -71,7 +74,7 @@ public final class ControlFactory {
 
     public static ControlStatusRoutes statusRoutes(Connections connections, ReconcileCommand reconcile) {
         return new ControlStatusRoutes(new ControlStatusCommand(new MongoStatusCounts(connections.database()),
-                new BrokerQueueSizes(connections.broker().orElseThrow()), reconcile::lastReconciliation));
+                queueSizes(connections), reconcile::lastReconciliation));
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
@@ -97,7 +100,7 @@ public final class ControlFactory {
     }
 
     private static RequeueLostMessagesCommand requeueLostMessages(TarantinoConfig config, Connections connections) {
-        return new RequeueLostMessagesCommand(new BrokerQueueSizes(connections.broker().orElseThrow()),
+        return new RequeueLostMessagesCommand(queueSizes(connections),
                 new MongoLostMessages(connections.database(), config.requeue()), downloadQueue(connections),
                 indexQueue(connections), new TransitionLog(), Clock.systemUTC());
     }
@@ -119,12 +122,22 @@ public final class ControlFactory {
         return new DropOldGenerationsCommand(new MongoOldGenerations(connections.database(), config.gc()));
     }
 
+    /** The waiting work: the broker's queues, or the waiting books in mode {@code polling} (SPEC §11.3). */
+    private static QueueSizes queueSizes(Connections connections) {
+        return connections.broker().<QueueSizes>map(BrokerQueueSizes::new).orElseGet(() -> new MongoQueueSizes(connections.database()));
+    }
+
+    /** Without a broker nothing is enqueued: a waiting book is polled or dispatched (SPEC §11.3 and §11.4). */
     private static DownloadQueue downloadQueue(Connections connections) {
-        return new BrokerTaskQueue(connections.broker().orElseThrow(), MessagingContracts.BOOKS_TO_DOWNLOAD);
+        return connections.broker().<DownloadQueue>map(broker -> new BrokerTaskQueue(broker, MessagingContracts.BOOKS_TO_DOWNLOAD))
+                .orElse(task -> {
+                });
     }
 
     private static IndexQueue indexQueue(Connections connections) {
-        return new BrokerTaskQueue(connections.broker().orElseThrow(), MessagingContracts.BOOKS_TO_INDEX);
+        return connections.broker().<IndexQueue>map(broker -> new BrokerTaskQueue(broker, MessagingContracts.BOOKS_TO_INDEX))
+                .orElse(task -> {
+                });
     }
 
     private static List<Integer> ids(Path file) {
