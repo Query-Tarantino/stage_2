@@ -5,12 +5,15 @@ import com.mongodb.MongoSocketException;
 import com.mongodb.MongoTimeoutException;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.javalin.http.Header;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
 import org.ulpgc.tarantino.common.messaging.BrokerUnavailableException;
 import org.ulpgc.tarantino.common.model.ProblemCode;
+
+import java.time.Duration;
 
 /**
  * Answers every error as Problem Details (RFC 9457, SPEC §6.6): {@code parameter} only in {@code 400} responses,
@@ -40,6 +43,12 @@ public final class ProblemDetails {
             LOGGER.error("Unexpected error answering {} {}", context.method(), context.path(), error);
             answer(context, HttpStatus.INTERNAL_SERVER_ERROR, null, null, null);
         });
+    }
+
+    /** A {@code 503} that asks to retry after {@code retryAfter} instead of the usual 5 s (SPEC §11.4). */
+    public static void unavailable(Context context, String detail, Duration retryAfter) {
+        unavailable(context, detail);
+        context.header(Header.RETRY_AFTER, String.valueOf(retryAfter.toSeconds()));
     }
 
     private static void unavailable(Context context, String detail) {

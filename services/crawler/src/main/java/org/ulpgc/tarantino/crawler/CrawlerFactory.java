@@ -4,6 +4,7 @@ import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.Coordination;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
+import org.ulpgc.tarantino.common.http.InternalTasks;
 import org.ulpgc.tarantino.common.messaging.BookTasks;
 import org.ulpgc.tarantino.common.messaging.Broker;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
@@ -18,6 +19,7 @@ import org.ulpgc.tarantino.crawler.adapters.broker.BrokerDownloadQueue;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.GutenbergHttpDownloader;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.LocalMirrorDownloader;
+import org.ulpgc.tarantino.crawler.adapters.local.LocalDownloadQueue;
 import org.ulpgc.tarantino.crawler.adapters.http.IngestRoutes;
 import org.ulpgc.tarantino.crawler.adapters.mongo.MongoBookClaims;
 import org.ulpgc.tarantino.crawler.adapters.mongo.MongoDownloadedBooks;
@@ -40,14 +42,22 @@ public final class CrawlerFactory {
     private CrawlerFactory() {
     }
 
-    /** One worker for one thread, with its own queue handles in the modes with a broker (SPEC §11.1). */
-    public static Runnable downloadWorker(TarantinoConfig config, Connections connections) {
+    /**
+     * One worker for one thread, with its own queue handles in the modes with a broker (SPEC §11.1). In mode
+     * {@code orchestrator} every worker takes from the replica's {@code localDownloads}, and a failed download that ends
+     * {@code QUEUED} goes back there; if it is full, the orchestrator dispatches the book again.
+     */
+    public static Runnable downloadWorker(TarantinoConfig config, Connections connections, LocalDownloadQueue localDownloads) {
         MongoBookClaims claims = new MongoBookClaims(connections.database(), config.lease(), config.maxAttempts());
         Consumer<CrashPoint> crashPoints = new CrashPoints(config.crashAt())::hit;
         if (config.coordination() == Coordination.POLLING) {
             return new PollingDownloadWorker(claims, downloadCommand(config, claims, task -> {
             }, task -> {
             }, crashPoints), config.poll());
+        }
+        if (config.coordination() == Coordination.ORCHESTRATOR) {
+            return new DownloadWorker(localDownloads, downloadCommand(config, claims, localDownloads::offer, task -> {
+            }, crashPoints), crashPoints);
         }
         Broker broker = connections.broker().orElseThrow();
         BookTasks downloads = broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD);
@@ -73,7 +83,16 @@ public final class CrawlerFactory {
                 Clock.systemUTC())::register;
     }
 
-    /** In mode {@code polling} nothing is enqueued: a {@code QUEUED} book is polled (SPEC §11.3). */
+    /** The routes of the mode: in mode {@code orchestrator}, also {@code POST /internal/download} (SPEC §11.4). */
+    public static Consumer<Javalin> routes(TarantinoConfig config, Connections connections, LocalDownloadQueue localDownloads) {
+        Consumer<Javalin> ingest = routes(connections);
+        if (config.coordination() != Coordination.ORCHESTRATOR) {
+            return ingest;
+        }
+        return ingest.andThen(app -> InternalTasks.register(app, InternalTasks.DOWNLOAD, localDownloads::offer));
+    }
+
+    /** Without a broker nothing is enqueued: a {@code QUEUED} book is polled or dispatched (SPEC §11.3 and §11.4). */
     private static TaskQueue downloadQueueOnEachUse(Connections connections) {
         return connections.broker().<TaskQueue>map(broker -> task -> offerOnOwnHandle(broker, task)).orElse(task -> {
         });
