@@ -12,8 +12,8 @@ import java.util.function.Function;
 
 /**
  * The resources of each service during one phase of a {@code resource-usage} run (SPEC §9): one bar per service and
- * configuration, the mean over every repetition with its 95 % CI, as {@code bench resources} summarises them, and 0
- * where the service did not run in that phase.
+ * configuration, the mean over the repetitions with the 95 % CI of {@code bench resources}, one value per repetition,
+ * and 0 where the service did not run in that phase.
  */
 final class PhaseResourceCharts {
 
@@ -47,7 +47,7 @@ final class PhaseResourceCharts {
         keys.stream().map(ResourceUsage.Key::configuration).distinct().forEach(configuration -> {
             List<Optional<SummaryStats.Metrics>> metrics = services.stream()
                     .map(service -> Optional.ofNullable(usage.get(new ResourceUsage.Key(configuration, phase, service)))
-                            .map(repetitions -> SummaryStats.calculate(repetitions.stream().flatMap(measures -> values.apply(measures).stream()).toList())))
+                            .map(repetitions -> SummaryStats.ofRepetitions(repetitions.stream().map(values).toList())))
                     .toList();
             chart.addSeries(configuration, services,
                     metrics.stream().map(metric -> metric.map(SummaryStats.Metrics::mean).orElse(0.0)).toList(),
