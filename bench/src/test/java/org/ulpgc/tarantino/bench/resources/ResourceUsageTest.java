@@ -36,6 +36,24 @@ class ResourceUsageTest {
     }
 
     @Test
+    void addsTheWholeStackUpPerRefreshThatStartsInsideTheWindow() {
+        List<ContainerStats> samples = List.of(
+                sample("10:00:00.0Z", "stage_2-crawler-1", 99, 99),
+                sample("10:00:01.0Z", "stage_2-crawler-1", 10, 100),
+                sample("10:00:01.1Z", "stage_2-crawler-2", 20, 200),
+                sample("10:00:01.2Z", "stage_2-mongo-1", 5, 300),
+                sample("10:00:01.3Z", "stage_2-bench-run-e1218bd40d63", 1, 1),
+                sample("10:00:02.0Z", "stage_2-crawler-1", 30, 100),
+                sample("10:00:02.1Z", "stage_2-mongo-1", 40, 200));
+
+        Map<ResourceUsage.PhaseKey, ResourceUsage.StackMeasures> stack = ResourceUsage.stack(samples, Map.of("replicas-2-rep-1", List.of(INGESTION)));
+
+        ResourceUsage.StackMeasures ingestion = stack.get(new ResourceUsage.PhaseKey("replicas=2", PhaseWindow.INGESTION));
+        assertEquals(List.of(35.0, 70.0), ingestion.cpuTotal());
+        assertEquals(List.of(600.0, 300.0), ingestion.memoryTotalMib());
+    }
+
+    @Test
     void poolsTheRepetitionsOfAConfiguration() {
         List<ContainerStats> samples = List.of(
                 sample("10:00:01Z", "stage_2-crawler-1", 10, 100),

@@ -35,7 +35,9 @@ class ResourceToolTest {
                         "metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit",
                         "cpu_per_replica,\"replicas=2,phase=ingestion,service=crawler\",15.30,6.93,62.26,10.40,20.20,20.20,percent",
                         "cpu_total,\"replicas=2,phase=ingestion,service=crawler\",30.60,0.00,0.00,30.60,30.60,30.60,percent",
-                        "memory_per_replica,\"replicas=2,phase=ingestion,service=crawler\",150.00,70.71,635.31,100.00,200.00,200.00,MiB"),
+                        "memory_per_replica,\"replicas=2,phase=ingestion,service=crawler\",150.00,70.71,635.31,100.00,200.00,200.00,MiB",
+                        "stack_cpu_total,\"replicas=2,phase=ingestion\",30.60,0.00,0.00,30.60,30.60,30.60,percent",
+                        "stack_memory_total,\"replicas=2,phase=ingestion\",300.00,0.00,0.00,300.00,300.00,300.00,MiB"),
                 Files.readAllLines(runDirectory.resolve(SummaryStats.FILE_NAME)));
     }
 

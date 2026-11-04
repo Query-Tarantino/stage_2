@@ -41,9 +41,21 @@ public final class ResourceUsage {
             return new Measures(concat(cpuPerReplica, other.cpuPerReplica), concat(cpuTotal, other.cpuTotal),
                     concat(memoryPerReplicaMib, other.memoryPerReplicaMib));
         }
+    }
 
-        private static List<Double> concat(List<Double> first, List<Double> second) {
-            return Stream.concat(first.stream(), second.stream()).toList();
+    public record PhaseKey(String configuration, String phase) {
+    }
+
+    /** The CPU and the memory of every Compose container added up, one value per refresh. */
+    public record StackMeasures(List<Double> cpuTotal, List<Double> memoryTotalMib) {
+
+        static StackMeasures ofRefresh(List<ContainerStats> containers) {
+            return new StackMeasures(List.of(containers.stream().mapToDouble(ContainerStats::cpuPercent).sum()),
+                    List.of(containers.stream().mapToLong(ContainerStats::memoryBytes).sum() / BYTES_PER_MIB));
+        }
+
+        StackMeasures plus(StackMeasures other) {
+            return new StackMeasures(concat(cpuTotal, other.cpuTotal), concat(memoryTotalMib, other.memoryTotalMib));
         }
     }
 
@@ -54,6 +66,29 @@ public final class ResourceUsage {
         windowsByTrial.forEach((trial, windows) -> windows.forEach(window -> measuresByService(refreshes, window).forEach((service, measures) ->
                 usage.merge(new Key(TrialName.configuration(trial), window.phase(), service), measures, Measures::plus))));
         return usage;
+    }
+
+    /**
+     * The whole stack, by configuration in trial order and then phase: every refresh that starts inside the phase window
+     * counts with all its Compose containers, so a refresh cut by the edge of the window never counts half the stack.
+     */
+    public static Map<PhaseKey, StackMeasures> stack(List<ContainerStats> samples, Map<String, List<PhaseWindow>> windowsByTrial) {
+        List<List<ContainerStats>> refreshes = refreshes(samples);
+        Map<PhaseKey, StackMeasures> stack = new LinkedHashMap<>();
+        windowsByTrial.forEach((trial, windows) -> windows.forEach(window -> composeRefreshesStartingIn(refreshes, window).forEach(refresh ->
+                stack.merge(new PhaseKey(TrialName.configuration(trial), window.phase()), StackMeasures.ofRefresh(refresh), StackMeasures::plus))));
+        return stack;
+    }
+
+    private static Stream<List<ContainerStats>> composeRefreshesStartingIn(List<List<ContainerStats>> refreshes, PhaseWindow window) {
+        return refreshes.stream()
+                .filter(refresh -> window.contains(refresh.getFirst().at()))
+                .map(refresh -> refresh.stream().filter(sample -> ComposeReplica.of(sample.container()).isPresent()).toList())
+                .filter(containers -> !containers.isEmpty());
+    }
+
+    private static List<Double> concat(List<Double> first, List<Double> second) {
+        return Stream.concat(first.stream(), second.stream()).toList();
     }
 
     private static Map<String, Measures> measuresByService(List<List<ContainerStats>> refreshes, PhaseWindow window) {
