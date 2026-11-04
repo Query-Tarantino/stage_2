@@ -25,4 +25,9 @@ public class BrokerIndexQueue implements IndexQueue {
     public List<BookTask> drain(int max) {
         return queue.drain(max);
     }
+
+    @Override
+    public void acknowledge() {
+        queue.acknowledge();
+    }
 }

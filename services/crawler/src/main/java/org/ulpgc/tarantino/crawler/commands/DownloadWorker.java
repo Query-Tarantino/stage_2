@@ -44,7 +44,11 @@ public class DownloadWorker implements Runnable {
 
     private void download(BookTask task) {
         crashPoints.accept(CrashPoint.CRAWLER_AFTER_DEQUEUE);
-        download.execute(task);
+        try {
+            download.execute(task);
+        } finally {
+            queue.acknowledge();
+        }
     }
 
     private static void pauseAfterFailure() {

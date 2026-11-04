@@ -12,6 +12,7 @@ import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.LeaseHeartbeat;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
+import org.ulpgc.tarantino.crawler.adapters.broker.BrokerDownloadQueue;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.GutenbergHttpDownloader;
 import org.ulpgc.tarantino.crawler.adapters.gutenberg.LocalMirrorDownloader;
@@ -46,7 +47,7 @@ public final class CrawlerFactory {
         MongoBookClaims claims = new MongoBookClaims(connections.database(), config.lease(), config.maxAttempts());
         DownloadBookCommand download = new DownloadBookCommand(claims, ingestCommand(config), downloads::offer, indexing::offer,
                 new TransitionLog(), Clock.systemUTC(), crashPoints, heartbeats);
-        return new DownloadWorker(downloads::poll, download, crashPoints);
+        return new DownloadWorker(new BrokerDownloadQueue(downloads), download, crashPoints);
     }
 
     /**

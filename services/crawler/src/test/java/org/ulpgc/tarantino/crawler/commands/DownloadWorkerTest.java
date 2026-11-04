@@ -14,6 +14,7 @@ import org.ulpgc.tarantino.crawler.ports.DownloadQueue;
 
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ class DownloadWorkerTest {
 
     private final List<Integer> claimedBooks = new ArrayList<>();
     private final List<CrashPoint> reachedPoints = new ArrayList<>();
+    private final List<Integer> acknowledgedAfterClaims = new ArrayList<>();
 
     @AfterEach
     void clearInterruption() {
@@ -44,6 +46,13 @@ class DownloadWorkerTest {
 
         assertEquals(List.of(CrashPoint.CRAWLER_AFTER_DEQUEUE), reachedPoints);
         assertEquals(List.of(1342), claimedBooks);
+    }
+
+    @Test
+    void acknowledgesTheMessageOnceItsJobIsOver() {
+        worker(reachedPoints::add).run();
+
+        assertEquals(List.of(1), acknowledgedAfterClaims);
     }
 
     @Test
@@ -65,14 +74,22 @@ class DownloadWorkerTest {
         return new DownloadWorker(oneMessageThenStop(), download, crashPoints);
     }
 
-    private static DownloadQueue oneMessageThenStop() {
+    private DownloadQueue oneMessageThenStop() {
         List<BookTask> messages = new ArrayList<>(List.of(TASK));
-        return wait -> {
-            if (messages.isEmpty()) {
-                Thread.currentThread().interrupt();
-                return Optional.empty();
+        return new DownloadQueue() {
+            @Override
+            public Optional<BookTask> next(Duration wait) {
+                if (messages.isEmpty()) {
+                    Thread.currentThread().interrupt();
+                    return Optional.empty();
+                }
+                return Optional.of(messages.removeFirst());
             }
-            return Optional.of(messages.removeFirst());
+
+            @Override
+            public void acknowledge() {
+                acknowledgedAfterClaims.add(claimedBooks.size());
+            }
         };
     }
 

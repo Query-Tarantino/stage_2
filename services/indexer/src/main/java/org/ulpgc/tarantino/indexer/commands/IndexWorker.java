@@ -40,8 +40,13 @@ public class IndexWorker implements Runnable {
 
     private void indexNextBatch() throws InterruptedException {
         Map<Integer, Instant> books = collector.next();
-        if (!books.isEmpty()) {
+        if (books.isEmpty()) {
+            return;
+        }
+        try {
             index.execute(books);
+        } finally {
+            collector.acknowledge();
         }
     }
 
