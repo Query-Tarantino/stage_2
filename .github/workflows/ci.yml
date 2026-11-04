@@ -88,29 +88,8 @@ jobs:
         with:
           name: jars
 
-      - name: Restore the mirror of the sample books
-        id: mirror
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: benchmarks/mirror
-          key: sample-mirror-${{ hashFiles('workload/sample_ids.txt') }}
-
-      - name: Download the sample books into the mirror
-        if: steps.mirror.outputs.cache-hit != 'true'
-        env:
-          TARANTINO_CACHE_SOURCE: http
-          TARANTINO_WORKLOAD: ${{ runner.temp }}/sample-workload
-        run: |
-          mkdir -p "$TARANTINO_WORKLOAD"
-          cp workload/sample_ids.txt "$TARANTINO_WORKLOAD/book_ids.txt"
-          TARANTINO_CACHE_BOOKS=$(grep -c . workload/sample_ids.txt) scripts/fill_cache.sh
-
-      - name: Save the mirror of the sample books
-        if: steps.mirror.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: benchmarks/mirror
-          key: ${{ steps.mirror.outputs.cache-primary-key }}
+      - name: Fill the mirror of the sample books
+        uses: ./.github/actions/sample-mirror
 
       - name: Start the stack
         run: docker compose up -d --build --wait --wait-timeout 300

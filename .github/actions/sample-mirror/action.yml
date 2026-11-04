@@ -1,0 +1,30 @@
+name: Sample mirror
+description: Fills benchmarks/mirror with the books of workload/sample_ids.txt, cached by the hash of the list
+
+runs:
+  using: composite
+  steps:
+    - name: Restore the mirror of the sample books
+      id: mirror
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: benchmarks/mirror
+        key: sample-mirror-${{ hashFiles('workload/sample_ids.txt') }}
+
+    - name: Download the sample books into the mirror
+      if: steps.mirror.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        TARANTINO_CACHE_SOURCE: http
+        TARANTINO_WORKLOAD: ${{ runner.temp }}/sample-workload
+      run: |
+        mkdir -p "$TARANTINO_WORKLOAD"
+        cp workload/sample_ids.txt "$TARANTINO_WORKLOAD/book_ids.txt"
+        TARANTINO_CACHE_BOOKS=$(grep -c . workload/sample_ids.txt) scripts/fill_cache.sh
+
+    - name: Save the mirror of the sample books
+      if: steps.mirror.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        path: benchmarks/mirror
+        key: ${{ steps.mirror.outputs.cache-primary-key }}
