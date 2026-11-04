@@ -32,7 +32,7 @@ public class IndexWorker implements Runnable {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (RuntimeException e) {
-                LOGGER.warn("Dropped a batch: {}", e.getMessage());
+                LOGGER.warn("Dropped a batch", e);
                 pauseAfterFailure();
             }
         }
