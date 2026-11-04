@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.indexer;
 
 import io.javalin.Javalin;
+import org.ulpgc.tarantino.common.config.Coordination;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.messaging.Broker;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
@@ -24,6 +25,9 @@ import org.ulpgc.tarantino.indexer.commands.BatchCollector;
 import org.ulpgc.tarantino.indexer.commands.BookReader;
 import org.ulpgc.tarantino.indexer.commands.IndexBatchCommand;
 import org.ulpgc.tarantino.indexer.commands.IndexWorker;
+import org.ulpgc.tarantino.indexer.commands.PollingIndexWorker;
+import org.ulpgc.tarantino.indexer.ports.BatchAnnouncer;
+import org.ulpgc.tarantino.indexer.ports.BooksToIndex;
 import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 
 import java.time.Clock;
@@ -34,27 +38,41 @@ public final class IndexerFactory {
     private IndexerFactory() {
     }
 
-    public static IndexWorker indexWorker(TarantinoConfig config, Connections connections) {
+    /** The batch loop of the configured mode (SPEC §11.1). */
+    public static Runnable indexWorker(TarantinoConfig config, Connections connections) {
+        MongoBatchStore batches = new MongoBatchStore(connections.database(), config.lease(), Replica.name());
+        if (config.coordination() == Coordination.POLLING) {
+            return new PollingIndexWorker(batches, indexCommand(config, connections, batches, batch -> {
+            }), config.indexBatch(), config.batchTimeout(), config.poll());
+        }
         Broker broker = connections.broker().orElseThrow();
-        BatchCollector collector = new BatchCollector(new BrokerIndexQueue(broker.queue(MessagingContracts.BOOKS_TO_INDEX)), config.indexBatch(), config.batchTimeout(),
-                Clock.systemUTC());
-        IndexBatchCommand index = new IndexBatchCommand(new MongoBatchStore(connections.database(), config.lease(), Replica.name()),
-                new BookReader(datalakeReader(config), tokenizer(config)), new MongoIndexWriter(connections.database()),
-                broker.announcements()::publish, new TransitionLog(), new CrashPoints(config.crashAt()),
+        BatchCollector collector = new BatchCollector(new BrokerIndexQueue(broker.queue(MessagingContracts.BOOKS_TO_INDEX)),
+                config.indexBatch(), config.batchTimeout(), Clock.systemUTC());
+        return new IndexWorker(collector, indexCommand(config, connections, batches, broker.announcements()::publish));
+    }
+
+    private static IndexBatchCommand indexCommand(TarantinoConfig config, Connections connections, MongoBatchStore batches,
+                                                  BatchAnnouncer announcer) {
+        return new IndexBatchCommand(batches, new BookReader(datalakeReader(config), tokenizer(config)),
+                new MongoIndexWriter(connections.database()), announcer, new TransitionLog(), new CrashPoints(config.crashAt()),
                 renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal));
-        return new IndexWorker(collector, index);
     }
 
     public static Consumer<Javalin> routes(Connections connections) {
         IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()), new MongoIndexStatus(connections.database()));
-        Broker broker = connections.broker().orElseThrow();
-        BookRoutes books = new BookRoutes(new BookStates(connections.database())::state,
-                task -> broker.queue(MessagingContracts.BOOKS_TO_INDEX).offer(task),
+        BookRoutes books = new BookRoutes(new BookStates(connections.database())::state, booksToIndex(connections),
                 Clock.systemUTC());
         return app -> {
             index.register(app);
             books.register(app);
         };
+    }
+
+    /** In mode {@code polling} nothing is enqueued: a {@code DOWNLOADED} book is polled (SPEC §11.3). */
+    private static BooksToIndex booksToIndex(Connections connections) {
+        return connections.broker().<BooksToIndex>map(broker -> task -> broker.queue(MessagingContracts.BOOKS_TO_INDEX).offer(task))
+                .orElse(task -> {
+                });
     }
 
     public static DatalakeReader datalakeReader(TarantinoConfig config) {

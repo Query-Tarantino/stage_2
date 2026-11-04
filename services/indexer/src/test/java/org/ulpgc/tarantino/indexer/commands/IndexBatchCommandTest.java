@@ -15,6 +15,7 @@ import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
 import org.ulpgc.tarantino.indexer.ports.BatchStore;
 import org.ulpgc.tarantino.indexer.ports.IndexWriter;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -198,6 +199,37 @@ class IndexBatchCommandTest {
 
         assertEquals(Set.of(), batches.marked);
         assertEquals(List.of(), announced);
+    }
+
+    @Test
+    void pollsTheOldestDownloadedBooksUntilTheBatchIsFull() throws InterruptedException {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        store(84, "Title: Frankenstein", "pride");
+        store(11, "Title: Alice", "pride");
+
+        command().executeClaimingNext(2, Duration.ofSeconds(5), Duration.ofMillis(1));
+
+        assertEquals(Map.of(BATCH_ID, List.of(11, 84)), batches.published);
+        assertEquals(Set.of(1342), batches.downloaded);
+        assertEquals(List.of(new BatchPublished(BATCH_ID, 1, 2, PUBLISHED_AT)), announced);
+    }
+
+    @Test
+    void closesAPolledBatchOnceItsTimeoutPassesSinceTheFirstClaim() throws InterruptedException {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().executeClaimingNext(100, Duration.ofMillis(20), Duration.ofMillis(5));
+
+        assertEquals(Map.of(BATCH_ID, List.of(1342)), batches.published);
+    }
+
+    @Test
+    void leavesAPolledBatchToExpireWhenNoBookWaits() throws InterruptedException {
+        command().executeClaimingNext(100, Duration.ofSeconds(5), Duration.ofMillis(1));
+
+        assertEquals(Map.of(), batches.published);
+        assertEquals(List.of(), announced);
+        assertTrue(leaseClosed);
     }
 
     private void store(int bookId, String header, String body) {

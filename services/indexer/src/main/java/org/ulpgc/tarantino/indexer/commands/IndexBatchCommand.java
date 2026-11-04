@@ -11,6 +11,7 @@ import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
+import org.ulpgc.tarantino.indexer.model.batch.ClaimedBook;
 import org.ulpgc.tarantino.indexer.model.book.ParsedBook;
 import org.ulpgc.tarantino.indexer.model.terms.BatchPostings;
 import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
@@ -18,8 +19,10 @@ import org.ulpgc.tarantino.indexer.ports.BatchAnnouncer;
 import org.ulpgc.tarantino.indexer.ports.BatchStore;
 import org.ulpgc.tarantino.indexer.ports.IndexWriter;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -75,10 +78,61 @@ public class IndexBatchCommand {
         }
     }
 
+    /**
+     * A batch of mode {@code polling} (SPEC §11.3): it opens the batch and claims the oldest {@code DOWNLOADED} book one
+     * at a time, until it has {@code size} books or {@code timeout} has passed since its first claim, sleeping up to
+     * {@code poll} while none waits. If no book is left to claim at first, the empty batch is left to expire.
+     */
+    public void executeClaimingNext(int size, Duration timeout, Duration poll) throws InterruptedException {
+        Batch batch = batches.open(batches.writeGeneration());
+        log.write(Transition.batch(batch.batchId(), null, BatchStatus.WRITING, batch.generation()));
+        try (Lease lease = heartbeats.apply(() -> batches.renew(batch))) {
+            Map<Integer, Instant> books = claimUntilFull(batch, size, timeout, poll);
+            if (books.isEmpty()) {
+                LOGGER.info("Batch {} found no book to claim; it is left to expire", batch.batchId());
+                return;
+            }
+            indexClaimed(batch, books.keySet().stream().sorted().toList(), lease);
+        }
+    }
+
+    private Map<Integer, Instant> claimUntilFull(Batch batch, int size, Duration timeout, Duration poll) throws InterruptedException {
+        Map<Integer, Instant> books = new LinkedHashMap<>();
+        Instant deadline = Instant.MAX;
+        while (books.size() < size && Instant.now().isBefore(deadline)) {
+            Optional<ClaimedBook> claimed = batches.claimNext(batch);
+            if (claimed.isPresent()) {
+                books.put(claimed.get().bookId(), claimed.get().enqueuedAt());
+                logClaim(batch, claimed.get().bookId(), claimed.get().enqueuedAt());
+                deadline = books.size() == 1 ? Instant.now().plus(timeout) : deadline;
+            } else if (books.isEmpty()) {
+                return books;
+            } else {
+                Thread.sleep(shorter(poll, Duration.between(Instant.now(), deadline)));
+            }
+        }
+        return books;
+    }
+
+    private static Duration shorter(Duration poll, Duration remaining) {
+        if (remaining.isNegative()) {
+            return Duration.ZERO;
+        }
+        return remaining.compareTo(poll) < 0 ? remaining : poll;
+    }
+
     private void index(Batch batch, Map<Integer, Instant> books, Lease lease) {
         List<Integer> claimed = batches.claim(batch, books.keySet());
-        claimed.forEach(bookId -> log.write(Transition.book(bookId, BookStatus.DOWNLOADED, BookStatus.INDEXING)
-                .inBatch(batch.batchId(), batch.generation()).fromMessageEnqueuedAt(books.get(bookId))));
+        claimed.forEach(bookId -> logClaim(batch, bookId, books.get(bookId)));
+        indexClaimed(batch, claimed, lease);
+    }
+
+    private void logClaim(Batch batch, int bookId, Instant enqueuedAt) {
+        log.write(Transition.book(bookId, BookStatus.DOWNLOADED, BookStatus.INDEXING)
+                .inBatch(batch.batchId(), batch.generation()).fromMessageEnqueuedAt(enqueuedAt));
+    }
+
+    private void indexClaimed(Batch batch, List<Integer> claimed, Lease lease) {
         List<ParsedBook> parsed = new ArrayList<>();
         for (int bookId : claimed) {
             parse(batch, bookId, lease).ifPresent(parsed::add);
