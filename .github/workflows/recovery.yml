@@ -1,0 +1,159 @@
+name: Recovery
+
+on:
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  scope:
+    name: Decide whether to recover
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      recover: ${{ steps.scope.outputs.recover }}
+    steps:
+      - name: Recover on main and when the recovery changes
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+        run: |
+          recover=true
+          if [[ $EVENT == pull_request && $BASE_REF != main ]]; then
+            changed_files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST/files" --paginate --jq '.[].filename')
+            grep -E '^(scripts/recovery/|\.github/workflows/recovery\.yml$)' <<< "$changed_files" > /dev/null || recover=false
+          fi
+          echo "recover=$recover" >> "$GITHUB_OUTPUT"
+
+  prepare:
+    name: Build the jars and the mirror
+    needs: scope
+    if: ${{ needs.scope.outputs.recover == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Build the jars
+        run: mvn -B -ntp -DskipTests package
+
+      - name: Fill the mirror of the sample books
+        uses: ./.github/actions/sample-mirror
+
+      - name: Keep the jars and the mirror for every row
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: recovery-inputs
+          path: |
+            services/*/target/*-1.0-SNAPSHOT.jar
+            bench/target/bench-1.0-SNAPSHOT.jar
+            benchmarks/mirror/
+            !**/target/original-*.jar
+          if-no-files-found: error
+          retention-days: 1
+
+  recover:
+    name: Recover ${{ matrix.row }} with ${{ matrix.replicas }} replicas
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        row:
+          - 01-crawler-after-claim
+          - 02-crawler-after-datalake-write
+          - 03-crawler-after-downloaded
+          - 04-crawler-after-dequeue
+          - 05-indexer-after-dequeue
+          - 06-indexer-during-batch-write
+          - 07-indexer-after-publish
+          - 08-indexer-after-mark
+          - 09-crawler-paused
+          - 10-indexer-paused
+          - 11-control-killed
+          - 12-hazelcast-restarted
+          - 13-mongo-stopped
+          - 14-query-replica-killed
+        replicas: [1, 2, 3]
+        exclude:
+          - row: 14-query-replica-killed
+            replicas: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/benchmarks/runs/
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: recovery-inputs
+
+      - name: Run the recovery
+        env:
+          ROW: ${{ matrix.row }}
+          REPLICAS: ${{ matrix.replicas }}
+        run: |
+          mkdir -p benchmarks/runs
+          "scripts/recovery/$ROW.sh" "$REPLICAS"
+
+      - name: Keep the run
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: recovery-${{ matrix.row }}-r${{ matrix.replicas }}
+          path: benchmarks/runs/
+          if-no-files-found: warn
+          retention-days: 14
+
+  matrix:
+    name: Recovery matrix
+    needs: [scope, recover]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every row to recover
+        env:
+          RECOVER: ${{ needs.scope.outputs.recover }}
+          RESULT: ${{ needs.recover.result }}
+        run: |
+          if [[ $RECOVER == false ]]; then
+            echo "This pull request does not change the recovery, so the matrix runs when it reaches main"
+            exit 0
+          fi
+          echo "Every row of the failure matrix: $RESULT"
+          [[ $RESULT == success ]]
