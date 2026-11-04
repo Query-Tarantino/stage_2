@@ -39,7 +39,7 @@ public final class RecoveryTool {
     private static final Pattern SCRIPT = Pattern.compile("\\d{2}");
     private static final Pattern POSITIVE = Pattern.compile("[1-9]\\d{0,8}");
     private static final int WAIT_ARGUMENTS = 3;
-    private static final Pattern RECOVERY_EXPERIMENT = Pattern.compile("recovery-\\d{2}-r\\d+");
+    private static final Pattern RECOVERY_EXPERIMENT = Pattern.compile("recovery-\\d{2}-(?:[a-z][a-z-]*-)?r\\d+");
     private static final String ZOMBIE_INDEXER_SCRIPT = "10";
     private static final String QUERY_REPLICA_SCRIPT = "14";
     private static final String RECOVERY_SECONDS = "recovery_seconds";

@@ -3,7 +3,7 @@ source "$(dirname "$0")/lib.sh"
 
 restart_broker_with_books_queued() {
     local broker
-    broker=$(broker_of_mode)
+    broker=$(broker_of_mode "$VARIANT")
     seed_mirror
     start_stack
     bench wait books-to-download
@@ -13,7 +13,7 @@ restart_broker_with_books_queued() {
     recover
 }
 
-if [[ -z $(broker_of_mode) ]]; then
+if [[ -z $(broker_of_mode "$VARIANT") ]]; then
     echo "Row 12 does not apply: there is no broker"
     exit 0
 fi

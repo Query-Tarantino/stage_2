@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.bench.charts;
 import org.knowm.xchart.CategoryChart;
 import org.knowm.xchart.CategoryChartBuilder;
 import org.ulpgc.tarantino.bench.recovery.RecoveryChecks;
+import org.ulpgc.tarantino.bench.recovery.RecoveryRunName;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
@@ -15,7 +16,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -82,11 +82,12 @@ final class RecoveryChart {
 
     private static Optional<RecoveryRun> recoveryRun(Path run) {
         String runId = run.getFileName().toString();
-        Matcher name = RecoveryChecks.RUN_NAME.matcher(runId);
-        if (!name.matches()) {
-            return Optional.empty();
-        }
-        return Optional.of(new RecoveryRun(runId, name.group(1), Integer.parseInt(name.group(2)), recoverySeconds(run)));
+        return RecoveryRunName.parse(runId).map(name -> new RecoveryRun(runId, label(name), name.replicas(), recoverySeconds(run)));
+    }
+
+    /** The bar's category: the script in mode {@code hazelcast}, and the script and its mode in any other (SPEC §9). */
+    private static String label(RecoveryRunName name) {
+        return RecoveryRunName.DEFAULT_MODE.equals(name.mode()) ? name.row() : name.row() + " " + name.mode();
     }
 
     private static double recoverySeconds(Path run) {
