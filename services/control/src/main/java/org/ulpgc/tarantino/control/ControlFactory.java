@@ -1,6 +1,17 @@
 package org.ulpgc.tarantino.control;
 
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
+import org.ulpgc.tarantino.common.config.Coordination;
+import org.ulpgc.tarantino.common.config.TarantinoService;
+import org.ulpgc.tarantino.control.adapters.http.DnsSnapshotRefreshes;
+import org.ulpgc.tarantino.control.adapters.http.HttpWorkDispatcher;
+import org.ulpgc.tarantino.control.adapters.local.InFlightQueueSizes;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoPublishedBatches;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoWaitingBooks;
+import org.ulpgc.tarantino.control.commands.AnnouncePublishedBatchesCommand;
+import org.ulpgc.tarantino.control.commands.OrchestrateCommand;
+import org.ulpgc.tarantino.control.model.DispatchedBooks;
+import org.ulpgc.tarantino.control.model.Stage;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
@@ -43,8 +54,11 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class ControlFactory {
+
+    private static final String QUERY_HOST = "query";
 
     private ControlFactory() {
     }
@@ -73,8 +87,36 @@ public final class ControlFactory {
     }
 
     public static ControlStatusRoutes statusRoutes(Connections connections, ReconcileCommand reconcile) {
-        return new ControlStatusRoutes(new ControlStatusCommand(new MongoStatusCounts(connections.database()),
-                queueSizes(connections), reconcile::lastReconciliation));
+        return statusRoutes(connections, reconcile, queueSizes(connections));
+    }
+
+    /** In mode {@code orchestrator}, {@code queues} reports the books in flight of each stage (SPEC §11.4). */
+    public static ControlStatusRoutes statusRoutes(TarantinoConfig config, Connections connections, ReconcileCommand reconcile,
+                                                   Map<Stage, DispatchedBooks> dispatched) {
+        if (config.coordination() != Coordination.ORCHESTRATOR) {
+            return statusRoutes(connections, reconcile);
+        }
+        return statusRoutes(connections, reconcile, new InFlightQueueSizes(dispatched.get(Stage.DOWNLOAD), dispatched.get(Stage.INDEX)));
+    }
+
+    private static ControlStatusRoutes statusRoutes(Connections connections, ReconcileCommand reconcile, QueueSizes sizes) {
+        return new ControlStatusRoutes(new ControlStatusCommand(new MongoStatusCounts(connections.database()), sizes,
+                reconcile::lastReconciliation));
+    }
+
+    /** The books the orchestrator has in flight, shared by its tick and {@code GET /control/status}. */
+    public static Map<Stage, DispatchedBooks> dispatchedBooks() {
+        return Map.of(Stage.DOWNLOAD, new DispatchedBooks(), Stage.INDEX, new DispatchedBooks());
+    }
+
+    /** One tick of mode {@code orchestrator} (SPEC §11.4). */
+    public static OrchestrateCommand orchestrateCommand(TarantinoConfig config, Connections connections,
+                                                        Map<Stage, DispatchedBooks> dispatched) {
+        AnnouncePublishedBatchesCommand announce = new AnnouncePublishedBatchesCommand(new MongoPublishedBatches(connections.database()),
+                new DnsSnapshotRefreshes(QUERY_HOST, TarantinoService.QUERY.defaultPort()));
+        return new OrchestrateCommand(new MongoWaitingBooks(connections.database()), new HttpWorkDispatcher(config.orchestratorTarget()),
+                dispatched, Map.of(Stage.DOWNLOAD, config.orchestratorDownloadWindow(), Stage.INDEX, config.orchestratorIndexWindow()),
+                config.requeue(), announce::execute, new TransitionLog(), Clock.systemUTC());
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
