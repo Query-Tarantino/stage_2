@@ -12,9 +12,22 @@ readonly STOPWORDS=workload/stopwords.txt
 readonly REPLICAS_LIST="${TARANTINO_REPLICAS_LIST:-1 2 3}"
 readonly REPETITIONS="${TARANTINO_REPETITIONS:-5}"
 readonly PHASE_TIMEOUT_SECONDS="${TARANTINO_PHASE_TIMEOUT_SECONDS:-1800}"
-SERVICES=(mongo hazelcast crawler indexer query control nginx)
-COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml)
-readonly SERVICES COMPOSE
+readonly VARIANT="${TARANTINO_VARIANT:-hazelcast}"
+
+source scripts/bench/modes.sh
+
+COMPOSE=()
+SERVICES=()
+
+use_mode() {
+    local mode=$1 files
+    files=$(compose_files "$mode")
+    read -r -a COMPOSE <<< "docker compose $files"
+    export_profiles_of_mode "$mode"
+    mapfile -t SERVICES < <("${COMPOSE[@]}" config --services)
+}
+
+use_mode "$VARIANT"
 
 export TARANTINO_CANDIDATES="${TARANTINO_CANDIDATES:-mirror}"
 
