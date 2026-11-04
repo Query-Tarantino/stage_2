@@ -1,8 +1,10 @@
 package org.ulpgc.tarantino.indexer.adapters.mongo;
 
+import com.mongodb.MongoException;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Indexes;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -32,12 +34,14 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MongoBatchStoreTest {
 
     private static final Duration LEASE = Duration.ofSeconds(60);
     private static final List<Integer> BOOKS = IntStream.rangeClosed(1, 20).boxed().toList();
+    private static final String UNIQUE = "unique";
 
     @RegisterExtension
     final TemporaryMongoDatabase mongo = new TemporaryMongoDatabase();
@@ -53,6 +57,19 @@ class MongoBatchStoreTest {
         assertEquals(List.of(), document.getList(MongoFields.BOOK_IDS, Integer.class));
         assertTrue(document.getDate(MongoFields.LEASE_UNTIL).after(new Date()));
         assertTrue(database().getCollection(MongoCollections.postings(1)).listIndexes().into(new ArrayList<>()).size() > 1);
+    }
+
+    @Test
+    void ensuresTheIndexesOfAGenerationAgainWhenTheFirstAttemptFailed() {
+        MongoCollection<Document> postings = database().getCollection(MongoCollections.postings(1));
+        postings.createIndex(Indexes.ascending(MongoFields.TERM, MongoFields.BATCH_ID));
+        MongoBatchStore store = store(LEASE);
+        assertThrows(MongoException.class, () -> store.open(1));
+        postings.dropIndexes();
+
+        store.open(1);
+
+        assertTrue(postings.listIndexes().into(new ArrayList<>()).stream().anyMatch(index -> index.getBoolean(UNIQUE, false)));
     }
 
     @Test

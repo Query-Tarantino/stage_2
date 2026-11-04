@@ -74,8 +74,9 @@ public class MongoBatchStore implements BatchStore {
 
     @Override
     public Batch open(int generation) {
-        if (indexedGenerations.add(generation)) {
+        if (!indexedGenerations.contains(generation)) {
             MongoIndexes.ensureGenerationIndexes(database, generation);
+            indexedGenerations.add(generation);
         }
         Batch batch = new Batch(new ObjectId().toHexString(), UUID.randomUUID().toString(), generation);
         Document change = new Document(STATUS, BatchStatus.WRITING.name())

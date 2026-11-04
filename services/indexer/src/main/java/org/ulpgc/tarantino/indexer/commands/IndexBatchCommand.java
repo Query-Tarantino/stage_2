@@ -81,7 +81,7 @@ public class IndexBatchCommand {
                 .inBatch(batch.batchId(), batch.generation()).fromMessageEnqueuedAt(books.get(bookId))));
         List<ParsedBook> parsed = new ArrayList<>();
         for (int bookId : claimed) {
-            parse(batch, bookId).ifPresent(parsed::add);
+            parse(batch, bookId, lease).ifPresent(parsed::add);
         }
         if (parsed.isEmpty()) {
             LOGGER.info("Batch {} has no books to index; it is left to expire", batch.batchId());
@@ -95,16 +95,17 @@ public class IndexBatchCommand {
         publish(batch, parsed.stream().map(book -> book.metadata().bookId()).toList());
     }
 
-    private Optional<ParsedBook> parse(Batch batch, int bookId) {
+    private Optional<ParsedBook> parse(Batch batch, int bookId, Lease lease) {
         Optional<ParsedBook> book = reader.read(bookId);
         if (book.isEmpty()) {
-            failAtIndexing(batch, bookId);
+            failAtIndexing(batch, bookId, lease);
         }
         return book;
     }
 
-    private void failAtIndexing(Batch batch, int bookId) {
-        if (batches.failAtIndexing(batch, bookId)) {
+    /** Only while the batch keeps its lease: once it is lost, the job writes nothing else (SPEC §5.1). */
+    private void failAtIndexing(Batch batch, int bookId, Lease lease) {
+        if (!lease.lost() && batches.failAtIndexing(batch, bookId)) {
             log.write(Transition.book(bookId, BookStatus.INDEXING, BookStatus.FAILED).inBatch(batch.batchId(), batch.generation()));
         }
     }

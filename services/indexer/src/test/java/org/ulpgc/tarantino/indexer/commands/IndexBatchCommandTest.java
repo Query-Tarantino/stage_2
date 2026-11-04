@@ -155,6 +155,16 @@ class IndexBatchCommandTest {
     }
 
     @Test
+    void failsNoBookAtIndexingOnceItsLeaseIsLost() {
+        batches.downloaded.add(84);
+        leaseLostAfterStep = "open";
+
+        command().execute(books(84));
+
+        assertEquals(List.of(), batches.failed);
+    }
+
+    @Test
     void stopsWritingTheBatchOnceItsLeaseIsLost() {
         store(1342, "Title: Pride and Prejudice", distinctWords(2_500));
         leaseLostAfterStep = "postings";
