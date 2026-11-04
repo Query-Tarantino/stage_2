@@ -25,6 +25,7 @@
 
         <mongodb-driver.version>5.13.0</mongodb-driver.version>
         <hazelcast.version>5.7.0</hazelcast.version>
+        <activemq.version>6.1.8</activemq.version>
         <javalin.version>6.7.0</javalin.version>
         <jackson.version>2.22.3</jackson.version>
         <junit.version>5.11.4</junit.version>
@@ -57,6 +58,16 @@
                 <groupId>com.hazelcast</groupId>
                 <artifactId>hazelcast</artifactId>
                 <version>${hazelcast.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-client</artifactId>
+                <version>${activemq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-broker</artifactId>
+                <version>${activemq.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.javalin</groupId>
