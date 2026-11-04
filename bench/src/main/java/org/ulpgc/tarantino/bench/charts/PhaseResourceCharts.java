@@ -25,19 +25,19 @@ final class PhaseResourceCharts {
     private PhaseResourceCharts() {
     }
 
-    static List<String> phases(Map<ResourceUsage.Key, ResourceUsage.Measures> usage) {
+    static List<String> phases(Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage) {
         return usage.keySet().stream().map(ResourceUsage.Key::phase).distinct().toList();
     }
 
-    static CategoryChart cpu(Map<ResourceUsage.Key, ResourceUsage.Measures> usage, String phase) {
+    static CategoryChart cpu(Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage, String phase) {
         return chart("Total CPU per service during " + phase, "Mean total CPU (%)", usage, phase, ResourceUsage.Measures::cpuTotal);
     }
 
-    static CategoryChart memory(Map<ResourceUsage.Key, ResourceUsage.Measures> usage, String phase) {
+    static CategoryChart memory(Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage, String phase) {
         return chart("Memory per replica during " + phase, "Mean memory per replica (MiB)", usage, phase, ResourceUsage.Measures::memoryPerReplicaMib);
     }
 
-    private static CategoryChart chart(String title, String yAxis, Map<ResourceUsage.Key, ResourceUsage.Measures> usage, String phase,
+    private static CategoryChart chart(String title, String yAxis, Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage, String phase,
                                        Function<ResourceUsage.Measures, List<Double>> values) {
         List<ResourceUsage.Key> keys = usage.keySet().stream().filter(key -> key.phase().equals(phase)).toList();
         List<String> services = keys.stream().map(ResourceUsage.Key::service).distinct().sorted().toList();
@@ -47,7 +47,7 @@ final class PhaseResourceCharts {
         keys.stream().map(ResourceUsage.Key::configuration).distinct().forEach(configuration -> {
             List<Optional<SummaryStats.Metrics>> metrics = services.stream()
                     .map(service -> Optional.ofNullable(usage.get(new ResourceUsage.Key(configuration, phase, service)))
-                            .map(measures -> SummaryStats.calculate(values.apply(measures))))
+                            .map(repetitions -> SummaryStats.calculate(repetitions.stream().flatMap(measures -> values.apply(measures).stream()).toList())))
                     .toList();
             chart.addSeries(configuration, services,
                     metrics.stream().map(metric -> metric.map(SummaryStats.Metrics::mean).orElse(0.0)).toList(),

@@ -15,7 +15,7 @@ class PhaseResourceChartsTest {
 
     @Test
     void drawsOneSeriesPerConfigurationWithABarPerServiceAndZeroWhereTheServiceDidNotRun() {
-        Map<ResourceUsage.Key, ResourceUsage.Measures> usage = new LinkedHashMap<>();
+        Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage = new LinkedHashMap<>();
         usage.put(key("replicas=1", PhaseWindow.INGESTION, "crawler"), measures(List.of(40.0, 60.0)));
         usage.put(key("replicas=1", PhaseWindow.INDEXING, "indexer"), measures(List.of(90.0)));
         usage.put(key("replicas=2", PhaseWindow.INGESTION, "crawler"), measures(List.of(100.0)));
@@ -34,7 +34,7 @@ class PhaseResourceChartsTest {
         return new ResourceUsage.Key(configuration, phase, service);
     }
 
-    private static ResourceUsage.Measures measures(List<Double> cpuTotal) {
-        return new ResourceUsage.Measures(cpuTotal, cpuTotal, cpuTotal);
+    private static List<ResourceUsage.Measures> measures(List<Double> cpuTotal) {
+        return List.of(new ResourceUsage.Measures(cpuTotal, cpuTotal, cpuTotal, cpuTotal));
     }
 }

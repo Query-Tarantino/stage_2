@@ -14,11 +14,14 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * {@code bench resources <run directory>}: appends to {@code summary.csv} the CPU per replica, the total CPU and the
- * memory per replica of each service in each phase of each configuration of a {@code resource-usage} run (SPEC §9).
+ * memory per replica of each service, and the CPU and memory of the whole stack, in each phase of each configuration of
+ * a {@code resource-usage} run, over its repetitions (SPEC §9).
  */
 public final class ResourceTool {
 
@@ -28,6 +31,8 @@ public final class ResourceTool {
     static final String CPU_PER_REPLICA = "cpu_per_replica";
     static final String CPU_TOTAL = "cpu_total";
     static final String MEMORY_PER_REPLICA = "memory_per_replica";
+    static final String STACK_CPU_TOTAL = "stack_cpu_total";
+    static final String STACK_MEMORY_TOTAL = "stack_memory_total";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ResourceTool.class);
     private static final String PERCENT = "percent";
@@ -44,18 +49,25 @@ public final class ResourceTool {
             return WRONG_USAGE;
         }
         Path runDirectory = Path.of(args.getFirst());
-        Map<ResourceUsage.Key, ResourceUsage.Measures> usage = usage(runDirectory);
+        Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage = usage(runDirectory);
         if (usage.isEmpty()) {
             LOGGER.error("{} has no {} samples inside the phase windows of its trials", runDirectory, StatsTool.FILE_NAME);
             return FAILED;
         }
-        usage.forEach((key, measures) -> appendRows(runDirectory.resolve(SummaryStats.FILE_NAME), key, measures));
-        LOGGER.info("Summarised the resources of {} services, phases and configurations in {}", usage.size(), runDirectory.resolve(SummaryStats.FILE_NAME));
+        Path summaryCsv = runDirectory.resolve(SummaryStats.FILE_NAME);
+        usage.forEach((key, repetitions) -> appendServiceRows(summaryCsv, key, repetitions));
+        usage(runDirectory, ResourceUsage::stackPerRepetition).forEach((key, repetitions) -> appendStackRows(summaryCsv, key, repetitions));
+        LOGGER.info("Summarised the resources of {} services, phases and configurations in {}", usage.size(), summaryCsv);
         return DONE;
     }
 
-    /** The resources of a run with trials and {@code stats.csv}; empty without either. */
-    public static Map<ResourceUsage.Key, ResourceUsage.Measures> usage(Path runDirectory) {
+    /** The resources of each service per repetition of a run with trials and {@code stats.csv}; empty without either. */
+    public static Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage(Path runDirectory) {
+        return usage(runDirectory, ResourceUsage::perRepetition);
+    }
+
+    private static Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage(Path runDirectory,
+            BiFunction<List<ContainerStats>, Map<String, List<PhaseWindow>>, Map<ResourceUsage.Key, List<ResourceUsage.Measures>>> measures) {
         Path stats = runDirectory.resolve(StatsTool.FILE_NAME);
         Path logs = runDirectory.resolve(TransitionLogs.FOLDER);
         if (!Files.exists(stats) || !Files.isDirectory(logs)) {
@@ -63,7 +75,7 @@ public final class ResourceTool {
         }
         Map<String, List<PhaseWindow>> windowsByTrial = TransitionLogs.byTrial(logs).entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, trial -> PhaseWindow.of(trial.getValue()), (first, second) -> first, LinkedHashMap::new));
-        return ResourceUsage.of(samples(stats), windowsByTrial);
+        return measures.apply(samples(stats), windowsByTrial);
     }
 
     private static List<ContainerStats> samples(Path stats) {
@@ -74,16 +86,24 @@ public final class ResourceTool {
         }
     }
 
-    private static void appendRows(Path summaryCsv, ResourceUsage.Key key, ResourceUsage.Measures measures) {
+    private static void appendServiceRows(Path summaryCsv, ResourceUsage.Key key, List<ResourceUsage.Measures> repetitions) {
         String configuration = key.configuration() + PHASE + key.phase() + SERVICE + key.service();
-        appendRow(summaryCsv, CPU_PER_REPLICA, configuration, measures.cpuPerReplica(), PERCENT);
-        appendRow(summaryCsv, CPU_TOTAL, configuration, measures.cpuTotal(), PERCENT);
-        appendRow(summaryCsv, MEMORY_PER_REPLICA, configuration, measures.memoryPerReplicaMib(), MEBIBYTES);
+        appendRow(summaryCsv, CPU_PER_REPLICA, configuration, repetitions, ResourceUsage.Measures::cpuPerReplica, PERCENT);
+        appendRow(summaryCsv, CPU_TOTAL, configuration, repetitions, ResourceUsage.Measures::cpuTotal, PERCENT);
+        appendRow(summaryCsv, MEMORY_PER_REPLICA, configuration, repetitions, ResourceUsage.Measures::memoryPerReplicaMib, MEBIBYTES);
     }
 
-    private static void appendRow(Path summaryCsv, String metric, String configuration, List<Double> values, String unit) {
+    private static void appendStackRows(Path summaryCsv, ResourceUsage.Key key, List<ResourceUsage.Measures> repetitions) {
+        String configuration = key.configuration() + PHASE + key.phase();
+        appendRow(summaryCsv, STACK_CPU_TOTAL, configuration, repetitions, ResourceUsage.Measures::cpuTotal, PERCENT);
+        appendRow(summaryCsv, STACK_MEMORY_TOTAL, configuration, repetitions, ResourceUsage.Measures::memoryTotalMib, MEBIBYTES);
+    }
+
+    private static void appendRow(Path summaryCsv, String metric, String configuration, List<ResourceUsage.Measures> repetitions,
+                                  Function<ResourceUsage.Measures, List<Double>> values, String unit) {
         try {
-            SummaryStats.appendToSummary(summaryCsv, metric, configuration, SummaryStats.calculate(values), unit);
+            SummaryStats.appendToSummary(summaryCsv, metric, configuration,
+                    SummaryStats.ofRepetitions(repetitions.stream().map(values).toList()), unit);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
