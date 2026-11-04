@@ -1,14 +1,14 @@
 package org.ulpgc.tarantino.control;
 
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
-import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
 import org.ulpgc.tarantino.control.adapters.datalake.FileDatalakeTemporaries;
-import org.ulpgc.tarantino.control.adapters.hazelcast.HazelcastQueueSizes;
+import org.ulpgc.tarantino.control.adapters.broker.BrokerQueueSizes;
+import org.ulpgc.tarantino.control.adapters.broker.BrokerTaskQueue;
 import org.ulpgc.tarantino.control.adapters.http.ControlStatusRoutes;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoAbandonedBatches;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoBatchLeases;
@@ -71,7 +71,7 @@ public final class ControlFactory {
 
     public static ControlStatusRoutes statusRoutes(Connections connections, ReconcileCommand reconcile) {
         return new ControlStatusRoutes(new ControlStatusCommand(new MongoStatusCounts(connections.database()),
-                new HazelcastQueueSizes(connections.hazelcast().client()), reconcile::lastReconciliation));
+                new BrokerQueueSizes(connections.broker().orElseThrow()), reconcile::lastReconciliation));
     }
 
     /** The books to seed (SPEC §4.7): every book of the local mirror, or the ids of a workload file in its order. */
@@ -97,7 +97,7 @@ public final class ControlFactory {
     }
 
     private static RequeueLostMessagesCommand requeueLostMessages(TarantinoConfig config, Connections connections) {
-        return new RequeueLostMessagesCommand(new HazelcastQueueSizes(connections.hazelcast().client()),
+        return new RequeueLostMessagesCommand(new BrokerQueueSizes(connections.broker().orElseThrow()),
                 new MongoLostMessages(connections.database(), config.requeue()), downloadQueue(connections),
                 indexQueue(connections), new TransitionLog(), Clock.systemUTC());
     }
@@ -120,16 +120,11 @@ public final class ControlFactory {
     }
 
     private static DownloadQueue downloadQueue(Connections connections) {
-        return task -> bookTasks(connections, MessagingContracts.BOOKS_TO_DOWNLOAD).offer(task);
+        return new BrokerTaskQueue(connections.broker().orElseThrow(), MessagingContracts.BOOKS_TO_DOWNLOAD);
     }
 
     private static IndexQueue indexQueue(Connections connections) {
-        return task -> bookTasks(connections, MessagingContracts.BOOKS_TO_INDEX).offer(task);
-    }
-
-    /** Looked up on every message, so the commands can be built before the Hazelcast client connects. */
-    private static BookTaskQueue bookTasks(Connections connections, String queue) {
-        return new BookTaskQueue(connections.hazelcast().client(), queue);
+        return new BrokerTaskQueue(connections.broker().orElseThrow(), MessagingContracts.BOOKS_TO_INDEX);
     }
 
     private static List<Integer> ids(Path file) {

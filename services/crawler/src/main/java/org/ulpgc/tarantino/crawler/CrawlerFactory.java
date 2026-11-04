@@ -1,10 +1,10 @@
 package org.ulpgc.tarantino.crawler;
 
-import com.hazelcast.core.HazelcastInstance;
 import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
-import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
+import org.ulpgc.tarantino.common.messaging.BookTasks;
+import org.ulpgc.tarantino.common.messaging.Broker;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
@@ -37,9 +37,9 @@ public final class CrawlerFactory {
     }
 
     public static DownloadWorker downloadWorker(TarantinoConfig config, Connections connections) {
-        HazelcastInstance client = connections.hazelcast().client();
-        BookTaskQueue downloads = new BookTaskQueue(client, MessagingContracts.BOOKS_TO_DOWNLOAD);
-        BookTaskQueue indexing = new BookTaskQueue(client, MessagingContracts.BOOKS_TO_INDEX);
+        Broker broker = connections.broker().orElseThrow();
+        BookTasks downloads = broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD);
+        BookTasks indexing = broker.queue(MessagingContracts.BOOKS_TO_INDEX);
         Consumer<CrashPoint> crashPoints = new CrashPoints(config.crashAt())::hit;
         Function<BooleanSupplier, Lease> heartbeats = renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal);
         MongoBookClaims claims = new MongoBookClaims(connections.database(), config.lease(), config.maxAttempts());
@@ -49,8 +49,8 @@ public final class CrawlerFactory {
     }
 
     /**
-     * The routes, built before Hazelcast connects (SPEC §2.4): the queue is only looked up when {@code POST /ingest} uses
-     * it, so until Hazelcast answers that request is a {@code 503} instead of the crawler dying at startup.
+     * The routes, built before the broker connects (SPEC §2.4): the queue is only looked up when {@code POST /ingest} uses
+     * it, so until the broker answers that request is a {@code 503} instead of the crawler dying at startup.
      */
     public static Consumer<Javalin> routes(Connections connections) {
         return new IngestRoutes(new BookStates(connections.database())::state, new MongoIngestRequests(connections.database()),
@@ -59,7 +59,8 @@ public final class CrawlerFactory {
     }
 
     private static TaskQueue downloadQueueOnEachUse(Connections connections) {
-        return task -> new BookTaskQueue(connections.hazelcast().client(), MessagingContracts.BOOKS_TO_DOWNLOAD).offer(task);
+        Broker broker = connections.broker().orElseThrow();
+        return task -> broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD).offer(task);
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {

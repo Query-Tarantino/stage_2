@@ -1,7 +1,7 @@
 package org.ulpgc.tarantino.common.messaging;
 
 /** The message broker of a coordination mode that uses one (SPEC §11.1). */
-public interface Broker {
+public interface Broker extends AutoCloseable {
 
     /** A new handle on the queue on each call. */
     BookTasks queue(String name);
@@ -15,4 +15,7 @@ public interface Broker {
 
     /** What {@code /health} lists in {@code down} while the broker does not answer (SPEC §6.5). */
     String name();
+
+    @Override
+    void close();
 }

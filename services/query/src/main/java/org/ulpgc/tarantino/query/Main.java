@@ -2,7 +2,6 @@ package org.ulpgc.tarantino.query;
 
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.TarantinoService;
-import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
 import org.ulpgc.tarantino.common.http.Dependency;
 import org.ulpgc.tarantino.common.http.Health;
 import org.ulpgc.tarantino.common.startup.Connections;
@@ -29,6 +28,6 @@ public class Main {
     private static void refreshOnOneThread(TarantinoConfig config, Connections connections, SnapshotRefresher snapshots) {
         ScheduledExecutorService refresher = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("snapshot").factory());
         refresher.scheduleWithFixedDelay(snapshots::refreshOrKeep, 0, config.snapshot().toMillis(), TimeUnit.MILLISECONDS);
-        new BatchPublishedTopic(connections.hazelcast().client()).listen(batch -> refresher.execute(snapshots::refreshOrKeep));
+        connections.broker().orElseThrow().announcements().listen(batch -> refresher.execute(snapshots::refreshOrKeep));
     }
 }

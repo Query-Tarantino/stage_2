@@ -1,10 +1,8 @@
 package org.ulpgc.tarantino.indexer;
 
-import com.hazelcast.core.HazelcastInstance;
 import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
-import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
-import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
+import org.ulpgc.tarantino.common.messaging.Broker;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
@@ -15,7 +13,7 @@ import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.adapters.datalake.batch.BatchBasedDatalakeReader;
-import org.ulpgc.tarantino.indexer.adapters.hazelcast.HazelcastIndexQueue;
+import org.ulpgc.tarantino.indexer.adapters.broker.BrokerIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.http.BookRoutes;
 import org.ulpgc.tarantino.indexer.adapters.http.IndexRoutes;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoBatchStore;
@@ -37,20 +35,21 @@ public final class IndexerFactory {
     }
 
     public static IndexWorker indexWorker(TarantinoConfig config, Connections connections) {
-        HazelcastInstance client = connections.hazelcast().client();
-        BatchCollector collector = new BatchCollector(new HazelcastIndexQueue(client), config.indexBatch(), config.batchTimeout(),
+        Broker broker = connections.broker().orElseThrow();
+        BatchCollector collector = new BatchCollector(new BrokerIndexQueue(broker.queue(MessagingContracts.BOOKS_TO_INDEX)), config.indexBatch(), config.batchTimeout(),
                 Clock.systemUTC());
         IndexBatchCommand index = new IndexBatchCommand(new MongoBatchStore(connections.database(), config.lease(), Replica.name()),
                 new BookReader(datalakeReader(config), tokenizer(config)), new MongoIndexWriter(connections.database()),
-                new BatchPublishedTopic(client)::publish, new TransitionLog(), new CrashPoints(config.crashAt()),
+                broker.announcements()::publish, new TransitionLog(), new CrashPoints(config.crashAt()),
                 renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal));
         return new IndexWorker(collector, index);
     }
 
     public static Consumer<Javalin> routes(Connections connections) {
         IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()), new MongoIndexStatus(connections.database()));
+        Broker broker = connections.broker().orElseThrow();
         BookRoutes books = new BookRoutes(new BookStates(connections.database())::state,
-                task -> new BookTaskQueue(connections.hazelcast().client(), MessagingContracts.BOOKS_TO_INDEX).offer(task),
+                task -> broker.queue(MessagingContracts.BOOKS_TO_INDEX).offer(task),
                 Clock.systemUTC());
         return app -> {
             index.register(app);
