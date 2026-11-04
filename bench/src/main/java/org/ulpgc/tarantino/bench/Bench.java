@@ -15,6 +15,7 @@ import org.ulpgc.tarantino.bench.manifest.ManifestTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryTool;
 import org.ulpgc.tarantino.bench.resources.ResourceTool;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
+import org.ulpgc.tarantino.bench.visibility.VisibilityTool;
 
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,8 @@ public final class Bench {
             Map.entry("wait", RecoveryTool::waitFor),
             Map.entry("recovery", RecoveryTool::recovery),
             Map.entry("recovery-compare", RecoveryTool::compare),
-            Map.entry("recovery-chart", ChartsTool::recovery)));
+            Map.entry("recovery-chart", ChartsTool::recovery),
+            Map.entry("visibility", VisibilityTool::run)));
 
     private Bench() {
     }
