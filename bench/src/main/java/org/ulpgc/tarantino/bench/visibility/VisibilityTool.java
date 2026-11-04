@@ -53,7 +53,7 @@ public final class VisibilityTool {
         return DONE;
     }
 
-    static Map<String, List<BatchVisibility>> byTrial(Path logs) {
+    public static Map<String, List<BatchVisibility>> byTrial(Path logs) {
         return TransitionLogs.byTrial(logs).entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
                 trial -> BatchVisibility.of(trial.getValue(), snapshots(logs.resolve(trial.getKey()))),
                 (first, second) -> first, LinkedHashMap::new));

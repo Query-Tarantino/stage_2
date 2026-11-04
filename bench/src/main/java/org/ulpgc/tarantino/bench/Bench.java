@@ -17,6 +17,7 @@ import org.ulpgc.tarantino.bench.recovery.RecoveryDelayTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryTool;
 import org.ulpgc.tarantino.bench.resources.ResourceTool;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
+import org.ulpgc.tarantino.bench.variants.VariantsTool;
 import org.ulpgc.tarantino.bench.visibility.VisibilityTool;
 
 import java.util.List;
@@ -54,7 +55,8 @@ public final class Bench {
             Map.entry("recovery-chart", ChartsTool::recovery),
             Map.entry("visibility", VisibilityTool::run),
             Map.entry("recovery-delay", RecoveryDelayTool::run),
-            Map.entry("broker", BrokerTool::run)));
+            Map.entry("broker", BrokerTool::run),
+            Map.entry("variants", VariantsTool::run)));
 
     private Bench() {
     }
