@@ -23,7 +23,9 @@ import java.util.stream.Stream;
 /**
  * {@code bench recovery-delay <output run dir> <recovery run dir>…}: for each book of each recovery run, the delay from
  * {@code failed_at} to its requeue and to its next claim, into {@code recovery-delay.csv}, with {@code requeue_delay} and
- * {@code reclaim_delay} in {@code summary.csv} per mode and replicas (SPEC §9).
+ * {@code reclaim_delay} in {@code summary.csv} per mode and replicas: each recovery run counts as one repetition, with
+ * its mean, and the percentiles go over every book (SPEC §9). A metric no book has, as {@code requeue_delay} where the
+ * broker redelivers, gets no row.
  */
 public final class RecoveryDelayTool {
 
@@ -72,19 +74,21 @@ public final class RecoveryDelayTool {
     }
 
     private static void appendSummary(Path summaryCsv, List<SourceRun> sources) {
-        Map<String, List<BookRecoveryDelay>> byConfiguration = sources.stream().collect(Collectors.groupingBy(
+        Map<String, List<SourceRun>> byConfiguration = sources.stream().collect(Collectors.groupingBy(
                 source -> "mode=" + source.name().mode() + ",replicas=" + source.name().replicas(), LinkedHashMap::new,
-                Collectors.flatMapping(source -> source.books().stream(), Collectors.toList())));
-        byConfiguration.forEach((configuration, books) -> {
-            append(summaryCsv, "requeue_delay", configuration,
-                    books.stream().flatMap(book -> book.requeueDelay().stream()).map(Duration::toMillis).toList());
-            append(summaryCsv, "reclaim_delay", configuration, books.stream().map(book -> book.reclaimDelay().toMillis()).toList());
+                Collectors.toList()));
+        byConfiguration.forEach((configuration, runs) -> {
+            append(summaryCsv, "requeue_delay", configuration, runs.stream().map(SourceRun::requeueMillis).toList());
+            append(summaryCsv, "reclaim_delay", configuration, runs.stream().map(SourceRun::reclaimMillis).toList());
         });
     }
 
-    private static void append(Path summaryCsv, String metric, String configuration, List<Long> millis) {
+    private static void append(Path summaryCsv, String metric, String configuration, List<List<Long>> millisByRun) {
+        if (millisByRun.stream().allMatch(List::isEmpty)) {
+            return;
+        }
         try {
-            SummaryStats.appendToSummary(summaryCsv, metric, configuration, SummaryStats.calculate(millis), UNIT);
+            SummaryStats.appendToSummary(summaryCsv, metric, configuration, SummaryStats.ofRepetitions(millisByRun), UNIT);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -99,6 +103,14 @@ public final class RecoveryDelayTool {
     }
 
     private record SourceRun(String runId, RecoveryRunName name, List<BookRecoveryDelay> books) {
+
+        List<Long> requeueMillis() {
+            return books.stream().flatMap(book -> book.requeueDelay().stream()).map(Duration::toMillis).toList();
+        }
+
+        List<Long> reclaimMillis() {
+            return books.stream().map(book -> book.reclaimDelay().toMillis()).toList();
+        }
 
         Stream<String> rows() {
             return books.stream().map(book -> String.join(",", runId, name.mode(), String.valueOf(name.replicas()),

@@ -19,7 +19,8 @@ import java.util.stream.Stream;
 /**
  * {@code bench visibility <run dir>}: the delay from each batch's publication to each {@code query} replica's snapshot,
  * from the logs of every trial, into {@code visibility.csv} and {@code publication_visibility} in {@code summary.csv},
- * one configuration per trial without its repetition (SPEC §9).
+ * one configuration per trial without its repetition: its mean, deviation and CI over the mean of each repetition, and
+ * its percentiles over every batch and replica (SPEC §9).
  */
 public final class VisibilityTool {
 
@@ -71,17 +72,20 @@ public final class VisibilityTool {
     }
 
     private static void appendSummary(Path summaryCsv, Map<String, List<BatchVisibility>> byTrial) {
-        Map<String, List<Long>> byConfiguration = byTrial.entrySet().stream().collect(Collectors.groupingBy(
+        Map<String, List<List<Long>>> byConfiguration = byTrial.entrySet().stream().collect(Collectors.groupingBy(
                 trial -> TrialName.configuration(trial.getKey()), LinkedHashMap::new,
-                Collectors.flatMapping(trial -> trial.getValue().stream().map(batch -> batch.visibility().toMillis()),
-                        Collectors.toList())));
-        byConfiguration.forEach((configuration, millis) -> {
+                Collectors.mapping(trial -> millis(trial.getValue()), Collectors.toList())));
+        byConfiguration.forEach((configuration, repetitions) -> {
             try {
-                SummaryStats.appendToSummary(summaryCsv, METRIC, configuration, SummaryStats.calculate(millis), UNIT);
+                SummaryStats.appendToSummary(summaryCsv, METRIC, configuration, SummaryStats.ofRepetitions(repetitions), UNIT);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         });
+    }
+
+    private static List<Long> millis(List<BatchVisibility> batches) {
+        return batches.stream().map(batch -> batch.visibility().toMillis()).toList();
     }
 
     private static String row(String trial, BatchVisibility batch) {

@@ -757,7 +757,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 | `charts/` | The run's XChart charts in PNG, each with its `run_id` in the footer |
 | `visibility.csv` | `publication-visibility` and `coordination-variants`: one row per batch and `query` replica, with `trial`, `batch_id`, `replica`, `published_at`, `visible_at` and `visibility_ms`. `summary.csv` holds it as `publication_visibility` |
 | `broker.csv` | `broker-latency` only: one row per trial, with `broker`, `consumers`, `repetition`, `messages`, `p50_us`, `p95_us`, `p99_us` and `throughput_per_s`. `summary.csv` holds them as `broker_latency` and `broker_throughput` |
-| `recovery-delay.csv` | `recovery-delay` only: one row per book, with `source_run_id`, `mode`, `replicas`, `book_id`, `status`, `requeue_delay_ms` and `reclaim_delay_ms`. `summary.csv` holds them as `requeue_delay` and `reclaim_delay` |
+| `recovery-delay.csv` | `recovery-delay` only: one row per book, with `source_run_id`, `mode`, `replicas`, `book_id`, `status`, `requeue_delay_ms` and `reclaim_delay_ms`. `summary.csv` holds them as `requeue_delay` and `reclaim_delay`, with each recovery run as one repetition, and has no `requeue_delay` row for a mode and N where no book was requeued |
 | `variants.csv` | `coordination-variants` only: the `summary.csv` rows with a first column `mode`, plus `pipeline_throughput` |
 | `pairs.csv` | `coordination-variants` only: for every pair of modes, N and metric, both means, their difference and the half-width of its 95 % CI |
 | `runs.txt` | `campaign` only: each step, its exit code and its run folders |

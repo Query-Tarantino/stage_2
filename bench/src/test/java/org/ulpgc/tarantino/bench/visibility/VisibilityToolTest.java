@@ -36,7 +36,7 @@ class VisibilityToolTest {
                 "listener-on-rep-2," + BATCH + ",q1,2026-10-21T10:06:00Z,2026-10-21T10:06:00.060Z,60"),
                 Files.readAllLines(run.resolve(VisibilityTool.FILE_NAME)));
         String summary = Files.readString(run.resolve("summary.csv"));
-        assertTrue(summary.contains("publication_visibility,\"listener=on\",63.33"), summary);
+        assertTrue(summary.contains("publication_visibility,\"listener=on\",62.50,3.54,31.77,60.00,90.00,90.00,ms"), summary);
     }
 
     private void trial(String name, List<String> queryLines) throws IOException {
