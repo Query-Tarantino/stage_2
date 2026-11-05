@@ -15,7 +15,6 @@ import org.ulpgc.tarantino.indexer.model.rebuild.IndexStatus;
 import org.ulpgc.tarantino.indexer.model.rebuild.RebuildProgress;
 import org.ulpgc.tarantino.indexer.ports.IndexStatusReader;
 
-import java.time.Instant;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;

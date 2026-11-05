@@ -10,8 +10,6 @@ readonly REUSED_JMH_RUN=20261103-204454-index-throughput-6925d4e
 
 export TARANTINO_BATCH_TIMEOUT_SECONDS=2
 
-trial_started_at=""
-
 state_hypotheses() {
     echo "Machine: the official one, 24 hardware threads, 8 P cores and 16 E cores; each indexer replica indexes one batch at a time on its index-batches thread, so at most 3 indexing threads run and they fit in the P cores"
     echo "Factors: books per batch and indexer replicas, $REPETITIONS repetitions each, interleaved: repetition 1 of every configuration, then repetition 2, so drift over the run spreads across every configuration"
@@ -37,32 +35,7 @@ run_jmh_unless_reused() {
         echo "JMH: not run; the report cites jmh/ of $REUSED_JMH_RUN, because the tokenizer, the header parser and the batch writer it measures did not change"
         return
     fi
-    run_jmh
-}
-
-run_jmh() {
-    local absolute_run_dir
-    absolute_run_dir=$(host_path "$(cd "$run_dir" && pwd)")
-    mvn -DskipTests install
-    TARANTINO_MIRROR=$(host_path "$PWD/$MIRROR_DIR") TARANTINO_WORKLOAD=$(host_path "$PWD/workload") \
-        mvn -f services/indexer/pom.xml exec:exec \
-        -Dexec.executable=java \
-        -Dexec.classpathScope=test \
-        "-Dexec.args=-classpath %classpath org.ulpgc.tarantino.indexer.benchmarks.IndexerBenchmarks \"$absolute_run_dir\""
-    java -jar "$BENCH_JAR" jmh-csv "$run_dir/jmh/indexer.json" "$run_dir/jmh/indexer.csv"
-}
-
-host_path() {
-    if command -v cygpath >/dev/null 2>&1; then
-        cygpath -m "$1"
-    else
-        echo "$1"
-    fi
-}
-
-ingest_corpus() {
-    "${COMPOSE[@]}" up -d --wait
-    wait_for PUBLISHED "$(expected_books)"
+    run_jmh_of indexer org.ulpgc.tarantino.indexer.benchmarks.IndexerBenchmarks
 }
 
 measure() {
@@ -104,15 +77,6 @@ open_rebuild() {
     done
     echo "No rebuild to generation $expected after $REBUILD_ATTEMPTS attempts" >&2
     return 1
-}
-
-save_trial_logs() {
-    local trial_logs="$run_dir/logs/$current_trial" service
-    mkdir -p "$trial_logs"
-    for service in "${SERVICES[@]}"; do
-        "${COMPOSE[@]}" logs --no-color --timestamps --since "$trial_started_at" "$service" > "$trial_logs/$service.log"
-    done
-    current_trial=""
 }
 
 summarise_run() {

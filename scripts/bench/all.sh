@@ -9,7 +9,7 @@ readonly BENCH_JAR=bench/target/bench-1.0-SNAPSHOT.jar
 readonly RUNS_DIR=benchmarks/runs
 readonly MIRROR_DIR=benchmarks/mirror
 readonly CORPUS_SHA=workload/corpus.sha256
-readonly BRANCH=arch-testing
+readonly BRANCHES=(dev arch-testing)
 readonly OFFICIAL_CPUS=24
 readonly MINIMUM_MEMORY_GIB=15
 readonly BYTES_PER_GIB=$((1024 * 1024 * 1024))
@@ -121,7 +121,7 @@ fail() {
 }
 
 check_preconditions() {
-    [[ $(git rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || fail "the current branch is not $BRANCH"
+    [[ " ${BRANCHES[*]} " == *" $(git rev-parse --abbrev-ref HEAD) "* ]] || fail "the current branch is not one of ${BRANCHES[*]}"
     local overrides
     overrides=$(compgen -e | grep -E "$OVERRIDING_VARIABLES" | tr '\n' ' ')
     [[ -z $overrides ]] || fail "$overrides would change the defaults every step and its hypotheses rely on; unset them"
@@ -187,7 +187,7 @@ recovery_delay() {
 }
 
 print_dry_run() {
-    echo "Preconditions: branch $BRANCH; no TARANTINO_*, JAVA_TOOL_OPTIONS or *_CRASH_AT variable set; nothing changed outside $RUNS_DIR; docker info with $OFFICIAL_CPUS CPUs and at least $MINIMUM_MEMORY_GIB GiB; every book of $CORPUS_SHA in $MIRROR_DIR; $BENCH_JAR built"
+    echo "Preconditions: branch ${BRANCHES[0]} or ${BRANCHES[1]}; no TARANTINO_*, JAVA_TOOL_OPTIONS or *_CRASH_AT variable set; nothing changed outside $RUNS_DIR; docker info with $OFFICIAL_CPUS CPUs and at least $MINIMUM_MEMORY_GIB GiB; every book of $CORPUS_SHA in $MIRROR_DIR; $BENCH_JAR built"
     echo "Opening: java -jar $BENCH_JAR manifest start $RUNS_DIR campaign 0 -- $0"
     local step number=0
     while read -r step; do
