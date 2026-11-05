@@ -19,7 +19,7 @@ downloads them, `indexer` publishes them in batches and `query` answers the sear
 checks pass in every mode. Every row of the failure matrix recovers in mode `hazelcast` with 1, 2 and 3 replicas, and
 the five original experiments have their November runs in `benchmarks/runs/`. The report cites the campaign of
 `scripts/bench/all.sh`, which runs the experiments and the recovery matrix again in every mode, from one commit of
-`arch-testing` on the official machine, and the two November runs it reuses because their code did not change
+`dev` on the official machine, and the two November runs it reuses because their code did not change
 (`SPEC.md` §9 and [benchmarks/README.md](benchmarks/README.md)).
 
 ## Requirements

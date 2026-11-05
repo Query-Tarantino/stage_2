@@ -173,7 +173,7 @@ the runs of a row give the same books and `/search` answers whatever N. Recovery
 
 `scripts/bench/all.sh` runs the experiments above again, plus `publication-visibility`, `broker-latency`,
 `coordination-variants` and `recovery-delay`, and the recovery matrix in each of the five coordination modes
-(`SPEC.md` §11): 187 steps, about 11 hours, from one commit of `arch-testing` on the machine above. Each script prints
+(`SPEC.md` §11): 187 steps, about 11 hours, from one commit of `dev` on the machine above. Each script prints
 its hypotheses before measuring; `scripts/bench/all.sh --dry-run` lists every step and its command.
 
 The report cites only that campaign, so the November runs of this file are superseded once its runs are in
