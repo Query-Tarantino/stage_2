@@ -105,7 +105,10 @@ writes its own `benchmarks/runs/<run_id>/`:
 | Indexing throughput by batch size and indexer replicas, rebuilding the index once per trial | `./scripts/bench/index-throughput.sh` | `20261103-204454-index-throughput-6925d4e` |
 | Search latency by clients, HTTP threads and `query` replicas | `./scripts/bench/search-latency.sh` | `20261104-140900-search-latency-8e1c1e8` |
 | Coordination cost by replicas | `./scripts/bench/coordination-cost.sh` | `20261102-212416-coordination-cost-77ed00a` |
-| CPU and memory per service and of the whole stack | `./scripts/bench/resource-usage.sh` | `20261102-215134-resource-usage-77ed00a` |
+| CPU and memory per service and of the whole stack, and of the host from SPEC 1.9.2 on | `./scripts/bench/resource-usage.sh` | `20261102-215134-resource-usage-77ed00a` |
+
+[benchmarks/README.md](benchmarks/README.md) reads the results of these runs and of the recovery runs: the figures of each
+configuration, the hypotheses they confirm or refute, and the bottlenecks they show.
 
 The JMH benchmarks also run on their own, after `mvn -DskipTests install`, with `<service>` and its main class
 `crawler` `org.ulpgc.tarantino.crawler.benchmarks.CrawlerBenchmarks`, `indexer` `org.ulpgc.tarantino.indexer.benchmarks.IndexerBenchmarks`
