@@ -32,7 +32,7 @@ public class ApiChecker {
     private final CheckedClient client;
     private final String frontEndUrl;
     private final String operationalUrl;
-    private final Tokenizer tokenizer;
+    private final SearchTerms terms;
     private final List<JsonNode> sampleBooks = new ArrayList<>();
     private final HealthChecks health;
     private final EntryPortChecks entryPorts;
@@ -50,7 +50,7 @@ public class ApiChecker {
         Set<String> stopwords = Files.exists(stopwordsPath)
                 ? new FileStopwordsLoader(stopwordsPath).stopwords()
                 : Set.of();
-        this.tokenizer = new Tokenizer(stopwords);
+        this.terms = new SearchTerms(new Tokenizer(stopwords));
         ProblemChecks problems = new ProblemChecks(client);
         this.health = new HealthChecks(client);
         this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
@@ -257,7 +257,7 @@ public class ApiChecker {
         ObjectNode searchesNode = root.putObject("searches");
         ObjectNode booksNode = root.putObject("books");
         List<JsonNode> bookNodes = expectedBooks(targetIds, booksNode);
-        searchCases(termInLanguage(bookNodes, "de", "faust"), termInLanguage(bookNodes, "fr", "monde"))
+        searchCases(terms.termIn(bookNodes, "de", "faust"), terms.termIn(bookNodes, "fr", "monde"))
                 .forEach(searchCase -> expectedSearch(searchesNode, searchCase));
         if (expectedPath.getParent() != null) {
             Files.createDirectories(expectedPath.getParent());
@@ -289,15 +289,6 @@ public class ApiChecker {
             bookNode.set("languages", book.get("languages"));
         }
         bookNode.set("original_year", book.get("original_year"));
-    }
-
-    private String termInLanguage(List<JsonNode> books, String language, String otherwise) {
-        return books.stream()
-                .filter(book -> book.has("languages") && StreamSupport.stream(book.get("languages").spliterator(), false)
-                        .anyMatch(langNode -> language.equalsIgnoreCase(langNode.asText())))
-                .findFirst()
-                .map(this::pickSearchTerm)
-                .orElse(otherwise);
     }
 
     private record SearchCase(String name, String path) {
@@ -340,14 +331,10 @@ public class ApiChecker {
     }
 
     private void checkLanguageFilter(List<JsonNode> books, String language) throws IOException, InterruptedException {
-        Optional<JsonNode> match = books.stream()
-                .filter(book -> book.has("languages") && book.get("languages").isArray())
-                .filter(book -> StreamSupport.stream(book.get("languages").spliterator(), false)
-                        .anyMatch(langNode -> language.equalsIgnoreCase(langNode.asText())))
-                .findFirst();
+        Optional<JsonNode> match = SearchTerms.bookIn(books, language);
         if (match.isPresent()) {
             JsonNode book = match.get();
-            String term = pickSearchTerm(book);
+            String term = terms.termOf(book);
             int bookId = book.get("book_id").asInt();
             CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + term + "&language=" + language);
             assertEquals(200, response.status());
@@ -355,30 +342,6 @@ public class ApiChecker {
             assertTrue(response.json().get("total").asInt() >= 1, "/search?q=" + term + "&language=" + language + " finds at least one book");
             assertTrue(SearchResults.containsBook(response.json().get("results"), bookId), "/search?q=" + term + "&language=" + language + " finds book " + bookId);
         }
-    }
-
-    private String pickSearchTerm(JsonNode book) {
-        if (book.has("title") && !book.get("title").isNull()) {
-            List<String> terms = tokenizer.distinctTerms(book.get("title").asText());
-            Optional<String> descriptive = terms.stream().filter(term -> term.length() > 2).findFirst();
-            if (descriptive.isPresent()) {
-                return descriptive.get();
-            }
-            if (!terms.isEmpty()) {
-                return terms.getFirst();
-            }
-        }
-        if (book.has("author") && !book.get("author").isNull()) {
-            List<String> terms = tokenizer.distinctTerms(book.get("author").asText());
-            Optional<String> descriptive = terms.stream().filter(term -> term.length() > 2).findFirst();
-            if (descriptive.isPresent()) {
-                return descriptive.get();
-            }
-            if (!terms.isEmpty()) {
-                return terms.getFirst();
-            }
-        }
-        return "pride";
     }
 
     private static Path findStopwordsPath() {
