@@ -3,8 +3,10 @@ package org.ulpgc.tarantino.indexer.commands;
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.common.config.CrashPoint;
 import org.ulpgc.tarantino.common.model.BatchPublished;
+import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.Lease;
+import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 import org.ulpgc.tarantino.indexer.model.batch.Batch;
@@ -61,6 +63,13 @@ class IndexBatchCommandTest {
     private final FakeBatchStore batches = new FakeBatchStore();
     private final RecordingWriter writer = new RecordingWriter();
     private final List<BatchPublished> announced = new ArrayList<>();
+    private final List<Transition> transitions = new ArrayList<>();
+    private final TransitionLog log = new TransitionLog() {
+        @Override
+        public void write(Transition transition) {
+            transitions.add(transition);
+        }
+    };
     private final Map<Integer, BookText> datalake = new HashMap<>();
 
     @Test
@@ -76,6 +85,19 @@ class IndexBatchCommandTest {
         assertEquals(Map.of(BATCH_ID, List.of(84, 1342)), batches.published);
         assertEquals(Set.of(84, 1342), batches.marked);
         assertEquals(List.of(new BatchPublished(BATCH_ID, 1, 2, PUBLISHED_AT)), announced);
+    }
+
+    @Test
+    void logsThePublicationOnlyOfTheBooksItMarkedItself() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        store(84, "Title: Frankenstein", "pride");
+        batches.completedByControl.add(84);
+
+        command().execute(books(1342, 84));
+
+        assertEquals(Set.of(1342), batches.marked);
+        assertEquals(List.of(Transition.book(1342, BookStatus.INDEXING, BookStatus.PUBLISHED).inBatch(BATCH_ID, 1)),
+                transitions.stream().filter(transition -> BookStatus.INDEXING.name().equals(transition.from())).toList());
     }
 
     @Test
@@ -222,7 +244,7 @@ class IndexBatchCommandTest {
 
     private IndexBatchCommand command() {
         BookReader reader = new BookReader(bookId -> Optional.ofNullable(datalake.get(bookId)), new Tokenizer(Set.of("and")));
-        return new IndexBatchCommand(batches, reader, writer, this::announce, new TransitionLog(), crashPoints, renewal -> {
+        return new IndexBatchCommand(batches, reader, writer, this::announce, log, crashPoints, renewal -> {
             this.renewal = renewal;
             return lease;
         });
@@ -240,6 +262,7 @@ class IndexBatchCommandTest {
         private final List<Integer> failed = new ArrayList<>();
         private final Map<String, List<Integer>> published = new HashMap<>();
         private final Set<Integer> marked = new HashSet<>();
+        private final Set<Integer> completedByControl = new HashSet<>();
         private final List<String> renewed = new ArrayList<>();
         private boolean leaseLost;
 
@@ -285,9 +308,13 @@ class IndexBatchCommandTest {
         }
 
         @Override
-        public void markPublished(Batch batch) {
+        public boolean markPublished(Batch batch, int bookId) {
             steps.add("mark");
-            marked.addAll(indexing);
+            boolean stillIndexing = indexing.remove(bookId) && !completedByControl.contains(bookId);
+            if (stillIndexing) {
+                marked.add(bookId);
+            }
+            return stillIndexing;
         }
     }
 

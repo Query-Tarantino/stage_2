@@ -111,7 +111,7 @@ class MongoBatchStoreTest {
         List<Integer> claimed = store.claim(batch, List.of(1342, 84));
 
         List<Optional<Instant>> published = TwoAtOnce.call(() -> store.publish(batch, claimed));
-        store.markPublished(batch);
+        claimed.forEach(bookId -> store.markPublished(batch, bookId));
 
         assertEquals(1, published.stream().filter(Optional::isPresent).count());
         Document document = batches().find(Filters.eq(MongoFields.ID, new ObjectId(batch.batchId()))).first();
@@ -120,6 +120,31 @@ class MongoBatchStoreTest {
         assertFalse(document.containsKey(MongoFields.LEASE_UNTIL));
         assertEquals(BookStatus.PUBLISHED.name(), state(1342).getString(MongoFields.STATUS));
         assertEquals(BookStatus.PUBLISHED.name(), state(84).getString(MongoFields.STATUS));
+    }
+
+    @Test
+    void onlyOneOfTwoMarksOfTheSameBookAtOnceMatches() throws Exception {
+        MongoBatchStore store = store(LEASE);
+        downloaded(1342);
+        Batch batch = store.open(1);
+        store.publish(batch, store.claim(batch, List.of(1342)));
+
+        List<Boolean> marked = TwoAtOnce.call(() -> store.markPublished(batch, 1342));
+
+        assertEquals(1, marked.stream().filter(Boolean::booleanValue).count());
+        assertEquals(BookStatus.PUBLISHED.name(), state(1342).getString(MongoFields.STATUS));
+    }
+
+    @Test
+    void doesNotMarkABookThatControlCompletedFirst() {
+        MongoBatchStore store = store(LEASE);
+        downloaded(1342);
+        Batch batch = store.open(1);
+        store.publish(batch, store.claim(batch, List.of(1342)));
+        states().updateOne(Filters.eq(MongoFields.ID, 1342),
+                UpdatePipelines.set(new Document(MongoFields.STATUS, BookStatus.PUBLISHED.name())));
+
+        assertFalse(store.markPublished(batch, 1342));
     }
 
     @Test

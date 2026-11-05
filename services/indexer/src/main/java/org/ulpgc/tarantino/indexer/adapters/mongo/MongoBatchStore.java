@@ -129,9 +129,9 @@ public class MongoBatchStore implements BatchStore {
     }
 
     @Override
-    public void markPublished(Batch batch) {
+    public boolean markPublished(Batch batch, int bookId) {
         Document change = new Document(STATUS, BookStatus.PUBLISHED.name()).append(PUBLISHED_AT, NOW).append(UPDATED_AT, NOW);
-        states.updateMany(indexingIn(batch), set(change));
+        return states.updateOne(Filters.and(Filters.eq(ID, bookId), indexingIn(batch)), set(change)).getMatchedCount() == 1;
     }
 
     private MongoCollection<Document> batches(Batch batch) {
