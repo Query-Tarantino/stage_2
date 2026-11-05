@@ -1,26 +1,20 @@
 package org.ulpgc.tarantino.control;
 
-import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.Coordination;
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.TarantinoService;
-import org.ulpgc.tarantino.control.adapters.http.DnsSnapshotRefreshes;
-import org.ulpgc.tarantino.control.adapters.http.HttpWorkDispatcher;
-import org.ulpgc.tarantino.control.adapters.local.InFlightQueueSizes;
-import org.ulpgc.tarantino.control.adapters.mongo.MongoPublishedBatches;
-import org.ulpgc.tarantino.control.adapters.mongo.MongoWaitingBooks;
-import org.ulpgc.tarantino.control.commands.AnnouncePublishedBatchesCommand;
-import org.ulpgc.tarantino.control.commands.OrchestrateCommand;
-import org.ulpgc.tarantino.control.model.DispatchedBooks;
-import org.ulpgc.tarantino.control.model.Stage;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.control.adapters.LocalMirror;
-import org.ulpgc.tarantino.control.adapters.datalake.FileDatalakeTemporaries;
 import org.ulpgc.tarantino.control.adapters.broker.BrokerQueueSizes;
 import org.ulpgc.tarantino.control.adapters.broker.BrokerTaskQueue;
+import org.ulpgc.tarantino.control.adapters.datalake.FileDatalakeTemporaries;
 import org.ulpgc.tarantino.control.adapters.http.ControlStatusRoutes;
+import org.ulpgc.tarantino.control.adapters.http.DnsSnapshotRefreshes;
+import org.ulpgc.tarantino.control.adapters.http.HttpWorkDispatcher;
+import org.ulpgc.tarantino.control.adapters.local.InFlightQueueSizes;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoAbandonedBatches;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoBatchLeases;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoDownloadLeases;
@@ -28,14 +22,18 @@ import org.ulpgc.tarantino.control.adapters.mongo.MongoIndexingBooks;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoLostMessages;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoOldGenerations;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoOutdatedBooks;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoPublishedBatches;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoQueueSizes;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoRebuilds;
 import org.ulpgc.tarantino.control.adapters.mongo.MongoStatusCounts;
+import org.ulpgc.tarantino.control.adapters.mongo.MongoWaitingBooks;
 import org.ulpgc.tarantino.control.commands.AbandonExpiredBatchesCommand;
+import org.ulpgc.tarantino.control.commands.AnnouncePublishedBatchesCommand;
 import org.ulpgc.tarantino.control.commands.CleanDatalakeCommand;
 import org.ulpgc.tarantino.control.commands.ControlStatusCommand;
 import org.ulpgc.tarantino.control.commands.DeleteAbandonedPostingsCommand;
 import org.ulpgc.tarantino.control.commands.DropOldGenerationsCommand;
+import org.ulpgc.tarantino.control.commands.OrchestrateCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
 import org.ulpgc.tarantino.control.commands.ReindexOutdatedBooksCommand;
 import org.ulpgc.tarantino.control.commands.ReleaseExpiredDownloadsCommand;
@@ -43,6 +41,8 @@ import org.ulpgc.tarantino.control.commands.RequeueLostMessagesCommand;
 import org.ulpgc.tarantino.control.commands.ResolveIndexingBooksCommand;
 import org.ulpgc.tarantino.control.commands.SeedCommand;
 import org.ulpgc.tarantino.control.commands.SwitchGenerationCommand;
+import org.ulpgc.tarantino.control.model.DispatchedBooks;
+import org.ulpgc.tarantino.control.model.Stage;
 import org.ulpgc.tarantino.control.ports.DownloadQueue;
 import org.ulpgc.tarantino.control.ports.IndexQueue;
 import org.ulpgc.tarantino.control.ports.QueueSizes;
@@ -56,7 +56,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** Builds the commands of {@code control}, the seeding, the reconciliation and the datalake cleanup, over its Mongo and Hazelcast connections (SPEC §2.2 and §5.3). */
+/**
+ * Builds the commands of {@code control}, the seeding, the reconciliation, the datalake cleanup and, in mode
+ * {@code orchestrator}, the orchestrator, over its Mongo connection and the broker of its mode (SPEC §2.2, §5.3 and §11).
+ */
 public final class ControlFactory {
 
     private static final String QUERY_HOST = "query";
