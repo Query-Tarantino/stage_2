@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 /** The executable checks of the HTTP API (SPEC §6) against the running stack, over the 20 books of {@code workload/sample_ids.txt} and {@code checks/expected.json}. */
@@ -39,6 +38,7 @@ public class ApiChecker {
     private final List<JsonNode> sampleBooks = new ArrayList<>();
     private final HealthChecks health;
     private final EntryPortChecks entryPorts;
+    private final OperationalChecks operational;
     private final SearchValidationChecks searchValidation;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
@@ -53,6 +53,7 @@ public class ApiChecker {
         ProblemChecks problems = new ProblemChecks(client);
         this.health = new HealthChecks(client);
         this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
+        this.operational = new OperationalChecks(client, problems, this.operationalUrl);
         this.searchValidation = new SearchValidationChecks(problems, this.frontEndUrl);
     }
 
@@ -63,57 +64,16 @@ public class ApiChecker {
         LOGGER.info("Starting API conformance checks");
         health.check();
         entryPorts.check();
-        checkOperationalEndpoints();
+        operational.checkStatusPages();
         ensurePublishedAndRefreshed(sampleIds);
-        checkStatusEndpoints();
-        checkIdempotency(sampleIds);
+        operational.checkBookStatus();
+        operational.checkIdempotency(sampleIds);
         checkBooksEndpoints(sampleIds);
         checkFiltersSummary();
         searchValidation.check();
         checkSearchEndpoints();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
-    }
-
-    public void checkOperationalEndpoints() throws IOException, InterruptedException {
-        LOGGER.info("Checking operational status endpoints");
-        CheckedClient.Response listResponse = client.get(operationalUrl + "/ingest/list");
-        assertEquals(200, listResponse.status());
-        assertTrue(listResponse.json().has("books"), "GET /ingest/list has books");
-
-        CheckedClient.Response indexStatus = client.get(operationalUrl + "/index/status");
-        assertEquals(200, indexStatus.status());
-        assertTrue(indexStatus.json().has("generation"), "GET /index/status has a generation");
-        assertTrue(indexStatus.json().has("books_indexed"), "GET /index/status has books_indexed");
-
-        CheckedClient.Response controlStatus = client.get(operationalUrl + "/control/status");
-        assertEquals(200, controlStatus.status());
-        assertTrue(controlStatus.json().has("books"), "GET /control/status has books");
-        assertTrue(controlStatus.json().has("queues"), "GET /control/status has queues");
-    }
-
-    public void checkStatusEndpoints() throws IOException, InterruptedException {
-        LOGGER.info("Checking status endpoints and operational errors");
-        CheckedClient.Response ingestStatus200 = client.get(operationalUrl + "/ingest/status/1342");
-        assertEquals(200, ingestStatus200.status());
-        assertEquals(1342, ingestStatus200.json().get("book_id").asInt());
-
-        CheckedClient.Response indexStatus200 = client.get(operationalUrl + "/index/status/1342");
-        assertEquals(200, indexStatus200.status());
-        assertEquals(1342, indexStatus200.json().get("book_id").asInt());
-
-        assertProblem(operationalUrl + "/ingest/status/999999", 404, "BOOK_NOT_FOUND", null);
-        assertProblem(operationalUrl + "/index/status/999999", 404, "BOOK_NOT_FOUND", null);
-
-        assertProblem(operationalUrl + "/ingest/status/0", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(operationalUrl + "/ingest/status/abc", 400, "INVALID_PARAMETER", "book_id");
-
-        assertProblem(operationalUrl + "/index/status/0", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(operationalUrl + "/index/status/abc", 400, "INVALID_PARAMETER", "book_id");
-
-        assertPostProblem(operationalUrl + "/ingest/0", 400, "INVALID_PARAMETER", "book_id");
-        assertPostProblem(operationalUrl + "/index/update/0", 400, "INVALID_PARAMETER", "book_id");
-        assertPostProblem(operationalUrl + "/index/update/999999", 404, "BOOK_NOT_FOUND", null);
     }
 
     private record BookStatusCheck(int bookId, String statusUrl) {}
@@ -224,33 +184,6 @@ public class ApiChecker {
         } catch (IOException exception) {
             return false;
         }
-    }
-
-    public void checkIdempotency(List<Integer> sampleIds) throws IOException, InterruptedException {
-        LOGGER.info("Verifying idempotency for published sample books");
-        for (int bookId : sampleIds) {
-            CheckedClient.Response ingestResponse = client.post(operationalUrl + "/ingest/" + bookId, "");
-            assertEquals(200, ingestResponse.status());
-            assertTrue(ingestResponse.header("Location") == null, "POST /ingest/" + bookId + " of a published book has no Location");
-            assertEquals("PUBLISHED", ingestResponse.json().get("status").asText());
-
-            CheckedClient.Response updateResponse = client.post(operationalUrl + "/index/update/" + bookId, "");
-            assertEquals(200, updateResponse.status());
-            assertTrue(updateResponse.header("Location") == null, "POST /index/update/" + bookId + " of a published book has no Location");
-            assertEquals("PUBLISHED", updateResponse.json().get("status").asText());
-        }
-
-        CheckedClient.Response listResponse = client.get(operationalUrl + "/ingest/list");
-        assertEquals(200, listResponse.status());
-        JsonNode booksNode = listResponse.json().get("books");
-        assertTrue(booksNode != null && booksNode.isArray(), "GET /ingest/list has a books array");
-        List<Integer> ingestedBooks = StreamSupport.stream(booksNode.spliterator(), false)
-                .map(JsonNode::asInt)
-                .toList();
-        assertEquals(ingestedBooks.size(), listResponse.json().get("count").asInt());
-        assertTrue(ingestedBooks.containsAll(sampleIds), "GET /ingest/list holds every sample book");
-        IntStream.range(1, ingestedBooks.size()).forEach(index ->
-                assertTrue(ingestedBooks.get(index) > ingestedBooks.get(index - 1), "GET /ingest/list is in ascending book_id order at position " + index));
     }
 
     public void checkBooksEndpoints(List<Integer> sampleIds) throws IOException, InterruptedException {
@@ -626,19 +559,6 @@ public class ApiChecker {
 
     private void assertProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
         CheckedClient.Response response = client.get(url);
-        assertEquals(expectedStatus, response.status());
-        if (expectedCode != null) {
-            assertTrue(response.json() != null && response.json().has("code"), "the " + expectedStatus + " of " + url + " has a code");
-            assertEquals(expectedCode, response.json().get("code").asText());
-        }
-        if (expectedParam != null) {
-            assertTrue(response.json() != null && response.json().has("parameter"), "the " + expectedStatus + " of " + url + " has a parameter");
-            assertEquals(expectedParam, response.json().get("parameter").asText());
-        }
-    }
-
-    private void assertPostProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.post(url, "");
         assertEquals(expectedStatus, response.status());
         if (expectedCode != null) {
             assertTrue(response.json() != null && response.json().has("code"), "the " + expectedStatus + " of " + url + " has a code");
