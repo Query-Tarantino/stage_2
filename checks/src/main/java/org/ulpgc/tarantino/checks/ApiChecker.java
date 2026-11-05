@@ -1,12 +1,8 @@
 package org.ulpgc.tarantino.checks;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.ulpgc.tarantino.common.json.TarantinoJson;
 import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 
@@ -14,16 +10,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.StreamSupport;
 
 /** The executable checks of the HTTP API (SPEC §6) against the running stack, over the 20 books of {@code workload/sample_ids.txt} and {@code checks/expected.json}. */
 public class ApiChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiChecker.class);
-    private static final ObjectMapper MAPPER = TarantinoJson.mapper();
 
     private final CheckedClient client;
     private final String frontEndUrl;
@@ -39,6 +32,7 @@ public class ApiChecker {
     private final SearchChecks searches;
     private final SearchPageChecks pages;
     private final ExpectedAnswers expectedAnswers;
+    private final ExpectedAnswersWriter expectedAnswersWriter;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
@@ -61,6 +55,7 @@ public class ApiChecker {
         this.searches = new SearchChecks(client, answers, terms, this.frontEndUrl);
         this.pages = new SearchPageChecks(answers);
         this.expectedAnswers = new ExpectedAnswers(client, this.frontEndUrl);
+        this.expectedAnswersWriter = new ExpectedAnswersWriter(client, terms, this.frontEndUrl);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -88,68 +83,6 @@ public class ApiChecker {
         snapshots.waitUntilServed(sampleIds);
     }
 
-    public void generateExpected(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
-        LOGGER.info("Generating expected answers to {}", expectedPath);
-        List<Integer> targetIds = (sampleIds != null && !sampleIds.isEmpty()) ? sampleIds : readSampleIds();
-        ensurePublishedAndRefreshed(targetIds);
-        ObjectNode root = MAPPER.createObjectNode();
-        root.put("total_books", targetIds.size());
-        ArrayNode sampleIdsArray = root.putArray("sample_ids");
-        targetIds.forEach(sampleIdsArray::add);
-        ObjectNode searchesNode = root.putObject("searches");
-        ObjectNode booksNode = root.putObject("books");
-        List<JsonNode> bookNodes = expectedBooks(targetIds, booksNode);
-        SearchCase.all(terms.termIn(bookNodes, "de", "faust"), terms.termIn(bookNodes, "fr", "monde"))
-                .forEach(searchCase -> expectedSearch(searchesNode, searchCase));
-        if (expectedPath.getParent() != null) {
-            Files.createDirectories(expectedPath.getParent());
-        }
-        MAPPER.writerWithDefaultPrettyPrinter().writeValue(expectedPath.toFile(), root);
-        LOGGER.info("Generated expected.json with {} books and {} queries", booksNode.size(), searchesNode.size());
-    }
-
-    private List<JsonNode> expectedBooks(List<Integer> bookIds, ObjectNode booksNode) {
-        List<JsonNode> bookNodes = new ArrayList<>();
-        bookIds.forEach(bookId -> {
-            try {
-                CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
-                if (response.status() == 200 && response.json() != null) {
-                    expectedBook(booksNode.putObject(String.valueOf(bookId)), bookId, response.json());
-                    bookNodes.add(response.json());
-                }
-            } catch (IOException | InterruptedException exception) {
-                throw new RuntimeException(exception);
-            }
-        });
-        return bookNodes;
-    }
-
-    private static void expectedBook(ObjectNode bookNode, int bookId, JsonNode book) {
-        bookNode.put("book_id", bookId);
-        List.of("title", "author", "language", "year").forEach(field -> bookNode.set(field, book.get(field)));
-        if (book.has("languages")) {
-            bookNode.set("languages", book.get("languages"));
-        }
-        bookNode.set("original_year", book.get("original_year"));
-    }
-
-    private void expectedSearch(ObjectNode searchesNode, SearchCase searchCase) {
-        try {
-            CheckedClient.Response response = client.get(frontEndUrl + searchCase.path());
-            ObjectNode queryNode = searchesNode.putObject(searchCase.name());
-            queryNode.put("path", searchCase.path());
-            queryNode.put("total", response.json().get("total").asInt());
-            ArrayNode bookIdsArray = queryNode.putArray("book_ids");
-            if (response.json().has("results") && response.json().get("results").isArray()) {
-                StreamSupport.stream(response.json().get("results").spliterator(), false)
-                        .map(resultNode -> resultNode.get("book_id").asInt())
-                        .forEach(bookIdsArray::add);
-            }
-        } catch (IOException | InterruptedException exception) {
-            throw new RuntimeException(exception);
-        }
-    }
-
     private static Path findStopwordsPath() {
         List<Path> candidates = List.of(
                 Paths.get("workload/stopwords.txt"),
@@ -162,29 +95,9 @@ public class ApiChecker {
                 .orElse(Paths.get("workload/stopwords.txt"));
     }
 
-    private static List<Integer> readSampleIds() {
-        Path path = findSampleIdsPath();
-        try {
-            return Files.readAllLines(path).stream()
-                    .map(String::trim)
-                    .filter(line -> !line.isEmpty())
-                    .map(Integer::parseInt)
-                    .toList();
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to read sample_ids from " + path, exception);
-        }
-    }
-
-    private static Path findSampleIdsPath() {
-        List<Path> candidates = List.of(
-                Paths.get("workload/sample_ids.txt"),
-                Paths.get("../workload/sample_ids.txt"),
-                Paths.get("../../workload/sample_ids.txt")
-        );
-        return candidates.stream()
-                .filter(Files::exists)
-                .findFirst()
-                .orElse(Paths.get("workload/sample_ids.txt"));
+    public void generateExpected(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
+        ensurePublishedAndRefreshed(sampleIds);
+        expectedAnswersWriter.write(sampleIds, expectedPath);
     }
 
     private static String trimSlash(String url) {
