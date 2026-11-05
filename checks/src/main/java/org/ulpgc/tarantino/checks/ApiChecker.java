@@ -25,7 +25,6 @@ public class ApiChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiChecker.class);
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
-    private static final int LARGE_OFFSET = 1_000_000_000;
 
     private final CheckedClient client;
     private final String frontEndUrl;
@@ -39,6 +38,7 @@ public class ApiChecker {
     private final BookChecks books;
     private final SearchValidationChecks searchValidation;
     private final SearchChecks searches;
+    private final SearchPageChecks pages;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
@@ -57,7 +57,9 @@ public class ApiChecker {
         this.snapshots = new SnapshotRefreshWait(client, this.frontEndUrl);
         this.books = new BookChecks(client, problems, this.frontEndUrl);
         this.searchValidation = new SearchValidationChecks(problems, this.frontEndUrl);
-        this.searches = new SearchChecks(client, new SearchAnswers(client, this.frontEndUrl), terms, this.frontEndUrl);
+        SearchAnswers answers = new SearchAnswers(client, this.frontEndUrl);
+        this.searches = new SearchChecks(client, answers, terms, this.frontEndUrl);
+        this.pages = new SearchPageChecks(answers);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -75,8 +77,7 @@ public class ApiChecker {
         searches.checkFilters();
         searchValidation.check();
         searches.check(sampleBooks);
-        checkPagination();
-        checkSearchesWithoutResults();
+        pages.check();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
     }
@@ -84,41 +85,6 @@ public class ApiChecker {
     public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
         ingestion.publish(sampleIds);
         snapshots.waitUntilServed(sampleIds);
-    }
-
-    private void checkPagination() throws IOException, InterruptedException {
-        JsonNode page0 = page("/search?q=pride&offset=0&limit=1", 0);
-        JsonNode page1 = page("/search?q=pride&offset=1&limit=1", 1);
-        assertEquals(page0.get("total").asInt(), page1.get("total").asInt());
-        if (page0.get("total").asInt() >= 2) {
-            assertTrue(page0.get("results").get(0).get("book_id").asInt() != page1.get("results").get(0).get("book_id").asInt(),
-                    "pages 0 and 1 of /search?q=pride start with different books");
-        }
-        CheckedClient.Response largeOffset = client.get(frontEndUrl + "/search?q=pride&offset=" + LARGE_OFFSET);
-        assertEquals(200, largeOffset.status());
-        assertEquals(LARGE_OFFSET, largeOffset.json().get("offset").asInt());
-        assertEquals(0, largeOffset.json().get("results").size());
-    }
-
-    private JsonNode page(String path, int offset) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.get(frontEndUrl + path);
-        assertEquals(200, response.status());
-        assertEquals(offset, response.json().get("offset").asInt());
-        assertEquals(1, response.json().get("limit").asInt());
-        return response.json();
-    }
-
-    private void checkSearchesWithoutResults() throws IOException, InterruptedException {
-        findsNothing("/search?q=the%20and");
-        findsNothing("/search?q=pyromaniac%20liliput");
-    }
-
-    private JsonNode findsNothing(String path) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.get(frontEndUrl + path);
-        assertEquals(200, response.status());
-        assertEquals(0, response.json().get("total").asInt());
-        assertEquals(0, response.json().get("results").size());
-        return response.json();
     }
 
     public void checkAgainstExpected(Path expectedPath) throws IOException, InterruptedException {
