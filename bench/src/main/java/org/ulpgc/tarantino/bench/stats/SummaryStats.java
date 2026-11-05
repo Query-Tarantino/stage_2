@@ -1,6 +1,8 @@
 package org.ulpgc.tarantino.bench.stats;
 
 import org.apache.commons.math3.distribution.TDistribution;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -23,6 +25,8 @@ import java.util.zip.GZIPInputStream;
 public class SummaryStats {
 
     public static final String FILE_NAME = "summary.csv";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SummaryStats.class);
 
     private static final double CONFIDENCE = 0.95;
     private static final double UPPER_TAIL = 1 - (1 - CONFIDENCE) / 2;
@@ -134,7 +138,7 @@ public class SummaryStats {
             Metrics metrics = calculate(latencies);
             appendToSummary(summaryCsv, metricName, config, metrics, "us");
         } catch (Exception exception) {
-            exception.printStackTrace();
+            LOGGER.error("Failed to summarise {}: {}", args.length > 0 ? args[0] : "the run", exception.getMessage(), exception);
             System.exit(1);
         }
     }

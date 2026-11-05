@@ -2,6 +2,8 @@ package org.ulpgc.tarantino.bench.jmh;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
 
 import java.io.IOException;
@@ -19,6 +21,7 @@ import java.util.stream.StreamSupport;
 /** {@code bench jmh-csv <json> <csv>}: the CSV of the raw JMH output a run keeps in {@code jmh/} (SPEC §9). */
 public class JmhCsvConverter {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmhCsvConverter.class);
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
     private static final String PARAMS = "params";
     private static final String PARAM_COLUMN_PREFIX = "Param: ";
@@ -79,13 +82,13 @@ public class JmhCsvConverter {
 
     public static void main(String[] args) {
         if (args.length < 2) {
-            System.err.println("Usage: JmhCsvConverter <input-json> <output-csv>");
+            LOGGER.error("Usage: bench jmh-csv <input json> <output csv>");
             System.exit(1);
         }
         try {
             convert(Paths.get(args[0]), Paths.get(args[1]));
         } catch (Exception exception) {
-            System.err.println("Failed to convert JMH JSON to CSV: " + exception.getMessage());
+            LOGGER.error("Failed to convert JMH JSON to CSV: {}", exception.getMessage(), exception);
             System.exit(1);
         }
     }
