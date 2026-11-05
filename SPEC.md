@@ -91,6 +91,13 @@ Each service is one process per replica, and each process runs these threads. Re
 
 Javalin's pool goes from 8 to 250 threads unless `TARANTINO_HTTP_THREADS` caps it (§4.7). Within a process, threads only share an immutable snapshot or a `java.util.concurrent` structure: the `query` snapshot behind an `AtomicReference`, the local queues of mode `orchestrator` (`ArrayBlockingQueue`) and the books the orchestrator has in flight (`ConcurrentHashMap`); the code takes no lock of its own. Replicas share nothing in memory: they only meet in MongoDB, through the conditional writes of §5.1, and in the broker of the mode, so no in-process lock is ever needed to keep two replicas apart.
 
+How the design keeps replicas and threads from getting in each other's way:
+
+- Duplicate work: a message, an HTTP call or a poll is only a hint. The claim in MongoDB (§5.1) lets one worker take a book or a batch, and a duplicate fails its claim and is dropped.
+- Conflicting writes: every state change is one conditional single-document write, with the current state and the `claim_id` in its filter; a worker that loses its lease writes nothing else, and whoever fails a write does not retry it (§5.1). So a book is in one live batch at most (§5.2).
+- Thread exhaustion: handlers answer in milliseconds and never wait for a job (§6.7), and the internal routes offer to a bounded local queue and answer `503` when it is full instead of blocking (§11.4). Worker threads are a fixed number per replica and never grow with the load, and a JVM that runs out of memory exits (§2.4).
+- Contention: replicas compete for MongoDB, the broker and the datalake volume, which are single on this host (§1). Batches share a per-batch cost among their books, postings go in `bulkWrite`s of 1,000 terms, and `query` reads an immutable snapshot without locks; the experiments of §9 measure what is left of that contention.
+
 ### 2.3 Repository and owners
 
 ```text
