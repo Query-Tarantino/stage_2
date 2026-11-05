@@ -10,6 +10,7 @@ final class ApiNames {
     static final String INDEX_UPDATE = "/index/update/";
     static final String INDEX_STATUS = "/index/status";
     static final String CONTROL_STATUS = "/control/status";
+    static final String BOOKS_PATH = "/books/";
     static final String SEARCH = "/search";
 
     static final String CONTENT_TYPE = "Content-Type";
@@ -24,6 +25,7 @@ final class ApiNames {
     static final String DETAIL = "detail";
     static final String GENERATION = "generation";
     static final String LANGUAGE = "language";
+    static final String LANGUAGES = "languages";
     static final String LIMIT = "limit";
     static final String OFFSET = "offset";
     static final String PARAMETER = "parameter";

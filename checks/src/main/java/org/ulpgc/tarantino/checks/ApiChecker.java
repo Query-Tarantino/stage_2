@@ -39,6 +39,7 @@ public class ApiChecker {
     private final HealthChecks health;
     private final EntryPortChecks entryPorts;
     private final OperationalChecks operational;
+    private final BookChecks books;
     private final SearchValidationChecks searchValidation;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
@@ -54,6 +55,7 @@ public class ApiChecker {
         this.health = new HealthChecks(client);
         this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
         this.operational = new OperationalChecks(client, problems, this.operationalUrl);
+        this.books = new BookChecks(client, problems, this.frontEndUrl);
         this.searchValidation = new SearchValidationChecks(problems, this.frontEndUrl);
     }
 
@@ -68,7 +70,8 @@ public class ApiChecker {
         ensurePublishedAndRefreshed(sampleIds);
         operational.checkBookStatus();
         operational.checkIdempotency(sampleIds);
-        checkBooksEndpoints(sampleIds);
+        sampleBooks.clear();
+        sampleBooks.addAll(books.check(sampleIds));
         checkFiltersSummary();
         searchValidation.check();
         checkSearchEndpoints();
@@ -180,40 +183,10 @@ public class ApiChecker {
         try {
             CheckedClient.Response response = client.get(frontEndUrl + "/search?q=pride");
             return response.status() == 200 && response.json() != null && response.json().has("results")
-                    && containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE);
+                    && SearchResults.containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE);
         } catch (IOException exception) {
             return false;
         }
-    }
-
-    public void checkBooksEndpoints(List<Integer> sampleIds) throws IOException, InterruptedException {
-        LOGGER.info("Checking /books endpoints");
-        sampleBooks.clear();
-        for (int bookId : sampleIds) {
-            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
-            assertEquals(200, response.status());
-            assertEquals(bookId, response.json().get("book_id").asInt());
-            sampleBooks.add(response.json());
-        }
-
-        CheckedClient.Response book1342 = client.get(frontEndUrl + "/books/1342");
-        assertEquals(200, book1342.status());
-        assertEquals(1342, book1342.json().get("book_id").asInt());
-        assertEquals("Pride and Prejudice", book1342.json().get("title").asText());
-        assertEquals("Jane Austen", book1342.json().get("author").asText());
-        assertEquals("en", book1342.json().get("language").asText());
-        assertTrue(book1342.json().has("languages") && book1342.json().get("languages").isArray(), "/books/1342 has a languages array");
-        assertEquals("en", book1342.json().get("languages").get(0).asText());
-
-        CheckedClient.Response notFound = client.get(frontEndUrl + "/books/999999");
-        assertEquals(404, notFound.status());
-        assertEquals("BOOK_NOT_FOUND", notFound.json().get("code").asText());
-
-        assertProblem(frontEndUrl + "/books/0", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/-5", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/01", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/2147483648", 400, "INVALID_PARAMETER", "book_id");
-        assertProblem(frontEndUrl + "/books/abc", 400, "INVALID_PARAMETER", "book_id");
     }
 
     public void checkFiltersSummary() throws IOException, InterruptedException {
@@ -283,7 +256,7 @@ public class ApiChecker {
         CheckedClient.Response response = client.get(frontEndUrl + path);
         assertEquals(200, response.status());
         assertTrue(response.json().get("total").asInt() >= 1, path + " finds at least one book");
-        assertTrue(containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE), path + " finds book 1342");
+        assertTrue(SearchResults.containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE), path + " finds book 1342");
         return response.json();
     }
 
@@ -483,7 +456,7 @@ public class ApiChecker {
             assertEquals(200, response.status());
             assertEquals(language, response.json().get("filters").get("language").asText());
             assertTrue(response.json().get("total").asInt() >= 1, "/search?q=" + term + "&language=" + language + " finds at least one book");
-            assertTrue(containsBook(response.json().get("results"), bookId), "/search?q=" + term + "&language=" + language + " finds book " + bookId);
+            assertTrue(SearchResults.containsBook(response.json().get("results"), bookId), "/search?q=" + term + "&language=" + language + " finds book " + bookId);
         }
     }
 
@@ -546,28 +519,6 @@ public class ApiChecker {
                 .filter(Files::exists)
                 .findFirst()
                 .orElse(Paths.get("workload/sample_ids.txt"));
-    }
-
-    private static boolean containsBook(JsonNode resultsNode, int bookId) {
-        if (resultsNode == null || !resultsNode.isArray()) {
-            return false;
-        }
-        return StreamSupport.stream(resultsNode.spliterator(), false)
-                .filter(resultNode -> resultNode.has("book_id"))
-                .anyMatch(resultNode -> resultNode.get("book_id").asInt() == bookId);
-    }
-
-    private void assertProblem(String url, int expectedStatus, String expectedCode, String expectedParam) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.get(url);
-        assertEquals(expectedStatus, response.status());
-        if (expectedCode != null) {
-            assertTrue(response.json() != null && response.json().has("code"), "the " + expectedStatus + " of " + url + " has a code");
-            assertEquals(expectedCode, response.json().get("code").asText());
-        }
-        if (expectedParam != null) {
-            assertTrue(response.json() != null && response.json().has("parameter"), "the " + expectedStatus + " of " + url + " has a parameter");
-            assertEquals(expectedParam, response.json().get("parameter").asText());
-        }
     }
 
     private static void assertEquals(Object expected, Object actual) {
