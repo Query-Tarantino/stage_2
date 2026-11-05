@@ -38,10 +38,6 @@ public class SnapshotRefresher {
         this(batches, metadata, new SnapshotLog());
     }
 
-    public SnapshotRefresher(PublishedBatches batches) {
-        this(batches, null);
-    }
-
     /** Empty until the first refresh succeeds; until then {@code query} answers {@code 503}. */
     public Optional<Snapshot> current() {
         return Optional.ofNullable(current.get());
@@ -59,9 +55,7 @@ public class SnapshotRefresher {
         }
         Map<String, List<Integer>> newBooks = newBatches.isEmpty() ? Map.of() : batches.bookIds(generation, newBatches);
         List<Integer> allNewBookIds = newBooks.values().stream().flatMap(List::stream).distinct().toList();
-        Map<Integer, BookFilter> newFilters = (metadata == null || allNewBookIds.isEmpty())
-                ? Map.of()
-                : metadata.filters(generation, allNewBookIds);
+        Map<Integer, BookFilter> newFilters = allNewBookIds.isEmpty() ? Map.of() : metadata.filters(generation, allNewBookIds);
         current.set(base.with(newBooks, newFilters));
         newBatches.forEach(batchId -> log.write(batchId, generation));
     }

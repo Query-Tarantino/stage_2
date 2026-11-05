@@ -32,11 +32,6 @@ public record Snapshot(
         bookFilters = Map.copyOf(bookFilters);
     }
 
-    public Snapshot(int generation, Set<String> batchIds, Set<Integer> bookIds) {
-        this(generation, batchIds, bookIds,
-                new FiltersSummary(List.of(), new YearRange(null, null), bookIds.size()), Map.of());
-    }
-
     public static Snapshot empty(int generation) {
         return new Snapshot(generation, Set.of(), Set.of(), FiltersSummary.empty(), Map.of());
     }
@@ -44,11 +39,6 @@ public record Snapshot(
     /** {@code N} of TF-IDF: the books of the snapshot, never a count of the collection. */
     public int bookCount() {
         return bookIds.size();
-    }
-
-    /** The same snapshot plus some newly published batches and their books. */
-    public Snapshot with(Map<String, List<Integer>> booksByBatch) {
-        return with(booksByBatch, Map.of());
     }
 
     /** The same snapshot plus newly published batches, their books, and each book's filter metadata. */

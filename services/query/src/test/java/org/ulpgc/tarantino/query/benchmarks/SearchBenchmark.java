@@ -61,9 +61,9 @@ public class SearchBenchmark {
 
     @Setup
     public void setup() {
-        Set<Integer> allBooks = IntStream.rangeClosed(1, BOOKS).boxed().collect(Collectors.toSet());
-        Set<String> batchIds = Set.of("batch_1", "batch_2");
-        snapshot = new Snapshot(1, batchIds, allBooks);
+        snapshot = Snapshot.empty(1).with(Map.of(
+                "batch_1", IntStream.rangeClosed(1, BOOKS / 2).boxed().toList(),
+                "batch_2", IntStream.rangeClosed(BOOKS / 2 + 1, BOOKS).boxed().toList()), Map.of());
 
         Map<String, TermPostings> postingsByTerm = Map.of(
                 "love", createPostings("love", 1, 400),
