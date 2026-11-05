@@ -583,45 +583,57 @@ public class ApiChecker {
         root.put("total_books", targetIds.size());
         ArrayNode sampleIdsArray = root.putArray("sample_ids");
         targetIds.forEach(sampleIdsArray::add);
-
         ObjectNode searchesNode = root.putObject("searches");
         ObjectNode booksNode = root.putObject("books");
+        List<JsonNode> bookNodes = expectedBooks(targetIds, booksNode);
+        searchCases(termInLanguage(bookNodes, "de", "faust"), termInLanguage(bookNodes, "fr", "monde"))
+                .forEach(searchCase -> expectedSearch(searchesNode, searchCase));
+        if (expectedPath.getParent() != null) {
+            Files.createDirectories(expectedPath.getParent());
+        }
+        MAPPER.writerWithDefaultPrettyPrinter().writeValue(expectedPath.toFile(), root);
+        LOGGER.info("Generated expected.json with {} books and {} queries", booksNode.size(), searchesNode.size());
+    }
+
+    private List<JsonNode> expectedBooks(List<Integer> bookIds, ObjectNode booksNode) {
         List<JsonNode> bookNodes = new ArrayList<>();
-        targetIds.forEach(bookId -> {
+        bookIds.forEach(bookId -> {
             try {
                 CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
                 if (response.status() == 200 && response.json() != null) {
-                    ObjectNode bookNode = booksNode.putObject(String.valueOf(bookId));
-                    bookNode.put("book_id", bookId);
-                    bookNode.set("title", response.json().get("title"));
-                    bookNode.set("author", response.json().get("author"));
-                    bookNode.set("language", response.json().get("language"));
-                    bookNode.set("year", response.json().get("year"));
-                    if (response.json().has("languages")) {
-                        bookNode.set("languages", response.json().get("languages"));
-                    }
-                    bookNode.set("original_year", response.json().get("original_year"));
+                    expectedBook(booksNode.putObject(String.valueOf(bookId)), bookId, response.json());
                     bookNodes.add(response.json());
                 }
             } catch (IOException | InterruptedException exception) {
                 throw new RuntimeException(exception);
             }
         });
+        return bookNodes;
+    }
 
-        Optional<JsonNode> deBook = bookNodes.stream()
+    private static void expectedBook(ObjectNode bookNode, int bookId, JsonNode book) {
+        bookNode.put("book_id", bookId);
+        List.of("title", "author", "language", "year").forEach(field -> bookNode.set(field, book.get(field)));
+        if (book.has("languages")) {
+            bookNode.set("languages", book.get("languages"));
+        }
+        bookNode.set("original_year", book.get("original_year"));
+    }
+
+    private String termInLanguage(List<JsonNode> books, String language, String otherwise) {
+        return books.stream()
                 .filter(book -> book.has("languages") && StreamSupport.stream(book.get("languages").spliterator(), false)
-                        .anyMatch(langNode -> "de".equalsIgnoreCase(langNode.asText())))
-                .findFirst();
-        String deTerm = deBook.map(this::pickSearchTerm).orElse("faust");
+                        .anyMatch(langNode -> language.equalsIgnoreCase(langNode.asText())))
+                .findFirst()
+                .map(this::pickSearchTerm)
+                .orElse(otherwise);
+    }
 
-        Optional<JsonNode> frBook = bookNodes.stream()
-                .filter(book -> book.has("languages") && StreamSupport.stream(book.get("languages").spliterator(), false)
-                        .anyMatch(langNode -> "fr".equalsIgnoreCase(langNode.asText())))
-                .findFirst();
-        String frTerm = frBook.map(this::pickSearchTerm).orElse("monde");
+    private record SearchCase(String name, String path) {
+    }
 
-        record SearchCase(String name, String path) {}
-        List<SearchCase> searchCases = List.of(
+    private static List<SearchCase> searchCases(String deTerm, String frTerm) {
+        return List.of(
                 new SearchCase("single_word", "/search?q=pride"),
                 new SearchCase("multi_word", "/search?q=pride%20prejudice"),
                 new SearchCase("filter_author", "/search?q=pride&author=Austen"),
@@ -637,29 +649,23 @@ public class ApiChecker {
                 new SearchCase("stopwords_only", "/search?q=the%20and"),
                 new SearchCase("empty_results", "/search?q=pyromaniac%20liliput")
         );
-        searchCases.forEach(searchCase -> {
-            try {
-                CheckedClient.Response response = client.get(frontEndUrl + searchCase.path());
-                ObjectNode queryNode = searchesNode.putObject(searchCase.name());
-                queryNode.put("path", searchCase.path());
-                int total = response.json().get("total").asInt();
-                queryNode.put("total", total);
-                ArrayNode bookIdsArray = queryNode.putArray("book_ids");
-                if (response.json().has("results") && response.json().get("results").isArray()) {
-                    StreamSupport.stream(response.json().get("results").spliterator(), false)
-                            .map(resultNode -> resultNode.get("book_id").asInt())
-                            .forEach(bookIdsArray::add);
-                }
-            } catch (IOException | InterruptedException exception) {
-                throw new RuntimeException(exception);
-            }
-        });
+    }
 
-        if (expectedPath.getParent() != null) {
-            Files.createDirectories(expectedPath.getParent());
+    private void expectedSearch(ObjectNode searchesNode, SearchCase searchCase) {
+        try {
+            CheckedClient.Response response = client.get(frontEndUrl + searchCase.path());
+            ObjectNode queryNode = searchesNode.putObject(searchCase.name());
+            queryNode.put("path", searchCase.path());
+            queryNode.put("total", response.json().get("total").asInt());
+            ArrayNode bookIdsArray = queryNode.putArray("book_ids");
+            if (response.json().has("results") && response.json().get("results").isArray()) {
+                StreamSupport.stream(response.json().get("results").spliterator(), false)
+                        .map(resultNode -> resultNode.get("book_id").asInt())
+                        .forEach(bookIdsArray::add);
+            }
+        } catch (IOException | InterruptedException exception) {
+            throw new RuntimeException(exception);
         }
-        MAPPER.writerWithDefaultPrettyPrinter().writeValue(expectedPath.toFile(), root);
-        LOGGER.info("Generated expected.json with {} books and {} queries", booksNode.size(), searchesNode.size());
     }
 
     private void checkLanguageFilter(List<JsonNode> books, String language) throws IOException, InterruptedException {
