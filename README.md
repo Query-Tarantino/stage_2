@@ -108,6 +108,14 @@ Run the index throughput benchmark, which ingests the corpus once and rebuilds t
 ./scripts/bench/index-throughput.sh
 ```
 
+To summarise an existing run again, delete its `summary.csv` and run its command on the run folder, then redraw its charts; a `search-latency` run keeps its per-trial rows and only needs `bench search-latency`, which appends the per-configuration ones (SPEC §9):
+
+```bash
+java -jar bench/target/bench-1.0-SNAPSHOT.jar coordination benchmarks/runs/<run_id>
+java -jar bench/target/bench-1.0-SNAPSHOT.jar resources benchmarks/runs/<run_id>
+java -jar bench/target/bench-1.0-SNAPSHOT.jar charts benchmarks/runs/<run_id>
+```
+
 ## Corpus
 
 `scripts/fill_cache.sh` copies the benchmark corpus, the first 2,800 downloadable books of
