@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.bench.variants;
 
 import org.apache.commons.math3.distribution.TDistribution;
+import org.ulpgc.tarantino.bench.stats.SummaryStats;
 
 import java.util.List;
 import java.util.Locale;
@@ -19,12 +20,14 @@ public record ModePair(VariantMetric metric, int replicas, String modeA, String 
     private static final double UPPER_TAIL = 0.975;
 
     static ModePair of(VariantMetric metric, int replicas, String modeA, List<Double> valuesA, String modeB, List<Double> valuesB) {
-        int degreesOfFreedom = Math.min(valuesA.size(), valuesB.size()) - 1;
+        SummaryStats.Metrics a = SummaryStats.calculate(valuesA);
+        SummaryStats.Metrics b = SummaryStats.calculate(valuesB);
+        int degreesOfFreedom = Math.min(a.count(), b.count()) - 1;
         Optional<Double> halfWidth = degreesOfFreedom < 1
                 ? Optional.empty()
                 : Optional.of(new TDistribution(degreesOfFreedom).inverseCumulativeProbability(UPPER_TAIL)
-                        * Math.sqrt(variance(valuesA) / valuesA.size() + variance(valuesB) / valuesB.size()));
-        return new ModePair(metric, replicas, modeA, modeB, mean(valuesA), mean(valuesB), halfWidth);
+                        * Math.sqrt(squared(a.stdDev()) / a.count() + squared(b.stdDev()) / b.count()));
+        return new ModePair(metric, replicas, modeA, modeB, a.mean(), b.mean(), halfWidth);
     }
 
     public double difference() {
@@ -42,12 +45,7 @@ public record ModePair(VariantMetric metric, int replicas, String modeA, String 
                 metric.unit());
     }
 
-    private static double mean(List<Double> values) {
-        return values.stream().mapToDouble(Double::doubleValue).average().orElse(Double.NaN);
-    }
-
-    private static double variance(List<Double> values) {
-        double mean = mean(values);
-        return values.stream().mapToDouble(value -> (value - mean) * (value - mean)).sum() / (values.size() - 1);
+    private static double squared(double value) {
+        return value * value;
     }
 }
