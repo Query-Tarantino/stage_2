@@ -99,6 +99,12 @@ jobs:
       - name: Run the functional API checks
         run: java -jar checks/target/checks-1.0-SNAPSHOT.jar
 
+      - name: Scale query to three replicas
+        run: docker compose up -d --wait --wait-timeout 300 --scale query=3
+
+      - name: Run the functional API checks against three query replicas
+        run: java -jar checks/target/checks-1.0-SNAPSHOT.jar
+
       - name: Collect the service logs
         if: ${{ failure() }}
         run: docker compose logs --no-color --timestamps > compose.log
