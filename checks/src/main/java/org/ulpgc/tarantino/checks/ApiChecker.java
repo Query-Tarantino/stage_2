@@ -39,6 +39,7 @@ public class ApiChecker {
     private final List<JsonNode> sampleBooks = new ArrayList<>();
     private final HealthChecks health;
     private final EntryPortChecks entryPorts;
+    private final SearchValidationChecks searchValidation;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
@@ -49,8 +50,10 @@ public class ApiChecker {
                 ? new FileStopwordsLoader(stopwordsPath).stopwords()
                 : Set.of();
         this.tokenizer = new Tokenizer(stopwords);
+        ProblemChecks problems = new ProblemChecks(client);
         this.health = new HealthChecks(client);
         this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
+        this.searchValidation = new SearchValidationChecks(problems, this.frontEndUrl);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -66,7 +69,7 @@ public class ApiChecker {
         checkIdempotency(sampleIds);
         checkBooksEndpoints(sampleIds);
         checkFiltersSummary();
-        checkSearchParametersOrder();
+        searchValidation.check();
         checkSearchEndpoints();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
@@ -288,48 +291,6 @@ public class ApiChecker {
         assertTrue(json.has("languages"), "/search/filters has languages");
         assertTrue(json.has("years"), "/search/filters has years");
         assertTrue(json.has("total_books"), "/search/filters has total_books");
-    }
-
-    public void checkSearchParametersOrder() throws IOException, InterruptedException {
-        LOGGER.info("Checking parameter validation in strict order");
-        checkMissingQuery();
-        checkInvalidFilters();
-        checkInvalidPaging();
-        checkFirstInvalidParameterWins();
-    }
-
-    private void checkMissingQuery() throws IOException, InterruptedException {
-        assertProblem(frontEndUrl + "/search", 400, "MISSING_PARAMETER", "q");
-        assertProblem(frontEndUrl + "/search?q=", 400, "MISSING_PARAMETER", "q");
-        assertProblem(frontEndUrl + "/search?q=%20", 400, "MISSING_PARAMETER", "q");
-    }
-
-    private void checkInvalidFilters() throws IOException, InterruptedException {
-        assertProblem(frontEndUrl + "/search?q=pride&author=...!", 400, "INVALID_PARAMETER", "author");
-        assertProblem(frontEndUrl + "/search?q=pride&language=eng", 400, "INVALID_PARAMETER", "language");
-        assertProblem(frontEndUrl + "/search?q=pride&language=E", 400, "INVALID_PARAMETER", "language");
-        assertProblem(frontEndUrl + "/search?q=pride&language=12", 400, "INVALID_PARAMETER", "language");
-        assertProblem(frontEndUrl + "/search?q=pride&year=98", 400, "INVALID_PARAMETER", "year");
-        assertProblem(frontEndUrl + "/search?q=pride&year=19980", 400, "INVALID_PARAMETER", "year");
-        assertProblem(frontEndUrl + "/search?q=pride&year=abcd", 400, "INVALID_PARAMETER", "year");
-    }
-
-    private void checkInvalidPaging() throws IOException, InterruptedException {
-        assertProblem(frontEndUrl + "/search?q=pride&offset=-1", 400, "INVALID_PARAMETER", "offset");
-        assertProblem(frontEndUrl + "/search?q=pride&offset=abc", 400, "INVALID_PARAMETER", "offset");
-        assertProblem(frontEndUrl + "/search?q=pride&offset=99999999999999999999", 400, "INVALID_PARAMETER", "offset");
-        assertProblem(frontEndUrl + "/search?q=pride&limit=0", 400, "INVALID_PARAMETER", "limit");
-        assertProblem(frontEndUrl + "/search?q=pride&limit=101", 400, "INVALID_PARAMETER", "limit");
-        assertProblem(frontEndUrl + "/search?q=pride&limit=-5", 400, "INVALID_PARAMETER", "limit");
-        assertProblem(frontEndUrl + "/search?q=pride&limit=xyz", 400, "INVALID_PARAMETER", "limit");
-    }
-
-    private void checkFirstInvalidParameterWins() throws IOException, InterruptedException {
-        assertProblem(frontEndUrl + "/search?q=&author=...!&language=bad&year=bad&offset=-1&limit=0", 400, "MISSING_PARAMETER", "q");
-        assertProblem(frontEndUrl + "/search?q=pride&author=...!&language=bad&year=bad&offset=-1&limit=0", 400, "INVALID_PARAMETER", "author");
-        assertProblem(frontEndUrl + "/search?q=pride&author=Austen&language=bad&year=bad&offset=-1&limit=0", 400, "INVALID_PARAMETER", "language");
-        assertProblem(frontEndUrl + "/search?q=pride&author=Austen&language=en&year=bad&offset=-1&limit=0", 400, "INVALID_PARAMETER", "year");
-        assertProblem(frontEndUrl + "/search?q=pride&author=Austen&language=en&year=1998&offset=-1&limit=0", 400, "INVALID_PARAMETER", "offset");
     }
 
     public void checkSearchEndpoints() throws IOException, InterruptedException {
