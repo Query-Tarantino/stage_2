@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.config.TarantinoService;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Locale;
 
 import static java.net.HttpURLConnection.HTTP_OK;
