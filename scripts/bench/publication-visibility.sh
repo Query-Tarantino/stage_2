@@ -33,6 +33,7 @@ measure() {
             start_listener_trial "listener-$listener-rep-$repetition" "$listener"
             record_trial
             wait_for PUBLISHED "$books"
+            wait_for snapshot "$books"
             save_trial_logs
         done
     done

@@ -39,6 +39,7 @@ measure() {
                 start_mode_trial "mode-$mode-replicas-$replicas-rep-$repetition" "$mode" "$replicas"
                 record_trial
                 wait_for PUBLISHED "$books"
+                wait_for snapshot "$books"
                 save_trial_logs
             done
         done
