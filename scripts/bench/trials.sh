@@ -12,9 +12,24 @@ readonly STOPWORDS=workload/stopwords.txt
 readonly REPLICAS_LIST="${TARANTINO_REPLICAS_LIST:-1 2 3}"
 readonly REPETITIONS="${TARANTINO_REPETITIONS:-5}"
 readonly PHASE_TIMEOUT_SECONDS="${TARANTINO_PHASE_TIMEOUT_SECONDS:-1800}"
-SERVICES=(mongo hazelcast crawler indexer query control nginx)
-COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml)
-readonly SERVICES COMPOSE
+readonly VARIANT="${TARANTINO_VARIANT:-hazelcast}"
+
+source scripts/bench/modes.sh
+
+COMPOSE=()
+SERVICES=()
+LOGGED_SERVICES=()
+
+use_mode() {
+    local mode=$1 files
+    files=$(compose_files "$mode")
+    read -r -a COMPOSE <<< "docker compose $files"
+    export_profiles_of_mode "$mode"
+    mapfile -t SERVICES < <("${COMPOSE[@]}" config --services)
+    LOGGED_SERVICES=("${SERVICES[@]}")
+}
+
+use_mode "$VARIANT"
 
 export TARANTINO_CANDIDATES="${TARANTINO_CANDIDATES:-mirror}"
 
@@ -81,7 +96,7 @@ save_trial_logs() {
     local trial_logs="$run_dir/logs/$current_trial"
     mkdir -p "$trial_logs"
     local service
-    for service in "${SERVICES[@]}"; do
+    for service in "${LOGGED_SERVICES[@]}"; do
         "${COMPOSE[@]}" logs --no-color --timestamps "$service" > "$trial_logs/$service.log"
     done
     current_trial=""

@@ -52,6 +52,11 @@ public class BatchCollector {
         return books;
     }
 
+    /** Acknowledges the messages of the batches collected so far. */
+    public void acknowledge() {
+        queue.acknowledge();
+    }
+
     private static void add(Map<Integer, Instant> books, BookTask task) {
         books.merge(task.bookId(), task.enqueuedAt(), (earlier, later) -> earlier.isBefore(later) ? earlier : later);
     }

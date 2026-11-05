@@ -4,6 +4,7 @@ import org.ulpgc.tarantino.common.model.BookStatus;
 
 import java.util.Map;
 
+/** The counts {@code GET /control/status} answers: books per state and the current generation (SPEC §6.5). */
 public interface StatusCounts {
 
     /** {@code current.generation}, the one {@code query} serves. */

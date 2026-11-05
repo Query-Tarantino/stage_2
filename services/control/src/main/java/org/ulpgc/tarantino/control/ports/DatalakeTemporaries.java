@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.control.ports;
 import java.nio.file.Path;
 import java.util.List;
 
+/** The orphaned {@code .tmp} files of the datalake cleanup (SPEC §4.6). */
 public interface DatalakeTemporaries {
 
     /**

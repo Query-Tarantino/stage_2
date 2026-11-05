@@ -24,8 +24,9 @@ import java.util.regex.Pattern;
 
 /**
  * The recovery commands of {@code bench} (SPEC §8), run in the Compose {@code bench} service against nginx and MongoDB
- * with the timing of {@code control}: {@code wait <state|queue> [<minimum>]}, {@code wait generation <n>}, {@code recovery <nn> <run_id> <failed_at>} and
- * {@code recovery-compare <nn>}; and {@code instant [<seconds from now>]}, which gives the scripts their {@code failed_at}.
+ * with the timing of {@code control}: {@code wait <state|queue> [<minimum>]}, {@code wait generation <n>},
+ * {@code wait snapshot <books>}, {@code recovery <nn> <run_id> <failed_at>} and {@code recovery-compare <nn>}; and
+ * {@code instant [<seconds from now>]}, which gives the scripts their {@code failed_at}.
  */
 public final class RecoveryTool {
 
@@ -39,7 +40,7 @@ public final class RecoveryTool {
     private static final Pattern SCRIPT = Pattern.compile("\\d{2}");
     private static final Pattern POSITIVE = Pattern.compile("[1-9]\\d{0,8}");
     private static final int WAIT_ARGUMENTS = 3;
-    private static final Pattern RECOVERY_EXPERIMENT = Pattern.compile("recovery-\\d{2}-r\\d+");
+    private static final Pattern RECOVERY_EXPERIMENT = Pattern.compile("recovery-\\d{2}-(?:[a-z][a-z-]*-)?r\\d+");
     private static final String ZOMBIE_INDEXER_SCRIPT = "10";
     private static final String QUERY_REPLICA_SCRIPT = "14";
     private static final String RECOVERY_SECONDS = "recovery_seconds";
@@ -62,19 +63,31 @@ public final class RecoveryTool {
         Optional<Integer> minimum = args.size() > 1 ? positive(args.get(1)) : Optional.of(WaitCommand.ANY);
         Optional<Duration> timeout = args.size() > 2 ? positive(args.get(2)).map(Duration::ofSeconds) : Optional.of(WaitCommand.DEFAULT_TIMEOUT);
         if (!knownWaitTarget(args) || args.size() > WAIT_ARGUMENTS || minimum.isEmpty() || timeout.isEmpty()) {
-            LOGGER.error("Usage: bench wait <QUEUED|DOWNLOADING|DOWNLOADED|INDEXING|PUBLISHED|FAILED|books-to-download|books-to-index> [<minimum above 0> [<timeout seconds>]], or bench wait generation <n above 0> [<timeout seconds>]");
+            LOGGER.error("Usage: bench wait <QUEUED|DOWNLOADING|DOWNLOADED|INDEXING|PUBLISHED|FAILED|books-to-download|books-to-index> [<minimum above 0> [<timeout seconds>]], bench wait generation <n above 0> [<timeout seconds>] or bench wait snapshot <books above 0> [<timeout seconds>]");
             return WRONG_USAGE;
         }
-        boolean reached = new WaitCommand(nginx(), Clock.systemUTC(), Pause.ofThread()).awaitAtLeast(args.getFirst(), minimum.get(), timeout.get());
+        boolean reached = awaitAtLeast(args.getFirst(), minimum.get(), timeout.get());
         LOGGER.info(reached ? "{} reached {}" : "{} stayed below {} for {} s", args.getFirst(), minimum.get(), timeout.get().toSeconds());
         return reached ? DONE : FAILED;
+    }
+
+    private static boolean awaitAtLeast(String target, int minimum, Duration timeout) {
+        if (target.equals(SnapshotWait.SNAPSHOT)) {
+            QueryReplicas replicas = new DnsQueryReplicas(DnsQueryReplicas.QUERY_HOST, TarantinoService.QUERY.defaultPort());
+            return new SnapshotWait(replicas, Clock.systemUTC(), Pause.ofThread()).awaitAtLeast(minimum, timeout);
+        }
+        return new WaitCommand(nginx(), Clock.systemUTC(), Pause.ofThread()).awaitAtLeast(target, minimum, timeout);
     }
 
     private static boolean knownWaitTarget(List<String> args) {
         if (args.isEmpty()) {
             return false;
         }
-        return args.getFirst().equals(WaitCommand.GENERATION) ? args.size() > 1 : WaitCommand.sectionOf(args.getFirst()).isPresent();
+        String target = args.getFirst();
+        if (target.equals(WaitCommand.GENERATION) || target.equals(SnapshotWait.SNAPSHOT)) {
+            return args.size() > 1;
+        }
+        return WaitCommand.sectionOf(target).isPresent();
     }
 
     public static int recovery(List<String> args) {
@@ -92,8 +105,12 @@ public final class RecoveryTool {
             return WRONG_USAGE;
         }
         List<String> differences = new RecoveryComparison(RUNS).differences(args.getFirst());
+        if (differences.isEmpty()) {
+            LOGGER.info("Every run of script {} ends with the same books and /search answers", args.getFirst());
+            return DONE;
+        }
         differences.forEach(LOGGER::error);
-        return differences.isEmpty() ? DONE : FAILED;
+        return FAILED;
     }
 
     private static int recover(String script, Path runDirectory, Instant failedAt) {

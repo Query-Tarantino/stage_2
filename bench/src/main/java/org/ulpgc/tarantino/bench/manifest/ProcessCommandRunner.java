@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/** Runs the commands whose output {@code manifest.json} records, such as {@code git} and {@code docker} (SPEC §9). */
 public class ProcessCommandRunner implements CommandRunner {
 
     @Override

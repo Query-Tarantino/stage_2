@@ -1,6 +1,8 @@
 package org.ulpgc.tarantino.bench.stats;
 
 import org.apache.commons.math3.distribution.TDistribution;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -24,8 +26,24 @@ public class SummaryStats {
 
     public static final String FILE_NAME = "summary.csv";
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SummaryStats.class);
+
+    private static final String USAGE = "Usage: bench summary <run directory> <configuration> <requests csv> <metric>";
+    private static final int ARGUMENTS = 4;
+    private static final int FAILED = 1;
+    private static final int WRONG_USAGE = 2;
+    private static final String MICROSECONDS = "us";
+    private static final String GZIP_SUFFIX = ".gz";
+    private static final String COLUMN_SEPARATOR = ",";
+    private static final String ANSWERED = "200";
+    private static final int STATUS_COLUMN = 2;
+    private static final int LATENCY_COLUMN = 3;
     private static final double CONFIDENCE = 0.95;
     private static final double UPPER_TAIL = 1 - (1 - CONFIDENCE) / 2;
+    private static final double P50 = 50;
+    private static final double P95 = 95;
+    private static final double P99 = 99;
+    private static final double PERCENT = 100;
 
     public record Metrics(
             int count,
@@ -52,11 +70,30 @@ public class SummaryStats {
         double stdDev = count > 1 ? Math.sqrt(sumSq / (count - 1)) : 0.0;
         double ci95 = count > 1 ? studentT(count - 1) * (stdDev / Math.sqrt(count)) : 0.0;
 
-        double p50 = percentile(sorted, 50);
-        double p95 = percentile(sorted, 95);
-        double p99 = percentile(sorted, 99);
+        double p50 = percentile(sorted, P50);
+        double p95 = percentile(sorted, P95);
+        double p99 = percentile(sorted, P99);
 
         return new Metrics(count, mean, stdDev, ci95, p50, p95, p99);
+    }
+
+    /**
+     * The {@code summary.csv} figures of one configuration (SPEC §9): {@code count} is the number of repetitions, the
+     * mean, standard deviation and 95 % CI are over the value of each repetition, with Student's t for {@code count - 1}
+     * degrees of freedom, and the nearest-rank percentiles are over the pooled values, so peaks still show.
+     */
+    public static Metrics overRepetitions(List<Double> repetitionMeans, List<? extends Number> pooled) {
+        Metrics repetitions = calculate(repetitionMeans);
+        Metrics values = calculate(pooled);
+        return new Metrics(repetitions.count(), repetitions.mean(), repetitions.stdDev(), repetitions.ci95(),
+                values.p50(), values.p95(), values.p99());
+    }
+
+    /** {@link #overRepetitions} with the mean of each non-empty repetition and every value of all of them pooled. */
+    public static Metrics ofRepetitions(List<? extends List<? extends Number>> valuesByRepetition) {
+        List<? extends List<? extends Number>> repetitions = valuesByRepetition.stream().filter(values -> !values.isEmpty()).toList();
+        return overRepetitions(repetitions.stream().map(values -> calculate(values).mean()).toList(),
+                repetitions.stream().<Number>flatMap(List::stream).toList());
     }
 
     private static double studentT(int degreesOfFreedom) {
@@ -64,7 +101,7 @@ public class SummaryStats {
     }
 
     private static double percentile(List<Double> sorted, double percentage) {
-        int index = (int) Math.ceil((percentage / 100.0) * sorted.size()) - 1;
+        int index = (int) Math.ceil((percentage / PERCENT) * sorted.size()) - 1;
         return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
     }
 
@@ -86,37 +123,30 @@ public class SummaryStats {
 
     public static List<Long> readLatencies(Path requestsCsv) throws IOException {
         InputStream stream = Files.newInputStream(requestsCsv);
-        if (requestsCsv.getFileName().toString().endsWith(".gz")) {
+        if (requestsCsv.getFileName().toString().endsWith(GZIP_SUFFIX)) {
             stream = new GZIPInputStream(stream);
         }
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
             return reader.lines()
-                    .map(line -> line.split(","))
-                    .filter(parts -> parts.length >= 4 && "200".equals(parts[2].trim()))
-                    .map(parts -> Long.parseLong(parts[3].trim()))
+                    .map(line -> line.split(COLUMN_SEPARATOR))
+                    .filter(parts -> parts.length > LATENCY_COLUMN && ANSWERED.equals(parts[STATUS_COLUMN].trim()))
+                    .map(parts -> Long.parseLong(parts[LATENCY_COLUMN].trim()))
                     .toList();
         }
     }
 
+    /** {@code bench summary}: appends the latency of one trial's answered requests to the run's {@code summary.csv}. */
     public static void main(String[] args) {
+        if (args.length != ARGUMENTS) {
+            LOGGER.error(USAGE);
+            System.exit(WRONG_USAGE);
+        }
         try {
-            Path runDir = Paths.get(args.length > 0 ? args[0] : "benchmarks/runs/latest");
-            String config = args.length > 1 ? args[1] : "default";
-            String sanitizedConfig = config.replaceAll("[^a-zA-Z0-9_=-]", "_");
-            Path specificGz = runDir.resolve("load").resolve(sanitizedConfig + ".csv.gz");
-            Path specificCsv = runDir.resolve("load").resolve(sanitizedConfig + ".csv");
-            Path requestsCsv = args.length > 2 && !args[2].isBlank()
-                    ? Paths.get(args[2])
-                    : (Files.exists(specificGz) ? specificGz : specificCsv);
-            String metricName = args.length > 3 && !args[3].isBlank() ? args[3] : "search_latency";
-            Path summaryCsv = runDir.resolve(FILE_NAME);
-
-            List<Long> latencies = readLatencies(requestsCsv);
-            Metrics metrics = calculate(latencies);
-            appendToSummary(summaryCsv, metricName, config, metrics, "us");
-        } catch (Exception exception) {
-            exception.printStackTrace();
-            System.exit(1);
+            Metrics metrics = calculate(readLatencies(Paths.get(args[2])));
+            appendToSummary(Paths.get(args[0]).resolve(FILE_NAME), args[3], args[1], metrics, MICROSECONDS);
+        } catch (IOException exception) {
+            LOGGER.error("Failed to summarise {}: {}", args[2], exception.getMessage(), exception);
+            System.exit(FAILED);
         }
     }
 }

@@ -5,6 +5,7 @@ import org.ulpgc.tarantino.query.model.TermPostings;
 import java.util.Collection;
 import java.util.List;
 
+/** The postings {@code query} reads for a search (SPEC §7). */
 public interface PostingsReader {
 
     /** The postings of the terms written by the given batches, with {@code {term: {$in}, batch_id: {$in}}} (SPEC §7). */

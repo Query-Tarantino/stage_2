@@ -3,7 +3,8 @@ set -euo pipefail
 
 SCRIPT_COMMAND=("$0" "$@")
 readonly SCRIPT_COMMAND
-readonly SCRIPT_NUMBER=$(basename "$0" | cut -c1-2)
+SCRIPT_NUMBER=$(basename "$0" | cut -c1-2)
+readonly SCRIPT_NUMBER
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
@@ -14,9 +15,14 @@ readonly CRASH_EXIT_CODE=1
 readonly CRASH_EXIT_TIMEOUT_SECONDS=120
 readonly PAUSE_LONGER_THAN_LEASE_SECONDS=10
 readonly WRONG_USAGE=2
-SERVICES=(mongo hazelcast crawler indexer query control nginx)
-COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml --env-file scripts/recovery/recovery.env)
-readonly SERVICES COMPOSE
+readonly VARIANT="${TARANTINO_VARIANT:-hazelcast}"
+
+source scripts/bench/modes.sh
+
+read -r -a COMPOSE <<< "docker compose $(compose_files "$VARIANT") --env-file scripts/recovery/recovery.env"
+export_profiles_of_mode "$VARIANT"
+mapfile -t SERVICES < <("${COMPOSE[@]}" config --services)
+readonly COMPOSE SERVICES
 
 replicas=""
 run_dir=""
@@ -61,9 +67,24 @@ start_stack() {
     "${COMPOSE[@]}" up -d --build --scale "crawler=$replicas" --scale "indexer=$replicas" --scale "query=$replicas"
 }
 
+run_experiment() {
+    if [[ $VARIANT == hazelcast ]]; then
+        echo "recovery-$SCRIPT_NUMBER-r$replicas"
+    else
+        echo "recovery-$SCRIPT_NUMBER-$VARIANT-r$replicas"
+    fi
+}
+
+skip_when_the_claim_is_the_dequeue() {
+    if [[ $VARIANT == polling ]]; then
+        echo "Row $SCRIPT_NUMBER does not apply in mode polling: the claim is the dequeue"
+        exit 0
+    fi
+}
+
 open_run() {
     local run_id
-    run_id=$(java -jar "$BENCH_JAR" manifest start "$RUNS_DIR" "recovery-$SCRIPT_NUMBER-r$replicas" 0 -- "${SCRIPT_COMMAND[@]}")
+    run_id=$(java -jar "$BENCH_JAR" manifest start "$RUNS_DIR" "$(run_experiment)" 0 -- "${SCRIPT_COMMAND[@]}")
     run_dir="$RUNS_DIR/$run_id"
     mkdir -p "$run_dir/logs"
     echo "$run_dir" > "$run_dir_file"

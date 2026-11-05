@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.control.ports;
 import java.util.List;
 import java.util.OptionalInt;
 
+/** The generations below the current one whose collections step 6.3 of the reconciliation drops (SPEC §5.3). */
 public interface OldGenerations {
 
     /** {@code current.generation} once its {@code switched_at} is older than {@code $$NOW − TARANTINO_GC_SECONDS}. */

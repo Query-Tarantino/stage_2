@@ -13,7 +13,6 @@ import org.ulpgc.tarantino.query.model.TermPostings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,7 +37,7 @@ class QueryConformanceTest {
                 (generation, terms, batchIds) -> postings.stream().filter(posting -> terms.contains(posting.term())).toList(),
                 (generation, bookIds) -> bookIds.stream().map(bookId -> new SearchResult(bookId, null, null, null, null)).toList(),
                 tokenizer);
-        Snapshot snapshot = new Snapshot(1, Set.of(BATCH), frequencies.keySet());
+        Snapshot snapshot = Snapshot.empty(1).with(Map.of(BATCH, List.copyOf(frequencies.keySet())), Map.of());
         return cases(search).stream().map(testCase -> DynamicTest.dynamicTest(testCase.get("query").asText(), () -> {
             List<SearchResult> found = command.execute(snapshot, new SearchQuery(testCase.get("query").asText(), 0, 20)).results();
             assertEquals(ids(testCase.get("ids")), found.stream().map(SearchResult::bookId).toList());

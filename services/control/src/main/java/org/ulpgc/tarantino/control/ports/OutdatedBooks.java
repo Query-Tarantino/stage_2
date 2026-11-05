@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.control.ports;
 
 import java.util.List;
 
+/** The published books of an older generation and “Reindex into another generation” (SPEC §5.1 and §5.3, step 6.1). */
 public interface OutdatedBooks {
 
     /** The target of a {@code RUNNING} rebuild, and {@code current.generation} otherwise (SPEC §5.4). */

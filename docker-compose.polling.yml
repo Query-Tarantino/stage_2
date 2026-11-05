@@ -1,0 +1,19 @@
+x-polling: &polling
+  TARANTINO_COORDINATION: polling
+
+services:
+  hazelcast:
+    deploy:
+      replicas: 0
+
+  crawler:
+    environment: *polling
+
+  indexer:
+    environment: *polling
+
+  query:
+    environment: *polling
+
+  control:
+    environment: *polling

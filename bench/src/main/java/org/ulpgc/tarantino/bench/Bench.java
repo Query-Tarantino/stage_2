@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.bench;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.bench.broker.BrokerTool;
 import org.ulpgc.tarantino.bench.charts.ChartsTool;
 import org.ulpgc.tarantino.bench.containers.StatsTool;
 import org.ulpgc.tarantino.bench.coordination.CoordinationTool;
@@ -10,11 +11,15 @@ import org.ulpgc.tarantino.bench.explain.ExplainPlanExporter;
 import org.ulpgc.tarantino.bench.index.IndexTool;
 import org.ulpgc.tarantino.bench.ingest.IngestTool;
 import org.ulpgc.tarantino.bench.jmh.JmhCsvConverter;
+import org.ulpgc.tarantino.bench.load.SearchLatencyTool;
 import org.ulpgc.tarantino.bench.load.SearchLoadGenerator;
 import org.ulpgc.tarantino.bench.manifest.ManifestTool;
+import org.ulpgc.tarantino.bench.recovery.RecoveryDelayTool;
 import org.ulpgc.tarantino.bench.recovery.RecoveryTool;
 import org.ulpgc.tarantino.bench.resources.ResourceTool;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
+import org.ulpgc.tarantino.bench.variants.VariantsTool;
+import org.ulpgc.tarantino.bench.visibility.VisibilityTool;
 
 import java.util.List;
 import java.util.Map;
@@ -33,6 +38,7 @@ public final class Bench {
     private static final Logger LOGGER = LoggerFactory.getLogger(Bench.class);
     private static final Map<String, ToIntFunction<List<String>>> COMMANDS = new TreeMap<>(Map.ofEntries(
             Map.entry("load", ofMain(SearchLoadGenerator::main)),
+            Map.entry("search-latency", SearchLatencyTool::run),
             Map.entry("jmh-csv", ofMain(JmhCsvConverter::main)),
             Map.entry("summary", ofMain(SummaryStats::main)),
             Map.entry("explain", ofMain(ExplainPlanExporter::main)),
@@ -48,7 +54,11 @@ public final class Bench {
             Map.entry("wait", RecoveryTool::waitFor),
             Map.entry("recovery", RecoveryTool::recovery),
             Map.entry("recovery-compare", RecoveryTool::compare),
-            Map.entry("recovery-chart", ChartsTool::recovery)));
+            Map.entry("recovery-chart", ChartsTool::recovery),
+            Map.entry("visibility", VisibilityTool::run),
+            Map.entry("recovery-delay", RecoveryDelayTool::run),
+            Map.entry("broker", BrokerTool::run),
+            Map.entry("variants", VariantsTool::run)));
 
     private Bench() {
     }

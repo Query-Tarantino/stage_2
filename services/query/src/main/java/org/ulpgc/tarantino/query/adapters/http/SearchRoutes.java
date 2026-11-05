@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.query.adapters.http;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.javalin.http.HttpStatus;
 import org.ulpgc.tarantino.common.http.BookIds;
 import org.ulpgc.tarantino.common.http.ProblemException;
 import org.ulpgc.tarantino.common.model.ProblemCode;
@@ -60,7 +61,7 @@ public class SearchRoutes {
             context.header("Access-Control-Allow-Methods", "GET, OPTIONS");
             context.header("Access-Control-Allow-Headers", "*");
         }
-        context.status(200);
+        context.status(HttpStatus.OK);
     }
 
     private void search(Context context) {

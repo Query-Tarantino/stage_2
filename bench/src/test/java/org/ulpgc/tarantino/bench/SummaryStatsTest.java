@@ -42,6 +42,28 @@ class SummaryStatsTest {
     }
 
     @Test
+    void takesTheMeanAndCiOverTheRepetitionsAndThePercentilesOverThePooledValues() {
+        SummaryStats.Metrics metrics = SummaryStats.overRepetitions(List.of(100.0, 300.0), List.of(50, 150, 250, 350, 1000));
+
+        assertEquals(2, metrics.count());
+        assertEquals(200.0, metrics.mean(), 0.001);
+        assertEquals(Math.sqrt(20_000), metrics.stdDev(), 0.001);
+        assertEquals(12.7062 * Math.sqrt(20_000) / Math.sqrt(2), metrics.ci95(), 0.01);
+        assertEquals(250.0, metrics.p50());
+        assertEquals(1000.0, metrics.p99());
+    }
+
+    @Test
+    void averagesEachNonEmptyRepetitionAndPoolsTheirValues() {
+        SummaryStats.Metrics metrics = SummaryStats.ofRepetitions(List.of(List.of(100, 100), List.of(), List.of(200, 400)));
+
+        assertEquals(2, metrics.count());
+        assertEquals(200.0, metrics.mean(), 0.001);
+        assertEquals(100.0, metrics.p50());
+        assertEquals(400.0, metrics.p95());
+    }
+
+    @Test
     void shouldAppendSummaryCsv(@TempDir Path tempDir) throws IOException {
         Path summaryCsv = tempDir.resolve("summary.csv");
         SummaryStats.Metrics metrics = new SummaryStats.Metrics(10, 150.0, 12.0, 7.5, 148, 170, 180);

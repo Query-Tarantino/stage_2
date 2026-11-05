@@ -1,18 +1,23 @@
 openapi: 3.1.0
 info:
   title: Query Tarantino API
-  version: "1.9"
+  version: "1.10"
   description: |
     HTTP API of Query Tarantino Stage 2, derived from SPEC.md §6; `info.version` follows the SPEC.md version.
 
-    The services also coordinate through Hazelcast (SPEC.md §4.2), which is not HTTP and has no paths here.
-    Its messages are the `BookTask` and `BatchPublished` schemas, carried as JSON text:
+    The services also coordinate in one of four modes (SPEC.md §11), and only mode `orchestrator` does it over HTTP, with
+    the routes tagged `internal`. Modes `hazelcast` (the default, SPEC.md §4.2) and `activemq` (§11.2) carry the
+    `BookTask` and `BatchPublished` schemas as JSON text on these queues and topic, which are not HTTP and have no paths
+    here; mode `polling` (§11.3) has no messages, because each worker claims its next book in MongoDB.
 
-    | Name | Type | Message |
-    | --- | --- | --- |
-    | `books-to-download` | Queue | `BookTask` |
-    | `books-to-index` | Queue | `BookTask` |
-    | `published-batches` | Topic | `BatchPublished` |
+    | Name | Type | Message | Producers | Consumers |
+    | --- | --- | --- | --- | --- |
+    | `books-to-download` | Queue | `BookTask` | `control`, `POST /ingest/{book_id}`, a `crawler` retrying a download | `crawler` workers |
+    | `books-to-index` | Queue | `BookTask` | `crawler`, `POST /index/update/{book_id}`, `control` | `indexer`, in batches |
+    | `published-batches` | Topic | `BatchPublished` | `indexer` | every `query` replica |
+
+    A message is only a hint: the conditional write that claims the book in MongoDB acknowledges it, and a duplicate or
+    stale message fails that write and is dropped (SPEC.md §4.2 and §5.1).
 
 tags:
   - name: front-end
@@ -21,6 +26,8 @@ tags:
     description: Ingestion, indexing and control, through nginx port 8081 to `crawler` (7001), `indexer` (7002) and `control` (7004).
   - name: health
     description: Health of each service on its own port, never through nginx.
+  - name: internal
+    description: "Mode `orchestrator` only (SPEC.md §11.4): `control` dispatches through nginx's internal port 8082, not published to the host, and calls each `query` replica directly. In every other mode these routes do not exist, and the service behind nginx answers `404` without `code`, as for any path it lacks (SPEC.md §6.6)."
 
 paths:
   /search:
@@ -507,6 +514,92 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /internal/download:
+    servers:
+      - url: http://nginx:8082
+        description: nginx's internal port, inside the Compose network only.
+    post:
+      tags: [internal]
+      operationId: dispatchDownload
+      summary: Put a book in the local download queue of one crawler replica
+      description: |
+        Consumer: the `control` orchestrator. Service: `crawler` (7001). nginx port: 8082, which hands a `503` to the next replica.
+        Asynchronous: the handler only offers the book to the replica's local queue; completion is the book reaching `DOWNLOADED`, read by the orchestrator from MongoDB.
+        Idempotency: a repeated dispatch does no harm, because the claim in MongoDB decides.
+        Caller: connect timeout 1 s and request timeout 2 s. On a `503`, a timeout or an error it stops dispatching this stage until its next tick, and it dispatches the book again once its last dispatch is older than `TARANTINO_REQUEUE_SECONDS` (SPEC.md §11.4).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookTask"
+            example:
+              book_id: 1342
+              enqueued_at: "2026-10-21T10:05:00Z"
+      responses:
+        "202":
+          description: The book is in this replica's local queue.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/LocalQueueFull"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /internal/index:
+    servers:
+      - url: http://nginx:8082
+        description: nginx's internal port, inside the Compose network only.
+    post:
+      tags: [internal]
+      operationId: dispatchIndex
+      summary: Put a book in the local index queue of one indexer replica
+      description: |
+        Consumer: the `control` orchestrator. Service: `indexer` (7002). nginx port: 8082, which hands a `503` to the next replica.
+        Asynchronous: the handler only offers the book to the replica's local queue; completion is the book reaching `PUBLISHED`, read by the orchestrator from MongoDB.
+        Idempotency: a repeated dispatch does no harm, because the claim in MongoDB decides.
+        Caller: connect timeout 1 s and request timeout 2 s. On a `503`, a timeout or an error it stops dispatching this stage until its next tick, and it dispatches the book again once its last dispatch is older than `TARANTINO_REQUEUE_SECONDS` (SPEC.md §11.4).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookTask"
+            example:
+              book_id: 1342
+              enqueued_at: "2026-10-21T10:05:00Z"
+      responses:
+        "202":
+          description: The book is in this replica's local queue.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/LocalQueueFull"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /internal/snapshot/refresh:
+    servers:
+      - url: http://{replica}:7003
+        description: Each `query` replica directly, at every address the Compose DNS gives for `query`.
+        variables:
+          replica:
+            default: query
+    post:
+      tags: [internal]
+      operationId: refreshSnapshot
+      summary: Ask one query replica to refresh its snapshot
+      description: |
+        Consumer: the `control` orchestrator, once per newly published batch. Service: `query` (7003). nginx port: none.
+        Asynchronous: it only asks the snapshot thread for a refresh, like a `BatchPublished`; the periodic refresh remains.
+        Idempotency: repeating it only refreshes again.
+        Caller: connect timeout 1 s and request timeout 2 s. A replica that does not answer is skipped: its periodic refresh shows the batch within `TARANTINO_SNAPSHOT_SECONDS`.
+      responses:
+        "202":
+          description: The snapshot thread was asked to refresh.
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   parameters:
     BookId:
@@ -624,6 +717,24 @@ components:
             title: "Internal Server Error"
             status: 500
             detail: "An unexpected exception occurred"
+    LocalQueueFull:
+      description: The replica's local queue is full; nginx tries the next replica.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying, 1 here.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: "about:blank"
+            title: "Service Unavailable"
+            status: 503
+            code: "DEPENDENCY_UNAVAILABLE"
+            detail: "The local queue of this replica is full"
+
     ServiceUnavailable:
       description: "`DEPENDENCY_UNAVAILABLE`: Mongo or Hazelcast do not answer, `query` has no snapshot yet, or nginx when no upstream replica answers (SPEC.md §6.6)."
       headers:
@@ -947,6 +1058,7 @@ components:
               format: int32
               minimum: 0
         queues:
+          description: "The messages waiting in each queue of the broker; in mode `polling`, the `QUEUED` and `DOWNLOADED` books, and in mode `orchestrator`, the books dispatched to each stage and not yet claimed (SPEC.md §11.3 and §11.4)."
           type: object
           additionalProperties: false
           required: [books-to-download, books-to-index]
@@ -965,7 +1077,7 @@ components:
             - type: "null"
 
     Health:
-      description: SPEC.md §6.5; `down` only when `DOWN`.
+      description: "SPEC.md §6.5; `down` only when `DOWN`. It can hold `mongo`, the broker of the mode (`hazelcast` or `activemq`) and, in `query`, `snapshot`; modes `polling` and `orchestrator` have no broker to list."
       type: object
       additionalProperties: false
       required: [status]
@@ -979,7 +1091,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            enum: [mongo, hazelcast, snapshot]
+            enum: [mongo, hazelcast, activemq, snapshot]
 
     Problem:
       description: "Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500` and on nginx's own `404` for an unknown path."
@@ -1009,7 +1121,7 @@ components:
         detail: "limit must be between 1 and 100"
 
     BookTask:
-      description: "Hazelcast message (SPEC.md §4.2) on the `books-to-download` and `books-to-index` queues."
+      description: "Message (SPEC.md §4.2) on the `books-to-download` and `books-to-index` queues, and the body of the internal routes of mode `orchestrator` (SPEC.md §11.4)."
       type: object
       additionalProperties: false
       required: [book_id, enqueued_at]

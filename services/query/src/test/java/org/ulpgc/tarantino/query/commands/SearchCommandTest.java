@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SearchCommandTest {
 
-    private static final Snapshot SNAPSHOT = new Snapshot(1, Set.of("a", "b"), Set.of(1342, 84, 345, 11));
+    private static final Snapshot SNAPSHOT = Snapshot.empty(1).with(Map.of("a", List.of(1342, 84), "b", List.of(345, 11)), Map.of());
     private static final List<TermPostings> POSTINGS = List.of(
             new TermPostings("pride", List.of(84, 345, 1342), List.of(6, 6, 55)),
             new TermPostings("prejudice", List.of(84, 345, 1342), List.of(2, 2, 11)),

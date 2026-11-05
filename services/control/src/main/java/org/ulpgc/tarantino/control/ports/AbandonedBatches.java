@@ -4,6 +4,7 @@ import org.ulpgc.tarantino.control.model.GenerationBatch;
 
 import java.util.List;
 
+/** The {@code ABANDONED} batches whose postings step 5 of the reconciliation deletes (SPEC §5.3). */
 public interface AbandonedBatches {
 
     /**

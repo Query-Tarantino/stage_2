@@ -13,9 +13,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * The coordination cost of a run (SPEC §9): the mean queue wait and work of each phase over its published books, from
- * {@code coordination.csv}, with the 95 % CI as error bars; in a run with trials, one series per configuration over the
- * books of all its repetitions.
+ * The coordination cost of a run (SPEC §9): the mean queue wait and work of each phase per published book, from
+ * {@code coordination.csv}, with the 95 % CI over the mean of each repetition as error bars, as in {@code summary.csv};
+ * in a run with trials, one series per configuration. A run without trials is a single repetition.
  */
 final class CoordinationChart {
 
@@ -35,9 +35,10 @@ final class CoordinationChart {
     static Map<String, Map<String, SummaryStats.Metrics>> phases(List<String> csv) {
         List<String> header = List.of(csv.getFirst().split(SEPARATOR));
         int trial = header.indexOf(TRIAL_COLUMN);
-        Map<String, List<String[]>> rowsBySeries = csv.stream().skip(1).map(row -> row.split(SEPARATOR))
-                .collect(Collectors.groupingBy(row -> trial < 0 ? ALL_BOOKS : TrialName.configuration(row[trial]),
-                        LinkedHashMap::new, Collectors.toList()));
+        Map<String, List<List<String[]>>> rowsBySeries = csv.stream().skip(1).map(row -> row.split(SEPARATOR))
+                .collect(Collectors.groupingBy(row -> trial < 0 ? ALL_BOOKS : TrialName.configuration(row[trial]), LinkedHashMap::new,
+                        Collectors.collectingAndThen(Collectors.groupingBy(row -> trial < 0 ? ALL_BOOKS : row[trial], LinkedHashMap::new,
+                                Collectors.toList()), repetitions -> List.copyOf(repetitions.values()))));
         if (rowsBySeries.isEmpty()) {
             rowsBySeries.put(ALL_BOOKS, List.of());
         }
@@ -55,9 +56,13 @@ final class CoordinationChart {
         return chart;
     }
 
-    private static Map<String, SummaryStats.Metrics> metricsPerPhase(List<String> header, List<String[]> rows) {
+    private static Map<String, SummaryStats.Metrics> metricsPerPhase(List<String> header, List<List<String[]>> repetitions) {
         return CoordinationTool.PHASE_COLUMNS.stream().collect(Collectors.toMap(Function.identity(),
-                phase -> SummaryStats.calculate(rows.stream().map(row -> Long.parseLong(row[header.indexOf(phase)])).toList()),
+                phase -> SummaryStats.ofRepetitions(repetitions.stream().map(rows -> millis(rows, header.indexOf(phase))).toList()),
                 (first, second) -> first, LinkedHashMap::new));
+    }
+
+    private static List<Long> millis(List<String[]> rows, int column) {
+        return rows.stream().map(row -> Long.parseLong(row[column])).toList();
     }
 }

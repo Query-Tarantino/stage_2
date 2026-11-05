@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+/** An HTTP client that validates every response it gets against {@code api/openapi.yaml} (SPEC §6). */
 public class CheckedClient {
 
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();

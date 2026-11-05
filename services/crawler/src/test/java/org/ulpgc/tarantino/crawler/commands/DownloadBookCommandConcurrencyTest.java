@@ -10,10 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
-import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookState;
+import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.mongo.MongoDatabases;
@@ -22,6 +22,7 @@ import org.ulpgc.tarantino.common.mongo.TwoAtOnce;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.crawler.adapters.datalake.batch.BatchBasedDatalakeAdapter;
 import org.ulpgc.tarantino.crawler.adapters.mongo.MongoBookClaims;
+import org.ulpgc.tarantino.crawler.model.ClaimedBook;
 import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
 import org.ulpgc.tarantino.crawler.ports.BookClaims;
 import org.ulpgc.tarantino.crawler.ports.BookDownloader;
@@ -60,8 +61,8 @@ class DownloadBookCommandConcurrencyTest {
     @TempDir
     Path datalake;
 
-    private final BookTaskQueue downloads = new BookTaskQueue(member, HazelcastContracts.BOOKS_TO_DOWNLOAD + "-" + UUID.randomUUID());
-    private final BookTaskQueue indexing = new BookTaskQueue(member, HazelcastContracts.BOOKS_TO_INDEX + "-" + UUID.randomUUID());
+    private final BookTaskQueue downloads = new BookTaskQueue(member, MessagingContracts.BOOKS_TO_DOWNLOAD + "-" + UUID.randomUUID());
+    private final BookTaskQueue indexing = new BookTaskQueue(member, MessagingContracts.BOOKS_TO_INDEX + "-" + UUID.randomUUID());
     private final CountDownLatch bothTriedToClaim = new CountDownLatch(CLAIMANTS);
 
     @BeforeAll
@@ -145,6 +146,11 @@ class DownloadBookCommandConcurrencyTest {
 
         private CountedClaims(BookClaims claims) {
             this.claims = claims;
+        }
+
+        @Override
+        public Optional<ClaimedBook> claimNext() {
+            return claims.claimNext();
         }
 
         @Override

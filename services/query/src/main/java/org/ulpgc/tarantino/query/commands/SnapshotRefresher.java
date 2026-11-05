@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.query.commands;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.common.operations.SnapshotLog;
 import org.ulpgc.tarantino.query.model.Snapshot;
 import org.ulpgc.tarantino.query.model.Snapshot.BookFilter;
 import org.ulpgc.tarantino.query.ports.MetadataReader;
@@ -15,7 +16,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Keeps the snapshot (SPEC §7). Only one thread refreshes it; requests just read the reference. When the generation
  * changes, it loads every published batch of the new one; otherwise only the batches it did not have, compared by
- * {@code _id} and never by {@code published_at}.
+ * {@code _id} and never by {@code published_at}. Each batch that enters the snapshot leaves its {@code snapshot} line
+ * (SPEC §4.8) once the new snapshot is set.
  */
 public class SnapshotRefresher {
 
@@ -23,15 +25,17 @@ public class SnapshotRefresher {
 
     private final PublishedBatches batches;
     private final MetadataReader metadata;
+    private final SnapshotLog log;
     private final AtomicReference<Snapshot> current = new AtomicReference<>();
 
-    public SnapshotRefresher(PublishedBatches batches, MetadataReader metadata) {
+    public SnapshotRefresher(PublishedBatches batches, MetadataReader metadata, SnapshotLog log) {
         this.batches = batches;
         this.metadata = metadata;
+        this.log = log;
     }
 
-    public SnapshotRefresher(PublishedBatches batches) {
-        this(batches, null);
+    public SnapshotRefresher(PublishedBatches batches, MetadataReader metadata) {
+        this(batches, metadata, new SnapshotLog());
     }
 
     /** Empty until the first refresh succeeds; until then {@code query} answers {@code 503}. */
@@ -51,10 +55,9 @@ public class SnapshotRefresher {
         }
         Map<String, List<Integer>> newBooks = newBatches.isEmpty() ? Map.of() : batches.bookIds(generation, newBatches);
         List<Integer> allNewBookIds = newBooks.values().stream().flatMap(List::stream).distinct().toList();
-        Map<Integer, BookFilter> newFilters = (metadata == null || allNewBookIds.isEmpty())
-                ? Map.of()
-                : metadata.filters(generation, allNewBookIds);
+        Map<Integer, BookFilter> newFilters = allNewBookIds.isEmpty() ? Map.of() : metadata.filters(generation, allNewBookIds);
         current.set(base.with(newBooks, newFilters));
+        newBatches.forEach(batchId -> log.write(batchId, generation));
     }
 
     /** A refresh that keeps the previous snapshot if Mongo fails, for the refresh thread. */

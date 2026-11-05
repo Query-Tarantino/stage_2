@@ -17,17 +17,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class GitAndDockerStateTest {
 
     @Test
-    void readsTheShortCommitAndACleanTreeWhenNothingChanged() {
-        CommandRunner runner = answering(Map.of(GitState.SHORT_COMMIT, "3f2a9c1\n", GitState.CHANGED_FILES, ""));
+    void readsTheShortCommitTheBranchAndACleanTreeWhenNothingChanged() {
+        CommandRunner runner = answering(Map.of(GitState.SHORT_COMMIT, "3f2a9c1\n", GitState.CHANGED_FILES, "",
+                GitState.BRANCH, "arch-testing\n"));
 
-        assertEquals(new GitState("3f2a9c1", true), GitState.of(runner));
+        assertEquals(new GitState("3f2a9c1", true, "arch-testing"), GitState.of(runner));
     }
 
     @Test
     void readsADirtyTreeWhenAFileChanged() {
-        CommandRunner runner = answering(Map.of(GitState.SHORT_COMMIT, "3f2a9c1\n", GitState.CHANGED_FILES, " M SPEC.md\n"));
+        CommandRunner runner = answering(Map.of(GitState.SHORT_COMMIT, "3f2a9c1\n", GitState.CHANGED_FILES, " M SPEC.md\n",
+                GitState.BRANCH, "dev\n"));
 
-        assertEquals(new GitState("3f2a9c1", false), GitState.of(runner));
+        assertEquals(new GitState("3f2a9c1", false, "dev"), GitState.of(runner));
     }
 
     @Test

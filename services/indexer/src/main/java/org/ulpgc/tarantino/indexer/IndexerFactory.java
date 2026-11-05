@@ -1,11 +1,13 @@
 package org.ulpgc.tarantino.indexer;
 
-import com.hazelcast.core.HazelcastInstance;
 import io.javalin.Javalin;
+import org.ulpgc.tarantino.common.config.Coordination;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
-import org.ulpgc.tarantino.common.hazelcast.BatchPublishedTopic;
-import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.http.InternalTasks;
+import org.ulpgc.tarantino.common.messaging.BookTasks;
+import org.ulpgc.tarantino.common.messaging.Broker;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
+import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.LeaseHeartbeat;
@@ -14,10 +16,11 @@ import org.ulpgc.tarantino.common.operations.TransitionLog;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
+import org.ulpgc.tarantino.indexer.adapters.broker.BrokerIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.datalake.batch.BatchBasedDatalakeReader;
-import org.ulpgc.tarantino.indexer.adapters.hazelcast.HazelcastIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.http.BookRoutes;
 import org.ulpgc.tarantino.indexer.adapters.http.IndexRoutes;
+import org.ulpgc.tarantino.indexer.adapters.local.LocalIndexQueue;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoBatchStore;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexStatus;
 import org.ulpgc.tarantino.indexer.adapters.mongo.MongoIndexWriter;
@@ -26,36 +29,80 @@ import org.ulpgc.tarantino.indexer.commands.BatchCollector;
 import org.ulpgc.tarantino.indexer.commands.BookReader;
 import org.ulpgc.tarantino.indexer.commands.IndexBatchCommand;
 import org.ulpgc.tarantino.indexer.commands.IndexWorker;
+import org.ulpgc.tarantino.indexer.commands.PollingIndexWorker;
+import org.ulpgc.tarantino.indexer.ports.BatchAnnouncer;
+import org.ulpgc.tarantino.indexer.ports.BooksToIndex;
 import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 
 import java.time.Clock;
 import java.util.function.Consumer;
 
+/** Builds the index workers and the HTTP routes of {@code indexer} over its connections (SPEC §2.2). */
 public final class IndexerFactory {
 
     private IndexerFactory() {
     }
 
-    public static IndexWorker indexWorker(TarantinoConfig config, Connections connections) {
-        HazelcastInstance client = connections.hazelcast().client();
-        BatchCollector collector = new BatchCollector(new HazelcastIndexQueue(client), config.indexBatch(), config.batchTimeout(),
-                Clock.systemUTC());
-        IndexBatchCommand index = new IndexBatchCommand(new MongoBatchStore(connections.database(), config.lease(), Replica.name()),
-                new BookReader(datalakeReader(config), tokenizer(config)), new MongoIndexWriter(connections.database()),
-                new BatchPublishedTopic(client)::publish, new TransitionLog(), new CrashPoints(config.crashAt()),
+    /** The batch loop of the configured mode (SPEC §11.1); in mode {@code orchestrator} it gathers from {@code localIndex}. */
+    public static Runnable indexWorker(TarantinoConfig config, Connections connections, LocalIndexQueue localIndex) {
+        MongoBatchStore batches = new MongoBatchStore(connections.database(), config.lease(), Replica.name());
+        if (config.coordination() == Coordination.POLLING) {
+            return new PollingIndexWorker(batches, indexCommand(config, connections, batches, batch -> {
+            }), config.indexBatch(), config.batchTimeout(), config.poll());
+        }
+        if (config.coordination() == Coordination.ORCHESTRATOR) {
+            return new IndexWorker(new BatchCollector(localIndex, config.indexBatch(), config.batchTimeout(), Clock.systemUTC()),
+                    indexCommand(config, connections, batches, batch -> {
+                    }));
+        }
+        Broker broker = connections.broker().orElseThrow();
+        BatchCollector collector = new BatchCollector(new BrokerIndexQueue(broker.queue(MessagingContracts.BOOKS_TO_INDEX)),
+                config.indexBatch(), config.batchTimeout(), Clock.systemUTC());
+        return new IndexWorker(collector, indexCommand(config, connections, batches, broker.announcements()::publish));
+    }
+
+    private static IndexBatchCommand indexCommand(TarantinoConfig config, Connections connections, MongoBatchStore batches,
+                                                  BatchAnnouncer announcer) {
+        return new IndexBatchCommand(batches, new BookReader(datalakeReader(config), tokenizer(config)),
+                new MongoIndexWriter(connections.database()), announcer, new TransitionLog(), new CrashPoints(config.crashAt()),
                 renewal -> LeaseHeartbeat.start(config.heartbeat(), renewal));
-        return new IndexWorker(collector, index);
     }
 
     public static Consumer<Javalin> routes(Connections connections) {
+        return routes(connections, booksToIndex(connections));
+    }
+
+    /**
+     * The routes of the mode: in mode {@code orchestrator}, {@code POST /index/update} offers to {@code localIndex} and
+     * {@code POST /internal/index} exists (SPEC §11.4).
+     */
+    public static Consumer<Javalin> routes(TarantinoConfig config, Connections connections, LocalIndexQueue localIndex) {
+        if (config.coordination() != Coordination.ORCHESTRATOR) {
+            return routes(connections);
+        }
+        return routes(connections, localIndex::offer)
+                .andThen(app -> InternalTasks.register(app, InternalTasks.INDEX, localIndex::offer));
+    }
+
+    private static Consumer<Javalin> routes(Connections connections, BooksToIndex booksToIndex) {
         IndexRoutes index = new IndexRoutes(new MongoRebuilds(connections.database()), new MongoIndexStatus(connections.database()));
-        BookRoutes books = new BookRoutes(new BookStates(connections.database())::state,
-                task -> new BookTaskQueue(connections.hazelcast().client(), HazelcastContracts.BOOKS_TO_INDEX).offer(task),
-                Clock.systemUTC());
+        BookRoutes books = new BookRoutes(new BookStates(connections.database())::state, booksToIndex, Clock.systemUTC());
         return app -> {
             index.register(app);
             books.register(app);
         };
+    }
+
+    /** In mode {@code polling} nothing is enqueued: a {@code DOWNLOADED} book is polled (SPEC §11.3). */
+    private static BooksToIndex booksToIndex(Connections connections) {
+        return connections.broker().<BooksToIndex>map(broker -> task -> offerOnOwnHandle(broker, task)).orElse(task -> {
+        });
+    }
+
+    private static void offerOnOwnHandle(Broker broker, BookTask task) {
+        try (BookTasks indexing = broker.queue(MessagingContracts.BOOKS_TO_INDEX)) {
+            indexing.offer(task);
+        }
     }
 
     public static DatalakeReader datalakeReader(TarantinoConfig config) {

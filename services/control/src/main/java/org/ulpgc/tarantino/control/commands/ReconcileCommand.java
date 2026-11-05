@@ -24,7 +24,7 @@ public class ReconcileCommand {
     }
 
     /**
-     * Runs every step in order. If one fails, as when Mongo or Hazelcast do not answer, it logs it and ends the pass
+     * Runs every step in order. If one fails, as when Mongo or the broker do not answer, it logs it and ends the pass
      * there without throwing, so the scheduled loop keeps running.
      */
     public void execute() {

@@ -10,7 +10,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -65,8 +64,7 @@ public class RecoveryComparison {
     }
 
     private static boolean isRunOf(String script, String runName) {
-        Matcher recoveryRun = RecoveryChecks.RUN_NAME.matcher(runName);
-        return recoveryRun.matches() && recoveryRun.group(1).equals(script);
+        return RecoveryRunName.parse(runName).filter(name -> name.row().equals(script)).isPresent();
     }
 
     private static JsonNode checks(Path run) {

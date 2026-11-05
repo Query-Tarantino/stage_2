@@ -1,0 +1,19 @@
+x-orchestrator: &orchestrator
+  TARANTINO_COORDINATION: orchestrator
+
+services:
+  hazelcast:
+    deploy:
+      replicas: 0
+
+  crawler:
+    environment: *orchestrator
+
+  indexer:
+    environment: *orchestrator
+
+  query:
+    environment: *orchestrator
+
+  control:
+    environment: *orchestrator

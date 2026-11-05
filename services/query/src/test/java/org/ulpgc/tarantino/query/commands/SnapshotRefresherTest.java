@@ -1,6 +1,7 @@
 package org.ulpgc.tarantino.query.commands;
 
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.operations.SnapshotLog;
 import org.ulpgc.tarantino.query.model.SearchResult;
 import org.ulpgc.tarantino.query.model.Snapshot;
 import org.ulpgc.tarantino.query.model.Snapshot.BookFilter;
@@ -20,8 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SnapshotRefresherTest {
 
+    private static final MetadataReader NO_METADATA = (generation, bookIds) -> List.of();
+
     private final FakeBatches batches = new FakeBatches();
-    private final SnapshotRefresher refresher = new SnapshotRefresher(batches);
+    private final SnapshotRefresher refresher = new SnapshotRefresher(batches, NO_METADATA);
 
     @Test
     void hasNoSnapshotUntilItsFirstRefresh() {
@@ -41,7 +44,7 @@ class SnapshotRefresherTest {
 
         refresher.refresh();
 
-        assertEquals(new Snapshot(1, Set.of("a", "b"), Set.of(1342, 84, 11)), refresher.current().orElseThrow());
+        assertEquals(snapshot(1, Map.of("a", List.of(1342, 84), "b", List.of(11))), refresher.current().orElseThrow());
         assertEquals(List.of(List.of("b")), batches.requested);
     }
 
@@ -83,7 +86,28 @@ class SnapshotRefresherTest {
 
         refresher.refresh();
 
-        assertEquals(new Snapshot(2, Set.of("c"), Set.of(1342)), refresher.current().orElseThrow());
+        assertEquals(snapshot(2, Map.of("c", List.of(1342))), refresher.current().orElseThrow());
+    }
+
+    @Test
+    void logsEachBatchOnceWhenItEntersTheSnapshotAndAllOfANewGeneration() {
+        List<String> logged = new ArrayList<>();
+        SnapshotRefresher logging = new SnapshotRefresher(batches, NO_METADATA, new SnapshotLog() {
+            @Override
+            public void write(String batchId, int generation) {
+                logged.add(batchId + "@" + generation);
+            }
+        });
+        batches.publish(1, "a", List.of(1342));
+        logging.refresh();
+        logging.refresh();
+        batches.publish(2, "b", List.of(84));
+        batches.publish(2, "c", List.of(11));
+        batches.generation = 2;
+
+        logging.refresh();
+
+        assertEquals(List.of("a@1", "b@2", "c@2"), logged);
     }
 
     @Test
@@ -94,7 +118,7 @@ class SnapshotRefresherTest {
 
         refresher.refreshOrKeep();
 
-        assertEquals(new Snapshot(1, Set.of("a"), Set.of(1342)), refresher.current().orElseThrow());
+        assertEquals(snapshot(1, Map.of("a", List.of(1342))), refresher.current().orElseThrow());
     }
 
     @Test
@@ -114,6 +138,10 @@ class SnapshotRefresherTest {
         assertEquals(Set.of(84, 1342, 11), snapshot.bookIds());
         assertEquals(1, batches.requested.size());
         assertEquals(Set.of("batch-1", "batch-3"), Set.copyOf(batches.requested.getFirst()));
+    }
+
+    private static Snapshot snapshot(int generation, Map<String, List<Integer>> booksByBatch) {
+        return Snapshot.empty(generation).with(booksByBatch, Map.of());
     }
 
     private static final class FakeBatches implements PublishedBatches {

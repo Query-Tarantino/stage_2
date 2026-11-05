@@ -12,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.ulpgc.tarantino.common.datalake.DatalakePaths;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BookStatus;
 import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.mongo.BookStates;
@@ -65,8 +65,8 @@ class DownloadReplicasTest {
     @TempDir
     Path datalake;
 
-    private final BookTaskQueue downloads = new BookTaskQueue(member, HazelcastContracts.BOOKS_TO_DOWNLOAD + "-" + UUID.randomUUID());
-    private final BookTaskQueue indexing = new BookTaskQueue(member, HazelcastContracts.BOOKS_TO_INDEX + "-" + UUID.randomUUID());
+    private final BookTaskQueue downloads = new BookTaskQueue(member, MessagingContracts.BOOKS_TO_DOWNLOAD + "-" + UUID.randomUUID());
+    private final BookTaskQueue indexing = new BookTaskQueue(member, MessagingContracts.BOOKS_TO_INDEX + "-" + UUID.randomUUID());
 
     @BeforeAll
     static void startMember() {

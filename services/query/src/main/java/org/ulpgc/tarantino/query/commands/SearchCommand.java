@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -41,39 +42,46 @@ public class SearchCommand {
     public SearchResponse execute(Snapshot snapshot, SearchQuery query) {
         List<String> terms = tokenizer.distinctTerms(query.q());
         if (terms.isEmpty() || snapshot.bookCount() == 0) {
-            return response(query, List.of(), List.of());
+            return nothingFound(query);
         }
-        Set<Integer> filteredIds = null;
-        if (query.hasFilters()) {
-            filteredIds = new HashSet<>(metadata.matchingBookIds(
-                    snapshot.generation(), query.authorTerms(), query.language(), query.year()));
-            filteredIds.retainAll(snapshot.bookIds());
-            if (filteredIds.isEmpty()) {
-                return response(query, List.of(), List.of());
-            }
+        Optional<Set<Integer>> filteredIds = filteredIds(snapshot, query);
+        if (filteredIds.filter(Set::isEmpty).isPresent()) {
+            return nothingFound(query);
         }
         Map<String, Map<Integer, Integer>> index = booksByTerm(
                 postings.postings(snapshot.generation(), terms, snapshot.batchIds()));
         if (!index.keySet().containsAll(terms)) {
-            return response(query, List.of(), List.of());
+            return nothingFound(query);
         }
-        Set<Integer> matches = intersection(terms, index, filteredIds);
-        if (matches.isEmpty()) {
-            return response(query, List.of(), List.of());
+        List<ScoredBook> ranked = rank(intersection(terms, index, filteredIds), terms, index, snapshot.bookCount());
+        return response(query, ranked, page(snapshot, query, ranked));
+    }
+
+    private Optional<Set<Integer>> filteredIds(Snapshot snapshot, SearchQuery query) {
+        if (!query.hasFilters()) {
+            return Optional.empty();
         }
-        List<ScoredBook> ranked = matches.stream()
-                .map(bookId -> new ScoredBook(bookId, score(bookId, terms, index, snapshot.bookCount())))
+        Set<Integer> filteredIds = new HashSet<>(metadata.matchingBookIds(
+                snapshot.generation(), query.authorTerms(), query.language(), query.year()));
+        filteredIds.retainAll(snapshot.bookIds());
+        return Optional.of(filteredIds);
+    }
+
+    private static List<ScoredBook> rank(
+            Set<Integer> matches, List<String> terms, Map<String, Map<Integer, Integer>> index, int totalBooks) {
+        return matches.stream()
+                .map(bookId -> new ScoredBook(bookId, score(bookId, terms, index, totalBooks)))
                 .sorted(RANKING)
                 .toList();
+    }
+
+    private List<SearchResult> page(Snapshot snapshot, SearchQuery query, List<ScoredBook> ranked) {
         List<Integer> page = ranked.stream()
                 .skip(query.offset())
                 .limit(query.limit())
                 .map(ScoredBook::bookId)
                 .toList();
-        List<SearchResult> pageResults = page.isEmpty()
-                ? List.of()
-                : inPageOrder(page, metadata.results(snapshot.generation(), page));
-        return response(query, ranked, pageResults);
+        return page.isEmpty() ? List.of() : inPageOrder(page, metadata.results(snapshot.generation(), page));
     }
 
     private static Map<String, Map<Integer, Integer>> booksByTerm(List<TermPostings> documents) {
@@ -82,9 +90,10 @@ public class SearchCommand {
             Map<Integer, Integer> books = index.computeIfAbsent(document.term(), key -> new HashMap<>());
             for (int position = 0; position < document.bookIds().size(); position++) {
                 Integer bookId = document.bookIds().get(position);
-                Integer previous = books.putIfAbsent(bookId, document.tfs().get(position));
-                if (previous != null) {
+                if (books.containsKey(bookId)) {
                     LOGGER.error("Book {} appears twice in the postings of {}", bookId, document.term());
+                } else {
+                    books.put(bookId, document.tfs().get(position));
                 }
             }
         }
@@ -92,12 +101,10 @@ public class SearchCommand {
     }
 
     private static Set<Integer> intersection(
-            List<String> terms, Map<String, Map<Integer, Integer>> index, Set<Integer> filteredIds) {
+            List<String> terms, Map<String, Map<Integer, Integer>> index, Optional<Set<Integer>> filteredIds) {
         List<Set<Integer>> candidateSets = new ArrayList<>(
                 terms.stream().map(term -> index.get(term).keySet()).toList());
-        if (filteredIds != null) {
-            candidateSets.add(filteredIds);
-        }
+        filteredIds.ifPresent(candidateSets::add);
         candidateSets.sort(Comparator.comparingInt(Set::size));
         Set<Integer> matches = new HashSet<>(candidateSets.getFirst());
         candidateSets.subList(1, candidateSets.size()).forEach(matches::retainAll);
@@ -119,6 +126,10 @@ public class SearchCommand {
                 .filter(byBook::containsKey)
                 .map(byBook::get)
                 .toList();
+    }
+
+    private static SearchResponse nothingFound(SearchQuery query) {
+        return response(query, List.of(), List.of());
     }
 
     private static SearchResponse response(

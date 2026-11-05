@@ -20,7 +20,9 @@ public final class TrialName {
     /** Trials by the value of each factor, numerically when both values are numbers, and then by repetition. */
     public static final Comparator<String> ORDER = Comparator.comparing(TrialName::sortKeys, TrialName::compareKeys);
 
-    private static final Pattern NAME = Pattern.compile("([a-z0-9]+-[a-z0-9]+(?:-[a-z0-9]+-[a-z0-9]+)*)-rep-([1-9]\\d*)");
+    private static final String FACTOR = "[a-z0-9]+-[a-z0-9]+(?:-(?:non)?persistent)?";
+    private static final Pattern NAME = Pattern.compile("(" + FACTOR + "(?:-" + FACTOR + ")*)-rep-([1-9]\\d*)");
+    private static final Pattern PAIR = Pattern.compile("([a-z0-9]+)-([a-z0-9]+(?:-(?:non)?persistent)?)(?:-|$)");
     private static final Pattern NUMBER = Pattern.compile("\\d+");
     private static final int FACTORS = 1;
     private static final int REPETITION = 2;
@@ -35,11 +37,14 @@ public final class TrialName {
         return NAME.matcher(trial).matches();
     }
 
-    /** The factors the trial set, in name order: {@code replicas-2-workers-8-rep-1} is {@code {replicas=2, workers=8}}. */
+    /**
+     * The factors the trial set, in name order: {@code replicas-2-workers-8-rep-1} is {@code {replicas=2, workers=8}}. A
+     * value may end in {@code -persistent} or {@code -nonpersistent}, as the modes and brokers of SPEC §11 do:
+     * {@code mode-activemq-persistent-replicas-1-rep-1} is {@code {mode=activemq-persistent, replicas=1}}.
+     */
     public static Map<String, String> factors(String trial) {
-        String[] words = matched(trial).group(FACTORS).split(WORD_SEPARATOR);
-        return IntStream.range(0, words.length / 2).boxed().collect(Collectors.toMap(factor -> words[2 * factor],
-                factor -> words[2 * factor + 1], (first, second) -> first, LinkedHashMap::new));
+        return PAIR.matcher(matched(trial).group(FACTORS)).results().collect(Collectors.toMap(pair -> pair.group(1),
+                pair -> pair.group(2), (first, second) -> first, LinkedHashMap::new));
     }
 
     public static int repetition(String trial) {

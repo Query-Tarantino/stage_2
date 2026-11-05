@@ -15,6 +15,7 @@ import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.common.mongo.MongoFields;
 import org.ulpgc.tarantino.common.mongo.TemporaryMongoDatabase;
 import org.ulpgc.tarantino.common.mongo.TwoAtOnce;
+import org.ulpgc.tarantino.crawler.model.ClaimedBook;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -51,6 +52,32 @@ class MongoBookClaimsTest {
         assertEquals(BookStatus.DOWNLOADING.name(), state.getString(MongoFields.STATUS));
         assertEquals(1, state.getInteger(MongoFields.ATTEMPTS));
         assertNotNull(state.getDate(MongoFields.LEASE_UNTIL));
+    }
+
+    @Test
+    void onlyOneOfTwoPollingWorkersAtOnceClaimsTheOnlyQueuedBook() throws Exception {
+        MongoBookClaims claims = claims();
+        new BookStates(database()).create(1342);
+
+        List<Optional<ClaimedBook>> outcomes = TwoAtOnce.call(claims::claimNext);
+
+        List<ClaimedBook> claimed = outcomes.stream().flatMap(Optional::stream).toList();
+        assertEquals(1, claimed.size());
+        assertEquals(1342, claimed.getFirst().bookId());
+        assertEquals(state().getDate(MongoFields.ENQUEUED_AT).toInstant(), claimed.getFirst().enqueuedAt());
+        assertEquals(claimed.getFirst().claimId(), state().getString(MongoFields.CLAIM_ID));
+    }
+
+    @Test
+    void twoPollingWorkersAtOnceClaimOneQueuedBookEach() throws Exception {
+        MongoBookClaims claims = claims();
+        new BookStates(database()).create(1342);
+        new BookStates(database()).create(84);
+
+        List<Optional<ClaimedBook>> outcomes = TwoAtOnce.call(claims::claimNext);
+
+        assertEquals(List.of(84, 1342), outcomes.stream().flatMap(Optional::stream).map(ClaimedBook::bookId).sorted().toList());
+        assertEquals(Optional.empty(), claims.claimNext());
     }
 
     @Test

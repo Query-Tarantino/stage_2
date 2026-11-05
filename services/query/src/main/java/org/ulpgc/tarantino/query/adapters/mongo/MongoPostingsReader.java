@@ -17,6 +17,7 @@ import static org.ulpgc.tarantino.common.mongo.MongoFields.BOOK_IDS;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.TERM;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.TFS;
 
+/** Reads {@code postings_g<n>} for the terms of a search, only from the snapshot's batches (SPEC §4.3 and §7). */
 public class MongoPostingsReader implements PostingsReader {
 
     private final MongoDatabase database;

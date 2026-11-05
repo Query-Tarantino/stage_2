@@ -1,5 +1,6 @@
 package org.ulpgc.tarantino.common.model;
 
+/** The {@code code} of a Problem Details error and its HTTP status (SPEC §4.5 and §6.6). */
 public enum ProblemCode {
     MISSING_PARAMETER(400),
     INVALID_PARAMETER(400),

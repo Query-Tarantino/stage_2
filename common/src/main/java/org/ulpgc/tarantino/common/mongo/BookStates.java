@@ -7,6 +7,7 @@ import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookState;
 import org.ulpgc.tarantino.common.model.BookStatus;
@@ -14,16 +15,19 @@ import org.ulpgc.tarantino.common.model.BookStatus;
 import java.util.Optional;
 
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ATTEMPTS;
+import static org.ulpgc.tarantino.common.mongo.MongoFields.BATCH_ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ENQUEUED_AT;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.GENERATION;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.LAST_ERROR;
+import static org.ulpgc.tarantino.common.mongo.MongoFields.PUBLISHED_AT;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.STATUS;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.UPDATED_AT;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.NOW;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.ifNull;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.set;
 
+/** The {@code book_states} collection (SPEC §4.3) and its common writes, such as “Create the state” (SPEC §5.1). */
 public class BookStates {
 
     private final MongoCollection<Document> collection;
@@ -39,6 +43,17 @@ public class BookStates {
                 .append(ENQUEUED_AT, ifNull(ENQUEUED_AT, NOW))
                 .append(UPDATED_AT, ifNull(UPDATED_AT, NOW));
         return collection.updateOne(Filters.eq(ID, bookId), set(fields), new UpdateOptions().upsert(true)).getUpsertedId() != null;
+    }
+
+    /**
+     * “Complete a publication” (SPEC §5.1), which the indexer runs after “Publish a batch” and {@code control} in step 3
+     * of SPEC §5.3: true only for the call that marked the book, which is the only one that logs it (SPEC §4.8).
+     */
+    public boolean completePublication(int bookId, String batchId) {
+        Bson indexingInTheBatch = Filters.and(Filters.eq(ID, bookId), Filters.eq(STATUS, BookStatus.INDEXING.name()),
+                Filters.eq(BATCH_ID, new ObjectId(batchId)));
+        Document published = new Document(STATUS, BookStatus.PUBLISHED.name()).append(PUBLISHED_AT, NOW).append(UPDATED_AT, NOW);
+        return collection.updateOne(indexingInTheBatch, set(published)).getModifiedCount() == 1;
     }
 
     /**

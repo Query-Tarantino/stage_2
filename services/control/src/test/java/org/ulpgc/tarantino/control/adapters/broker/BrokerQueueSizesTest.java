@@ -1,4 +1,4 @@
-package org.ulpgc.tarantino.control.adapters.hazelcast;
+package org.ulpgc.tarantino.control.adapters.broker;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
@@ -7,7 +7,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.common.hazelcast.BookTaskQueue;
-import org.ulpgc.tarantino.common.hazelcast.HazelcastContracts;
+import org.ulpgc.tarantino.common.hazelcast.HazelcastBroker;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 import org.ulpgc.tarantino.common.model.BookTask;
 
 import java.time.Instant;
@@ -16,7 +17,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class HazelcastQueueSizesTest {
+class BrokerQueueSizesTest {
 
     private static final Instant ENQUEUED_AT = Instant.parse("2026-10-21T10:05:00Z");
 
@@ -36,9 +37,9 @@ class HazelcastQueueSizesTest {
 
     @Test
     void countsTheMessagesWaitingInEachQueue() {
-        HazelcastQueueSizes sizes = new HazelcastQueueSizes(member);
-        enqueue(HazelcastContracts.BOOKS_TO_DOWNLOAD, List.of(1342, 84));
-        enqueue(HazelcastContracts.BOOKS_TO_INDEX, List.of(11));
+        BrokerQueueSizes sizes = new BrokerQueueSizes(new HazelcastBroker(member, () -> true));
+        enqueue(MessagingContracts.BOOKS_TO_DOWNLOAD, List.of(1342, 84));
+        enqueue(MessagingContracts.BOOKS_TO_INDEX, List.of(11));
 
         assertEquals(2, sizes.downloads());
         assertEquals(1, sizes.index());
@@ -46,7 +47,7 @@ class HazelcastQueueSizesTest {
 
     @Test
     void countsNothingInEmptyQueues() {
-        HazelcastQueueSizes sizes = new HazelcastQueueSizes(member);
+        BrokerQueueSizes sizes = new BrokerQueueSizes(new HazelcastBroker(member, () -> true));
 
         assertEquals(0, sizes.downloads());
         assertEquals(0, sizes.index());

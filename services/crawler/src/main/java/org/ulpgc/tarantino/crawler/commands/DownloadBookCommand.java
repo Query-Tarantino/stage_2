@@ -9,6 +9,7 @@ import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.operations.Lease;
 import org.ulpgc.tarantino.common.operations.Transition;
 import org.ulpgc.tarantino.common.operations.TransitionLog;
+import org.ulpgc.tarantino.crawler.model.ClaimedBook;
 import org.ulpgc.tarantino.crawler.ports.BookClaims;
 import org.ulpgc.tarantino.crawler.ports.TaskQueue;
 
@@ -52,14 +53,15 @@ public class DownloadBookCommand {
     }
 
     public void execute(BookTask task) {
-        Optional<String> claim = claims.claim(task.bookId());
-        if (claim.isEmpty()) {
-            return;
-        }
-        log.write(Transition.book(task.bookId(), BookStatus.QUEUED, BookStatus.DOWNLOADING).fromMessageEnqueuedAt(task.enqueuedAt()));
+        claims.claim(task.bookId()).ifPresent(claimId -> executeClaimed(new ClaimedBook(task.bookId(), claimId, task.enqueuedAt())));
+    }
+
+    /** The job once the book is claimed, by a message or by “Claim the next book” in mode {@code polling} (SPEC §11.3). */
+    public void executeClaimed(ClaimedBook book) {
+        log.write(Transition.book(book.bookId(), BookStatus.QUEUED, BookStatus.DOWNLOADING).fromMessageEnqueuedAt(book.enqueuedAt()));
         crashPoints.accept(CrashPoint.AFTER_CLAIM);
-        try (Lease lease = heartbeats.apply(() -> claims.renew(task.bookId(), claim.get()))) {
-            download(task.bookId(), claim.get(), lease);
+        try (Lease lease = heartbeats.apply(() -> claims.renew(book.bookId(), book.claimId()))) {
+            download(book.bookId(), book.claimId(), lease);
         }
     }
 

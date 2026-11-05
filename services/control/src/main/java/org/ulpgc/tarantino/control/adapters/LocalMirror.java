@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+/** The local mirror of {@code TARANTINO_MIRROR}, whose books {@code control} seeds when {@code TARANTINO_CANDIDATES} is {@code mirror} (SPEC §4.7 and §5.3). */
 public class LocalMirror {
 
     private static final Pattern BOOK_ID = Pattern.compile("[1-9][0-9]{0,8}");

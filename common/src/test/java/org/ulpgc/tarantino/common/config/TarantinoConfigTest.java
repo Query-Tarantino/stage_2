@@ -12,7 +12,9 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TarantinoConfigTest {
 
@@ -24,7 +26,9 @@ class TarantinoConfigTest {
                 "tarantino", Path.of("datalake"), Path.of("workload"), Optional.empty(), "sample_ids.txt", 8, 3, 100,
                 Duration.ofSeconds(30), Duration.ofSeconds(60), Duration.ofSeconds(20), Duration.ofSeconds(30),
                 Duration.ofSeconds(120), Duration.ofSeconds(600), Duration.ofSeconds(600), Duration.ofSeconds(3600),
-                Duration.ofSeconds(5), "*", Optional.empty()), config);
+                Duration.ofSeconds(5), "*", Optional.empty(), Coordination.HAZELCAST, true,
+                "failover:(tcp://localhost:61616)?timeout=1000", false, Duration.ofMillis(200), Duration.ofMillis(200), 512, 400,
+                "http://nginx:8082", 256, 200), config);
     }
 
     @Test
@@ -54,7 +58,9 @@ class TarantinoConfigTest {
     @ValueSource(strings = {"TARANTINO_PORT", "TARANTINO_HTTP_THREADS", "TARANTINO_PARALLEL_DOWNLOADS",
             "TARANTINO_MAX_ATTEMPTS", "TARANTINO_INDEX_BATCH", "TARANTINO_BATCH_TIMEOUT_SECONDS", "TARANTINO_LEASE_SECONDS",
             "TARANTINO_HEARTBEAT_SECONDS", "TARANTINO_RECONCILE_SECONDS", "TARANTINO_REQUEUE_SECONDS", "TARANTINO_GC_SECONDS",
-            "TARANTINO_TMP_MAX_AGE_SECONDS", "TARANTINO_CLEANUP_SECONDS", "TARANTINO_SNAPSHOT_SECONDS"})
+            "TARANTINO_TMP_MAX_AGE_SECONDS", "TARANTINO_CLEANUP_SECONDS", "TARANTINO_SNAPSHOT_SECONDS",
+            "TARANTINO_POLL_MILLIS", "TARANTINO_ORCHESTRATOR_TICK_MILLIS", "TARANTINO_ORCHESTRATOR_DOWNLOAD_WINDOW",
+            "TARANTINO_ORCHESTRATOR_INDEX_WINDOW", "TARANTINO_LOCAL_DOWNLOAD_CAPACITY", "TARANTINO_LOCAL_INDEX_CAPACITY"})
     void rejectsAnyNumberThatIsNotAPositiveIntegerNamingItsVariable(String variable) {
         for (String value : List.of("0", "-5", "many", "1.5", "99999999999")) {
             assertInvalid(variable, Map.of(variable, value), TarantinoService.CRAWLER);
@@ -97,6 +103,40 @@ class TarantinoConfigTest {
         assertInvalid("TARANTINO_CRASH_AT", Map.of("TARANTINO_CRASH_AT", "after-publish"), TarantinoService.CRAWLER);
         assertInvalid("TARANTINO_CRASH_AT", Map.of("TARANTINO_CRASH_AT", "after-dequeue"), TarantinoService.CONTROL);
         assertInvalid("TARANTINO_CRASH_AT", Map.of("TARANTINO_CRASH_AT", "nowhere"), TarantinoService.INDEXER);
+    }
+
+    @Test
+    void readsTheCoordinationModeInLowerCase() {
+        assertEquals(Coordination.POLLING,
+                TarantinoConfig.from(Map.of("TARANTINO_COORDINATION", "polling"), TarantinoService.CRAWLER).coordination());
+        assertEquals(Coordination.ORCHESTRATOR,
+                TarantinoConfig.from(Map.of("TARANTINO_COORDINATION", " orchestrator "), TarantinoService.CONTROL).coordination());
+        assertInvalid("TARANTINO_COORDINATION", Map.of("TARANTINO_COORDINATION", "ActiveMQ"), TarantinoService.QUERY);
+        assertInvalid("TARANTINO_COORDINATION", Map.of("TARANTINO_COORDINATION", "kafka"), TarantinoService.QUERY);
+    }
+
+    @Test
+    void usesABrokerOnlyInTheChoreographyModes() {
+        assertEquals(List.of(Coordination.HAZELCAST, Coordination.ACTIVEMQ),
+                List.of(Coordination.values()).stream().filter(Coordination::usesBroker).toList());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"TARANTINO_SNAPSHOT_ON_PUBLISH", "TARANTINO_ACTIVEMQ_PERSISTENT"})
+    void acceptsOnlyTrueOrFalseInTheFlags(String variable) {
+        for (String value : List.of("yes", "1", "TRUE")) {
+            assertInvalid(variable, Map.of(variable, value), TarantinoService.QUERY);
+        }
+    }
+
+    @Test
+    void readsTheFlagsOfTheModes() {
+        TarantinoConfig config = TarantinoConfig.from(Map.of("TARANTINO_SNAPSHOT_ON_PUBLISH", "false",
+                "TARANTINO_ACTIVEMQ_PERSISTENT", "true", "TARANTINO_POLL_MILLIS", "50"), TarantinoService.QUERY);
+
+        assertFalse(config.snapshotOnPublish());
+        assertTrue(config.activeMqPersistent());
+        assertEquals(Duration.ofMillis(50), config.poll());
     }
 
     private static void assertInvalid(String variable, Map<String, String> environment, TarantinoService service) {

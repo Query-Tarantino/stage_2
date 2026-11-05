@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 
+/** The {@code .tmp} files of the datalake older than {@code TARANTINO_TMP_MAX_AGE_SECONDS}, which only {@code control} deletes (SPEC §4.6). */
 public class FileDatalakeTemporaries implements DatalakeTemporaries {
 
     private final Path datalake;
