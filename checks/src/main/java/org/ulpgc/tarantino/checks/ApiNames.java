@@ -26,6 +26,7 @@ final class ApiNames {
     static final String GENERATION = "generation";
     static final String LANGUAGE = "language";
     static final String LANGUAGES = "languages";
+    static final String LAST_ERROR = "last_error";
     static final String LIMIT = "limit";
     static final String OFFSET = "offset";
     static final String PARAMETER = "parameter";

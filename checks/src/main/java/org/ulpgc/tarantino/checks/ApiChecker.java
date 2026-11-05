@@ -39,6 +39,7 @@ public class ApiChecker {
     private final HealthChecks health;
     private final EntryPortChecks entryPorts;
     private final OperationalChecks operational;
+    private final SampleIngestion ingestion;
     private final BookChecks books;
     private final SearchValidationChecks searchValidation;
 
@@ -55,6 +56,7 @@ public class ApiChecker {
         this.health = new HealthChecks(client);
         this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
         this.operational = new OperationalChecks(client, problems, this.operationalUrl);
+        this.ingestion = new SampleIngestion(client, this.operationalUrl);
         this.books = new BookChecks(client, problems, this.frontEndUrl);
         this.searchValidation = new SearchValidationChecks(problems, this.frontEndUrl);
     }
@@ -79,49 +81,9 @@ public class ApiChecker {
         LOGGER.info("All API conformance checks passed successfully");
     }
 
-    private record BookStatusCheck(int bookId, String statusUrl) {}
-
     public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
-        LOGGER.info("Ensuring all sample books are published");
-        List<BookStatusCheck> pendingChecks = new ArrayList<>();
-        for (int bookId : sampleIds) {
-            CheckedClient.Response ingestResponse = client.post(operationalUrl + "/ingest/" + bookId, "");
-            assertTrue(ingestResponse.status() == 200 || ingestResponse.status() == 202, "POST /ingest/" + bookId + " answers 200 or 202");
-            if (ingestResponse.status() == 202) {
-                String location = ingestResponse.header("Location");
-                assertTrue(location != null && !location.isBlank(), "the 202 of POST /ingest/" + bookId + " has a Location");
-                String statusUrl = operationalUrl + (location.startsWith("/") ? location : "/" + location);
-                pendingChecks.add(new BookStatusCheck(bookId, statusUrl));
-            } else {
-                String bookStatus = ingestResponse.json().get("status").asText();
-                if (!"PUBLISHED".equals(bookStatus)) {
-                    pendingChecks.add(new BookStatusCheck(bookId, operationalUrl + "/ingest/status/" + bookId));
-                }
-            }
-        }
-        for (BookStatusCheck pendingCheck : pendingChecks) {
-            waitForPublished(pendingCheck.bookId(), pendingCheck.statusUrl());
-        }
+        ingestion.publish(sampleIds);
         waitForSnapshotRefresh(sampleIds);
-    }
-
-    private void waitForPublished(int bookId, String statusUrl) throws IOException, InterruptedException {
-        long deadline = System.currentTimeMillis() + (MAX_WAIT_SECONDS * 1000L);
-        while (System.currentTimeMillis() < deadline) {
-            CheckedClient.Response response = client.get(statusUrl);
-            if (response.status() == 200 && response.json() != null && response.json().has("status")) {
-                String status = response.json().get("status").asText();
-                if ("PUBLISHED".equals(status)) {
-                    return;
-                }
-                if ("FAILED".equals(status)) {
-                    String reason = response.json().has("last_error") ? response.json().get("last_error").asText() : "unknown";
-                    throw new AssertionError("Book " + bookId + " failed ingestion: " + reason);
-                }
-            }
-            Thread.sleep(1000);
-        }
-        throw new AssertionError("Timed out waiting for book " + bookId + " to reach PUBLISHED at " + statusUrl);
     }
 
     private void waitForSnapshotRefresh(List<Integer> sampleIds) throws IOException, InterruptedException {
