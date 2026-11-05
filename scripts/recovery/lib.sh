@@ -3,7 +3,8 @@ set -euo pipefail
 
 SCRIPT_COMMAND=("$0" "$@")
 readonly SCRIPT_COMMAND
-readonly SCRIPT_NUMBER=$(basename "$0" | cut -c1-2)
+SCRIPT_NUMBER=$(basename "$0" | cut -c1-2)
+readonly SCRIPT_NUMBER
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 

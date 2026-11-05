@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 source "$(dirname "${BASH_SOURCE[0]}")/trials.sh"
 
-readonly BASELINE_CLIENTS=32
-readonly BASELINE_THREADS=32
-readonly BASELINE_REPLICAS=1
 readonly FRONTEND_URL=http://localhost:8080
 readonly MONGO_URI=mongodb://mongo:27017/tarantino
 readonly CONTROL_STATUS_URL=http://localhost:8081/control/status
