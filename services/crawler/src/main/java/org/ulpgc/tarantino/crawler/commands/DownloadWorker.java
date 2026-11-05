@@ -10,7 +10,7 @@ import java.time.Duration;
 import java.util.function.Consumer;
 
 /**
- * A download worker: it takes the messages of {@code books-to-download} one by one. If Mongo or Hazelcast fail
+ * A download worker: it takes the messages of {@code books-to-download} one by one. If Mongo or the broker fail
  * halfway, it drops the message without marking anything and goes on: the lease expires and {@code control} redoes it.
  */
 public class DownloadWorker implements Runnable {

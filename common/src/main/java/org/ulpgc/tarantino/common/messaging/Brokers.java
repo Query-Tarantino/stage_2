@@ -7,6 +7,7 @@ import org.ulpgc.tarantino.common.hazelcast.HazelcastClients;
 
 import java.util.Optional;
 
+/** Opens the broker of the configured coordination mode, if the mode has one (SPEC §11.1). */
 public final class Brokers {
 
     private Brokers() {

@@ -18,7 +18,7 @@ import java.time.Duration;
 /**
  * Answers every error as Problem Details (RFC 9457, SPEC §6.6): {@code parameter} only in {@code 400} responses,
  * {@code Retry-After} on every {@code 503} and {@code 500} without {@code code} for anything unexpected. Mongo or
- * Hazelcast not answering is {@code 503} with {@code DEPENDENCY_UNAVAILABLE} (SPEC §4.5).
+ * the broker of the mode not answering is {@code 503} with {@code DEPENDENCY_UNAVAILABLE} (SPEC §4.5 and §11).
  */
 public final class ProblemDetails {
 

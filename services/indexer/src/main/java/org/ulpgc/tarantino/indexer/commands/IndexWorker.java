@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * The batch loop of an indexer replica. If Mongo or Hazelcast fail halfway, it leaves the batch unpublished and goes
+ * The batch loop of an indexer replica. If Mongo or the broker fail halfway, it leaves the batch unpublished and goes
  * on: its lease expires and {@code control} sends its books back to the queue.
  */
 public class IndexWorker implements Runnable {
