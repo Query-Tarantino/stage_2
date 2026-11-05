@@ -35,6 +35,7 @@ export TARANTINO_CANDIDATES="${TARANTINO_CANDIDATES:-mirror}"
 
 run_dir=""
 current_trial=""
+trial_started_at=""
 stats_pid=""
 
 open_run() {
@@ -93,13 +94,39 @@ wait_for() {
 }
 
 save_trial_logs() {
-    local trial_logs="$run_dir/logs/$current_trial"
+    local trial_logs="$run_dir/logs/$current_trial" service since=()
+    [[ -z $trial_started_at ]] || since=(--since "$trial_started_at")
     mkdir -p "$trial_logs"
-    local service
     for service in "${LOGGED_SERVICES[@]}"; do
-        "${COMPOSE[@]}" logs --no-color --timestamps "$service" > "$trial_logs/$service.log"
+        "${COMPOSE[@]}" logs --no-color --timestamps ${since[@]+"${since[@]}"} "$service" > "$trial_logs/$service.log"
     done
     current_trial=""
+}
+
+ingest_corpus() {
+    "${COMPOSE[@]}" up -d --wait
+    wait_for PUBLISHED "$(expected_books)"
+}
+
+run_jmh_of() {
+    local service=$1 main_class=$2 absolute_run_dir
+    mkdir -p "$run_dir/jmh"
+    absolute_run_dir=$(host_path "$(cd "$run_dir" && pwd)")
+    mvn -DskipTests install
+    TARANTINO_MIRROR=$(host_path "$PWD/$MIRROR_DIR") TARANTINO_WORKLOAD=$(host_path "$PWD/workload") \
+        mvn -f "services/$service/pom.xml" exec:exec \
+        -Dexec.executable=java \
+        -Dexec.classpathScope=test \
+        "-Dexec.args=-classpath %classpath $main_class \"$absolute_run_dir\""
+    java -jar "$BENCH_JAR" jmh-csv "$run_dir/jmh/$service.json" "$run_dir/jmh/$service.csv"
+}
+
+host_path() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        printf '%s\n' "$1"
+    fi
 }
 
 start_stats() {
