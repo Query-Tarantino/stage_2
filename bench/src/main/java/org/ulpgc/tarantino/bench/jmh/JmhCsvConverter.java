@@ -23,6 +23,8 @@ public class JmhCsvConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JmhCsvConverter.class);
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
+    private static final int FAILED = 1;
+    private static final int WRONG_USAGE = 2;
     private static final String PARAMS = "params";
     private static final String PARAM_COLUMN_PREFIX = "Param: ";
 
@@ -69,9 +71,9 @@ public class JmhCsvConverter {
         double score = primaryMetric.path("score").asDouble(0.0);
         double scoreError = primaryMetric.path("scoreError").asDouble(0.0);
         String scoreUnit = primaryMetric.path("scoreUnit").asText("");
-        int forks = benchmarkNode.path("forks").asInt(1);
-        int warmupIterations = benchmarkNode.path("warmupIterations").asInt(5);
-        int measurementIterations = benchmarkNode.path("measurementIterations").asInt(10);
+        int forks = benchmarkNode.path("forks").asInt();
+        int warmupIterations = benchmarkNode.path("warmupIterations").asInt();
+        int measurementIterations = benchmarkNode.path("measurementIterations").asInt();
         String jvmArgs = StreamSupport.stream(benchmarkNode.path("jvmArgs").spliterator(), false)
                 .map(JsonNode::asText)
                 .collect(Collectors.joining(" "));
@@ -83,13 +85,13 @@ public class JmhCsvConverter {
     public static void main(String[] args) {
         if (args.length < 2) {
             LOGGER.error("Usage: bench jmh-csv <input json> <output csv>");
-            System.exit(1);
+            System.exit(WRONG_USAGE);
         }
         try {
             convert(Paths.get(args[0]), Paths.get(args[1]));
         } catch (Exception exception) {
             LOGGER.error("Failed to convert JMH JSON to CSV: {}", exception.getMessage(), exception);
-            System.exit(1);
+            System.exit(FAILED);
         }
     }
 }
