@@ -398,6 +398,16 @@ The `bench` and `checks` jars read these, and nothing else does:
 
 `checks` also reads `TARANTINO_SNAPSHOT_SECONDS`, with its default, to wait for the snapshot refresh, and `bench explain` reads `TARANTINO_MONGO_URI`. `search-latency.sh` leaves `bench load` with its defaults.
 
+`scripts/fill_cache.sh`, which prepares the corpus once and runs no service, reads these:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `TARANTINO_CACHE_SOURCE` | `rsync` | How to copy the books: `rsync`, or `http`, one request per book, where port 873 is blocked |
+| `TARANTINO_RSYNC_SOURCE` | `rsync.ibiblio.org::gutenberg-epub` | rsync module of Project Gutenberg's generated collection |
+| `TARANTINO_CACHE_BOOKS` | 2800 | Books of the corpus, the first downloadable ones of `workload/book_ids.txt` |
+| `TARANTINO_CACHE_PARALLEL` | 16 | Downloads at once with `http` |
+| `TARANTINO_WORKLOAD` and `TARANTINO_BENCHMARKS` | `workload` and `benchmarks` | Where it reads `book_ids.txt` and writes `cache/` and `mirror/` |
+
 ### 4.8 Transition logs
 
 Each service writes one line for every book or batch state change it achieves (§5.1), and `control` also writes one for every message it requeues, with equal `from` and `to`. The line is written by `TransitionLog`, in `common`, at INFO level and with these keys in this order; `-` marks what does not apply:
