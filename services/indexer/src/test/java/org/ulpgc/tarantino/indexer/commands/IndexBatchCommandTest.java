@@ -246,6 +246,18 @@ class IndexBatchCommandTest {
     }
 
     @Test
+    void stopsClaimingPolledBooksOnceItsLeaseIsLost() throws InterruptedException {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        store(84, "Title: Frankenstein", "pride");
+        leaseLostAfterStep = "claim-next";
+
+        command().executeClaimingNext(100, Duration.ofSeconds(5), Duration.ofMillis(1));
+
+        assertEquals(Set.of(1342), batches.downloaded);
+        assertEquals(Map.of(), batches.published);
+    }
+
+    @Test
     void leavesAPolledBatchToExpireWhenNoBookWaits() throws InterruptedException {
         command().executeClaimingNext(100, Duration.ofSeconds(5), Duration.ofMillis(1));
 
@@ -302,6 +314,7 @@ class IndexBatchCommandTest {
         @Override
         public Optional<ClaimedBook> claimNext(Batch batch) {
             return downloaded.stream().sorted().findFirst().map(bookId -> {
+                steps.add("claim-next");
                 downloaded.remove(bookId);
                 indexing.add(bookId);
                 return new ClaimedBook(bookId, ENQUEUED_AT);

@@ -80,14 +80,15 @@ public class IndexBatchCommand {
 
     /**
      * A batch of mode {@code polling} (SPEC §11.3): it opens the batch and claims the oldest {@code DOWNLOADED} book one
-     * at a time, until it has {@code size} books or {@code timeout} has passed since its first claim, sleeping up to
-     * {@code poll} while none waits. If no book is left to claim at first, the empty batch is left to expire.
+     * at a time, until it has {@code size} books, {@code timeout} has passed since its first claim or its lease is lost,
+     * sleeping up to {@code poll} while none waits. If no book is left to claim at first, the empty batch is left to
+     * expire.
      */
     public void executeClaimingNext(int size, Duration timeout, Duration poll) throws InterruptedException {
         Batch batch = batches.open(batches.writeGeneration());
         log.write(Transition.batch(batch.batchId(), null, BatchStatus.WRITING, batch.generation()));
         try (Lease lease = heartbeats.apply(() -> batches.renew(batch))) {
-            Map<Integer, Instant> books = claimUntilFull(batch, size, timeout, poll);
+            Map<Integer, Instant> books = claimUntilFull(batch, size, timeout, poll, lease);
             if (books.isEmpty()) {
                 LOGGER.info("Batch {} found no book to claim; it is left to expire", batch.batchId());
                 return;
@@ -96,10 +97,11 @@ public class IndexBatchCommand {
         }
     }
 
-    private Map<Integer, Instant> claimUntilFull(Batch batch, int size, Duration timeout, Duration poll) throws InterruptedException {
+    private Map<Integer, Instant> claimUntilFull(Batch batch, int size, Duration timeout, Duration poll, Lease lease)
+            throws InterruptedException {
         Map<Integer, Instant> books = new LinkedHashMap<>();
         Instant deadline = Instant.MAX;
-        while (books.size() < size && Instant.now().isBefore(deadline)) {
+        while (books.size() < size && Instant.now().isBefore(deadline) && !lease.lost()) {
             Optional<ClaimedBook> claimed = batches.claimNext(batch);
             if (claimed.isPresent()) {
                 books.put(claimed.get().bookId(), claimed.get().enqueuedAt());
