@@ -24,6 +24,7 @@ public final class InternalTasks {
     private static final Duration RETRY_AFTER_FULL = Duration.ofSeconds(1);
     private static final String BODY = "body";
     private static final String FULL = "The local queue of this replica is full";
+    private static final String NOT_A_BOOK_TASK = "The body must be a BookTask: {\"book_id\": <positive integer>, \"enqueued_at\": <ISO-8601 instant>}";
 
     private InternalTasks() {
     }
@@ -55,8 +56,8 @@ public final class InternalTasks {
     private static BookTask parsed(String body) {
         try {
             return TarantinoJson.read(body, BookTask.class);
-        } catch (RuntimeException e) {
-            throw new ProblemException(ProblemCode.INVALID_PARAMETER, BODY, "The body must be a BookTask: " + e.getMessage());
+        } catch (RuntimeException _) {
+            throw new ProblemException(ProblemCode.INVALID_PARAMETER, BODY, NOT_A_BOOK_TASK);
         }
     }
 }

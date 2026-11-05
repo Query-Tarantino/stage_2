@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InternalDownloadRouteTest {
@@ -58,6 +59,8 @@ class InternalDownloadRouteTest {
         HttpResponse<String> zero = post("{\"book_id\": 0, \"enqueued_at\": \"2026-10-21T10:05:00Z\"}");
 
         assertEquals(400, notJson.statusCode());
+        assertTrue(notJson.body().contains("\"parameter\":\"body\""), notJson.body());
+        assertFalse(notJson.body().contains("jackson"), notJson.body());
         assertEquals(400, zero.statusCode());
         assertTrue(zero.body().contains("\"code\":\"INVALID_PARAMETER\""), zero.body());
         assertTrue(zero.body().contains("\"parameter\":\"book_id\""), zero.body());
