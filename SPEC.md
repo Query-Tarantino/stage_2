@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.9.1 · November 5, 2026
+Version 1.9.2 · November 5, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -336,6 +336,17 @@ The scripts in `scripts/bench/` also read these. `TarantinoConfig` does not, bec
 | `TARANTINO_REPLICAS_LIST` | `1 2 3` | `coordination-cost`, `resource-usage` | Replica counts of `crawler` and `indexer` together, space-separated |
 | `TARANTINO_PHASE_TIMEOUT_SECONDS` | 1800 | `coordination-cost`, `resource-usage` | Longest wait for a phase of a trial before the run gives up |
 
+The `bench` and `checks` jars read these, and nothing else does:
+
+| Variable | Default | Used by | Purpose |
+| --- | --- | --- | --- |
+| `TARANTINO_WARMUP_SECONDS` | 30 | `bench load` | Requests of each trial before the measurement, which are not recorded |
+| `TARANTINO_MEASUREMENT_SECONDS` | 120 | `bench load` | Measured part of each trial, whose requests go to `load/<trial>.csv.gz` |
+| `TARANTINO_FRONTEND_URL` | `http://localhost:8080` | `checks` | Front-end entry port (§6.1) |
+| `TARANTINO_OPERATIONAL_URL` | `http://localhost:8081` | `checks` | Operational entry port (§6.1) |
+
+`checks` also reads `TARANTINO_SNAPSHOT_SECONDS`, with its default, to wait for the snapshot refresh, and `bench explain` reads `TARANTINO_MONGO_URI`. `search-latency.sh` leaves `bench load` with its defaults.
+
 ### 4.8 Transition logs
 
 Each service writes one line for every book or batch state change it achieves (§5.1), and `control` also writes one for every message it requeues, with equal `from` and `to`. The line is written by `TransitionLog`, in `common`, at INFO level and with these keys in this order; `-` marks what does not apply:
@@ -349,7 +360,7 @@ transition entity=book id=1342 from=QUEUED to=DOWNLOADING batch_id=- generation=
 - `enqueued_at` is the one from the `BookTask` when the transition comes from a message (claiming a download or a book for a batch); otherwise, `-`. When a batch drained several messages for the same book, it is the earliest of them.
 - `at` is `Instant.now()` when the write finishes, and `replica` is the container hostname.
 - It is only written when the conditional write matches. `bench` derives `coordination.csv` (§9) from these lines, searching from `transition`, because `slf4j-simple` puts its prefix in front.
-- After “Publish a batch”, the indexer writes the `INDEXING`→`PUBLISHED` line of every book of the batch; if `control` completed some of them first (§5.3, step 3), those books have two such lines. `bench` reads neither: a book is published at the `at` of its batch's `WRITING`→`PUBLISHED` line, the earliest one if there are several.
+- After “Publish a batch”, the indexer and `control` (§5.3, step 3) mark a book `PUBLISHED` with the same write, so each book has one `INDEXING`→`PUBLISHED` line, from whichever matched. `bench` does not read it: a book is published at the `at` of its batch's `WRITING`→`PUBLISHED` line, the earliest one if there are several.
 
 ## 5. Conditional writes and reconciliation
 
@@ -378,10 +389,10 @@ Dates compared across processes use the Mongo server's time (`$$NOW`), never the
 | Claim its books | `indexer` | `updateMany` with `{_id: {$in: ids}, status: "DOWNLOADED"}` | `[{$set: {status: "INDEXING", batch_id: B, generation: w, updated_at: "$$NOW"}}]`; then `find({batch_id: B, status: "INDEXING"})` gives the batch's books | The others are ignored; if none is left, it stops renewing the batch and `control` abandons it when it expires |
 | Renew a batch | `indexer`, every `HEARTBEAT` | `{_id: B, status: "WRITING", claim_id: C}` | `[{$set: {lease_until: {$add: ["$$NOW", L]}}}]` | Lease lost: stops writing |
 | Fail at indexing | `indexer` | `{_id: id, status: "INDEXING", batch_id: B}` | `[{$set: {status: "FAILED", last_error: "NOT_IN_DATALAKE", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; the book leaves the batch, and if none is left the batch is not published, as in “Claim its books” | No longer in this batch: nothing |
-| Publish a batch | `indexer` | `{_id: B, status: "WRITING", claim_id: C, $expr: {$gt: ["$lease_until", "$$NOW"]}}`, with `findOneAndUpdate` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", book_ids: books}}, {$unset: "lease_until"}]`, with `books` never empty; then `updateMany({batch_id: B, status: "INDEXING"}, [{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}])` and `BatchPublished` from the document it returns (§4.2) | Lease lost: neither marks books nor notifies |
+| Publish a batch | `indexer` | `{_id: B, status: "WRITING", claim_id: C, $expr: {$gt: ["$lease_until", "$$NOW"]}}`, with `findOneAndUpdate` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", book_ids: books}}, {$unset: "lease_until"}]`, with `books` never empty; then, for each book of `books`, “Complete a publication” with `B`, whose line it only writes if the write matched, and `BatchPublished` from the document it returns (§4.2) | Lease lost: neither marks books nor notifies |
 | Abandon a batch | `control` | `{_id: B, status: "WRITING", $expr: {$lte: ["$lease_until", "$$NOW"]}}` | `[{$set: {status: "ABANDONED", abandoned_at: "$$NOW"}}, {$unset: "lease_until"}]` | It was published or renewed: untouched |
 | Release its books | `control` | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `ABANDONED` or without a document | `[{$set: {status: "DOWNLOADED", enqueued_at: "$$NOW", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; then `BookTask` to `books-to-index` | Someone changed it first: nothing |
-| Complete a publication | `control` | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `PUBLISHED` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}]` | Already done |
+| Complete a publication *(common)* | `indexer`, after “Publish a batch”; `control`, in step 3 of §5.3 | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `PUBLISHED` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}]` | Already done |
 | Reindex into another generation | `control` | `{_id: id, status: "PUBLISHED", generation: {$lt: w}}` | `[{$set: {status: "DOWNLOADED", enqueued_at: "$$NOW", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; then `BookTask` to `books-to-index` | Already reindexed: nothing |
 | Open a rebuild | `POST /index/rebuild` | `{_id: "rebuild", status: {$ne: "RUNNING"}}`, with upsert | `[{$set: {target_generation: g + 1, status: "RUNNING", requested_at: "$$NOW", switched_at: null}}]` | One is already running: the upsert fails with code 11000 and the existing one is returned (§5.4) |
 | Switch generation | `control` | `{_id: "current", generation: t - 1}` | `[{$set: {generation: t, switched_at: "$$NOW"}}]` | Someone already switched it |
@@ -652,7 +663,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 
 ## 9. Tests, benchmarks and runs
 
-**Tests.** Each conditional write has a test with two claimants at once, with Testcontainers MongoDB and embedded Hazelcast, in the module that owns it. The functional API checks (F4) live in `checks`, run against the running stack and validate every response against `api/openapi.yaml`.
+**Tests.** Each conditional write has a test with two claimants at once, with Testcontainers MongoDB and embedded Hazelcast, in the module that owns it. The functional API checks (F4) live in `checks`, run against the running stack and validate every response against `api/openapi.yaml`. CI runs them with one `query` replica and again with three, which must give the same answers.
 
 **JMH.** In each service's `src/test/java`, with at least 5 warmup and 10 measurement iterations, three forks, so that the error also covers the differences between JVMs, a fixed `-Xmx` and JSON output (`-rf json`) in the `jmh/` folder of its run; `bench` converts it to CSV. The iterations, forks and heap go in the benchmark's annotations, so every way of launching it keeps them, and each benchmark sets an iteration length that fits how long its operation takes. They run with `exec:exec` and `%classpath`, because JMH cannot fork its JVM from `exec:java`.
 
@@ -675,13 +686,14 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 | `jmh/` | Raw JMH output in JSON and its CSV, with forks, iterations and `-Xmx` |
 | `load/` | One row per load-generator request: instant, path, status and latency in µs. Each trial has its own gzip-compressed `load/<trial>.csv.gz`, because a run holds millions of requests and GitHub rejects files over 100 MB |
 | `stats.csv` | `docker stats` every second: container, CPU and memory |
+| `host.csv` | `bench stats`, next to `stats.csv`, every second: the CPU of the whole host in percent of one core, as `docker stats` counts it, and its memory in use, as the operating system of the machine that runs the script reports them. Runs made before 1.9.2 do not have it |
 | `logs/<service>.log` | `docker compose logs --no-color --timestamps <service>` of each service, with the transition logs (§4.8); in a run with trials, `logs/<trial>/<service>.log` |
 | `coordination.csv` | Queue wait and time to publication for each book, and for each trial in a run with trials, derived from the transition logs in `logs/` |
 | `ingest.csv` | `ingest-throughput` only: one row per trial with its factors, its repetition, and the books, seconds and books per second of two windows. The whole window runs from the first download claim to the last book downloaded, and the steady one from the download that completes 10 % of the books to the one that completes 90 %. `summary.csv` holds them as `ingest_throughput` and `ingest_throughput_steady` |
 | `index.csv` | `index-throughput` only: one row per trial with its factors, its repetition, and the books, seconds and books per second of its whole window, from the first index claim to the last batch published, in the highest generation a batch of that trial was published in. `summary.csv` holds it as `index_throughput` |
 | `checks.json` | Recovery runs only: `GET /control/status` and the `/search` answers to `workload/queries.txt` once recovered (§8) |
 | `explain/` | `explain("executionStats")` of each measured Mongo query |
-| `summary.csv` | The figures the report cites: metric, configuration, mean, sample standard deviation, half-width of the 95 % CI of the mean, nearest-rank p50, p95 and p99, and unit. The mean, standard deviation and CI are always over the repetitions of one configuration, one value per repetition, with Student's t for n − 1 degrees of freedom, n being the number of repetitions; p50, p95 and p99 are over the pooled values of every repetition (books, `docker stats` refreshes or requests) when the metric has them, and over the repetition values otherwise, where with only a few repetitions p95 and p99 are the maximum and the report does not cite them. The one exception is `search_latency`, one row per `search-latency` trial over the requests of that trial. `bench search-latency <run>` adds, per configuration of `search-latency`, `search_latency_mean`, `search_latency_p50`, `search_latency_p95` and `search_latency_p99` in µs, from each repetition's mean or percentile, and `search_throughput` in requests/s, the answered requests per second of each repetition. `bench resources <run>` adds, per configuration and phase of `resource-usage`, `stack_cpu_total` in percent and `stack_memory_total` in MiB, every container of the stack added up per refresh, next to the `cpu_per_replica`, `cpu_total` and `memory_per_replica` of each service |
+| `summary.csv` | The figures the report cites: metric, configuration, mean, sample standard deviation, half-width of the 95 % CI of the mean, nearest-rank p50, p95 and p99, and unit. The mean, standard deviation and CI are always over the repetitions of one configuration, one value per repetition, with Student's t for n − 1 degrees of freedom, n being the number of repetitions; p50, p95 and p99 are over the pooled values of every repetition (books, `docker stats` refreshes or requests) when the metric has them, and over the repetition values otherwise, where with only a few repetitions p95 and p99 are the maximum and the report does not cite them. The one exception is `search_latency`, one row per `search-latency` trial over the requests of that trial. `bench search-latency <run>` adds, per configuration of `search-latency`, `search_latency_mean`, `search_latency_p50`, `search_latency_p95` and `search_latency_p99` in µs, from each repetition's mean or percentile, and `search_throughput` in requests/s, the answered requests per second of each repetition. `bench resources <run>` adds, per configuration and phase of `resource-usage`, `stack_cpu_total` in percent and `stack_memory_total` in MiB, every container of the stack added up per refresh, next to the `cpu_per_replica`, `cpu_total` and `memory_per_replica` of each service, and, when the run has `host.csv`, `host_cpu_total` in percent and `host_memory_used` in MiB |
 | `charts/` | The run's XChart charts in PNG, each with its `run_id` in the footer |
 | `log.txt` | Full command output |
 
