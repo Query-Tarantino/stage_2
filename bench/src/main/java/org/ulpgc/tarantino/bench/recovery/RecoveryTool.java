@@ -105,8 +105,12 @@ public final class RecoveryTool {
             return WRONG_USAGE;
         }
         List<String> differences = new RecoveryComparison(RUNS).differences(args.getFirst());
+        if (differences.isEmpty()) {
+            LOGGER.info("Every run of script {} ends with the same books and /search answers", args.getFirst());
+            return DONE;
+        }
         differences.forEach(LOGGER::error);
-        return differences.isEmpty() ? DONE : FAILED;
+        return FAILED;
     }
 
     private static int recover(String script, Path runDirectory, Instant failedAt) {
