@@ -16,10 +16,11 @@ through Hazelcast by default or in one of three other modes, and everything runs
 
 The system runs end to end in its five coordination modes: `control` seeds the candidates and reconciles, `crawler`
 downloads them, `indexer` publishes them in batches and `query` answers the search API behind nginx, and the functional
-checks pass in every mode. Every row of the failure matrix recovers in mode `hazelcast` with 1, 2 and 3 replicas, and the five original
-experiments have their November runs in `benchmarks/runs/`. The report cites only the campaign of
-`scripts/bench/all.sh`, which runs every experiment and the recovery matrix again in every mode, from one commit of
-`arch-testing` on the official machine (`SPEC.md` §9).
+checks pass in every mode. Every row of the failure matrix recovers in mode `hazelcast` with 1, 2 and 3 replicas, and
+the five original experiments have their November runs in `benchmarks/runs/`. The report cites the campaign of
+`scripts/bench/all.sh`, which runs the experiments and the recovery matrix again in every mode, from one commit of
+`arch-testing` on the official machine, and the two November runs it reuses because their code did not change
+(`SPEC.md` §9 and [benchmarks/README.md](benchmarks/README.md)).
 
 ## Requirements
 
@@ -179,7 +180,7 @@ themselves: `TARANTINO_VARIANT=polling scripts/recovery/01-crawler-after-claim.s
 | `broker-latency`: Hazelcast against ActiveMQ, in isolation | `scripts/bench/broker-latency.sh` |
 | `recovery-delay`: how lost work comes back, over recovery runs | `scripts/bench/recovery-delay.sh benchmarks/runs/<recovery run>...` |
 | `coordination-variants`: every mode with 1, 2 and 3 replicas | `scripts/bench/coordination-variants.sh` |
-| `campaign`: every experiment and the recovery matrix in every mode | `scripts/bench/all.sh --dry-run`, then `scripts/bench/all.sh` |
+| `campaign`: the experiments and the recovery matrix in every mode, in about 11 hours | `scripts/bench/all.sh --dry-run`, then `scripts/bench/all.sh` |
 
 ## Corpus
 

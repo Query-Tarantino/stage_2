@@ -171,11 +171,22 @@ the runs of a row give the same books and `/search` answers whatever N. Recovery
 
 ## Coordination modes: the campaign
 
-`scripts/bench/all.sh` runs every experiment above again, plus `publication-visibility`, `broker-latency`,
+`scripts/bench/all.sh` runs the experiments above again, plus `publication-visibility`, `broker-latency`,
 `coordination-variants` and `recovery-delay`, and the recovery matrix in each of the five coordination modes
-(`SPEC.md` §11): 217 steps from one commit of `arch-testing` on the machine above. The report cites only that campaign,
-so the November runs of this file are superseded once its runs are in `benchmarks/runs/`. Each script prints its
-hypotheses before measuring; `scripts/bench/all.sh --dry-run` lists every step and its command.
+(`SPEC.md` §11): 187 steps, about 11 hours, from one commit of `arch-testing` on the machine above. Each script prints
+its hypotheses before measuring; `scripts/bench/all.sh --dry-run` lists every step and its command.
+
+The report cites only that campaign, so the November runs of this file are superseded once its runs are in
+`benchmarks/runs/`, except two that it reuses, on the same machine, because the code they measure did not change:
+
+| Measured with | Reused, or measured instead | Why |
+| --- | --- | --- |
+| `search-latency` | `20261104-140900-search-latency-8e1c1e8`, above | Its request path only had refactors since `8e1c1e8`, no dependency changed, and its JMH already met the protocol |
+| The indexer's JMH | `jmh/` of `20261103-204454-index-throughput-6925d4e` | The tokenizer, the header parser and the batch writer did not change since `6925d4e`; the rebuild trials run again |
+| `coordination-cost` | The `hazelcast` trials of `coordination-variants` | They run the same procedure with the same N and repetitions |
+| Rows 09–12 of the failure matrix | N = 1 only in the four modes other than `hazelcast` | Their recovery time is mostly processing the whole corpus, which `coordination-variants` measures for every N and mode |
+
+Without those cuts the campaign took about 18 hours, more than one night on the one official machine.
 
 ## What belongs to the single machine, and what Stage 3 changes
 

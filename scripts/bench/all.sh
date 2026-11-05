@@ -16,9 +16,11 @@ readonly BYTES_PER_GIB=$((1024 * 1024 * 1024))
 readonly WRONG_USAGE=2
 readonly OVERRIDING_VARIABLES='^(TARANTINO_.*|JAVA_TOOL_OPTIONS|CRAWLER_CRASH_AT|INDEXER_CRASH_AT)$'
 readonly ROWS=(01 02 03 04 05 06 07 08 09 10 11 12 13 14)
+readonly MIRROR_ROWS=(09 10 11 12)
 readonly DELAY_ROWS=(04 05 12)
-readonly EXPERIMENTS=(ingest-throughput index-throughput search-latency coordination-cost resource-usage
-    publication-visibility broker-latency coordination-variants)
+readonly EXPERIMENTS=(ingest-throughput index-throughput resource-usage publication-visibility broker-latency
+    coordination-variants)
+readonly WITHOUT_JMH=--without-jmh
 
 dry_run=false
 only_step=""
@@ -54,7 +56,18 @@ row_applies() {
 }
 
 replicas_of_row() {
-    if [[ $1 == 14 ]]; then echo "2 3"; else echo "1 2 3"; fi
+    local mode=$1 row=$2
+    if [[ $row == 14 ]]; then
+        echo "2 3"
+    elif [[ $mode != hazelcast ]] && is_mirror_row "$row"; then
+        echo "1"
+    else
+        echo "1 2 3"
+    fi
+}
+
+is_mirror_row() {
+    [[ " ${MIRROR_ROWS[*]} " == *" $1 "* ]]
 }
 
 recovery_script() {
@@ -66,7 +79,7 @@ recovery_steps() {
     for mode in "${MODES[@]}"; do
         for row in "${ROWS[@]}"; do
             row_applies "$mode" "$row" || continue
-            for replicas in $(replicas_of_row "$row"); do
+            for replicas in $(replicas_of_row "$mode" "$row"); do
                 echo "recovery-$mode-$row-r$replicas"
             done
         done
@@ -88,6 +101,7 @@ command_of() {
         recovery-summary) echo "recovery summary over every recovery run: bench manifest start, bench recovery-chart, bench manifest finish" ;;
         recovery-delay) echo "scripts/bench/recovery-delay.sh <the runs of rows ${DELAY_ROWS[*]} in every mode where they apply>" ;;
         recovery-*) recovery_command "$step" ;;
+        index-throughput) echo "scripts/bench/$step.sh $WITHOUT_JMH" ;;
         *) echo "scripts/bench/$step.sh" ;;
     esac
 }
@@ -145,6 +159,7 @@ execute() {
         recovery-summary) recovery_summary ;;
         recovery-delay) recovery_delay ;;
         recovery-*) bash -c "$(recovery_command "$step")" ;;
+        index-throughput) "scripts/bench/$step.sh" "$WITHOUT_JMH" ;;
         *) "scripts/bench/$step.sh" ;;
     esac
 }
