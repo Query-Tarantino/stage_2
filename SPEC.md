@@ -10,9 +10,7 @@ Stage 2 contracts. Everything shared by two or more modules has its literal name
 
 ## 1. Scope and assumptions
 
-`crawler` downloads books from Project Gutenberg, `indexer` indexes them in batches, `query` searches with TF-IDF and `control` seeds and reconciles. The services never call each other: they coordinate through Hazelcast, keep the texts in the datalake and the source of truth in MongoDB.
-
-The services coordinate in one of four modes (§11); the default, `hazelcast`, is the one the rest of this file describes.
+`crawler` downloads books from Project Gutenberg, `indexer` indexes them in batches, `query` searches with TF-IDF and `control` seeds and reconciles. The services keep the texts in the datalake and the source of truth in MongoDB, and coordinate in one of four modes (§11). In the default one, `hazelcast`, which the rest of this file describes, they never call each other: they coordinate through Hazelcast.
 
 Everything runs on one machine with Docker Compose. The design depends on these assumptions, which Stage 3 will have to lift:
 
@@ -28,17 +26,28 @@ Everything runs on one machine with Docker Compose. The design depends on these 
 
 ```mermaid
 flowchart TB
-  FE["Front-end"] -->|":8080"| NG["nginx"]
-  ADM["Scripts and admin"] -->|":8081"| NG
-  NG -->|"/control/*"| CT["control ×1 :7004"]
-  NG -->|"/ingest/*"| CR["crawler ×N :7001"]
-  NG -->|"/index/*"| IX["indexer ×N :7002"]
-  NG -->|"/search, /books, /search/filters"| Q["query ×N :7003"]
-  subgraph HZ["Hazelcast :5701"]
-    QD[["books-to-download"]]
-    QI[["books-to-index"]]
-    TP(("published-batches"))
+  FE["Front-end"]
+  ADM["Scripts and admin"]
+  subgraph HOST["One host: the Docker Compose network"]
+    NG["nginx: 8080 front-end, 8081 operations"]
+    CT["control ×1 :7004<br/>reconciliation thread"]
+    CR["crawler ×N :7001<br/>8 download threads each"]
+    IX["indexer ×N :7002<br/>1 batch thread each"]
+    Q["query ×N :7003<br/>1 snapshot thread each"]
+    subgraph HZ["Hazelcast ×1 :5701"]
+      QD[["books-to-download"]]
+      QI[["books-to-index"]]
+      TP(("published-batches"))
+    end
+    DL[("datalake volume")]
+    M[("MongoDB ×1 :27017")]
   end
+  FE -->|":8080"| NG
+  ADM -->|":8081"| NG
+  NG -->|"/control/*"| CT
+  NG -->|"/ingest/*"| CR
+  NG -->|"/index/*"| IX
+  NG -->|"/search, /books, /search/filters"| Q
   CT -->|"seeding and rescues"| QD
   QD --> CR
   CR -->|"POST /ingest and retries"| QD
@@ -48,13 +57,15 @@ flowchart TB
   IX -->|"POST /index/update"| QI
   IX -->|"BatchPublished"| TP
   TP --> Q
-  CR -->|"header and body"| DL[("datalake batch")]
+  CR -->|"header and body"| DL
   DL --> IX
   CT -->|"deletes old .tmp"| DL
-  CR & IX & CT & Q <--> M[("MongoDB :27017")]
+  CR & IX & CT & Q <--> M
 ```
 
 The life of a book: `control` seeds it, `crawler` downloads and enqueues it, `indexer` publishes it in a batch and `query` shows it.
+
+The diagram is mode `hazelcast`. The other modes (§11) only change how work reaches the workers and how `query` learns of a batch: §11.1 says what takes Hazelcast's place in each, and nothing else in the diagram moves.
 
 ### 2.2 Modules
 
@@ -68,6 +79,18 @@ The life of a book: `control` seeds it, `crawler` downloads and enqueues it, `in
 | `bench` | Load generator, recovery checks (§8), result processing and XChart charts for the integration benchmarks | Not deployed; the Compose `bench` service runs it on demand (§2.4) |
 | `checks` | Functional API checks (F4) against the running stack and against `api/openapi.yaml` | Not deployed |
 
+Each service is one process per replica, and each process runs these threads. Requests never run work: a handler only validates, writes state and enqueues (§3), so the HTTP pool only waits on MongoDB and the broker.
+
+| Process | Replicas | Threads |
+| --- | --- | --- |
+| `crawler` | N with `--scale`, 1 by default | `TARANTINO_PARALLEL_DOWNLOADS` download workers (`download-<i>`, 8 by default), each with its own queue handles; one lease heartbeat per book being downloaded, on a virtual thread; Javalin's HTTP pool |
+| `indexer` | N, 1 by default | One batch loop (`index-batches`); one lease heartbeat per open batch, on a virtual thread; Javalin's HTTP pool |
+| `query` | N, 1 by default | One snapshot thread (`snapshot`), the only one that refreshes; the topic listener and the internal refresh route only ask it to; Javalin's HTTP pool, which only reads the snapshot |
+| `control` | Always 1 | One `reconciliation` thread for the reconciliation and the datalake cleanup, which therefore never overlap; in mode `orchestrator`, one `orchestrator` thread for its ticks (§11.4); Javalin's HTTP pool |
+| `mongo`, `hazelcast`, `activemq` and `nginx` | 1 each | Their own; nginx runs `worker_processes auto`, one per CPU |
+
+Javalin's pool goes from 8 to 250 threads unless `TARANTINO_HTTP_THREADS` caps it (§4.7). Within a process, threads only share an immutable snapshot or a `java.util.concurrent` structure: the `query` snapshot behind an `AtomicReference`, the local queues of mode `orchestrator` (`ArrayBlockingQueue`) and the books the orchestrator has in flight (`ConcurrentHashMap`); the code takes no lock of its own. Replicas share nothing in memory: they only meet in MongoDB, through the conditional writes of §5.1, and in the broker of the mode, so no in-process lock is ever needed to keep two replicas apart.
+
 ### 2.3 Repository and owners
 
 ```text
@@ -75,6 +98,8 @@ stage_2/
 ├── SPEC.md, README.md
 ├── pom.xml                  parent: modules and every version
 ├── docker-compose.yml, docker-compose.mirror.yml, Dockerfile, .dockerignore, .gitignore
+├── docker-compose.activemq.yml, docker-compose.activemq-persistent.yml, docker-compose.polling.yml, docker-compose.orchestrator.yml
+├── activemq/activemq.xml
 ├── common/
 ├── services/
 │   ├── crawler/
@@ -87,15 +112,15 @@ stage_2/
 ├── nginx/nginx.conf
 ├── scripts/
 │   ├── fill_cache.sh        from Stage 1
-│   ├── bench/<experiment>.sh
+│   ├── bench/<experiment>.sh, trials.sh, modes.sh, all.sh
 │   └── recovery/<nn>-<row>.sh
 ├── workload/                sample_ids.txt, book_ids.txt, queries.txt, stopwords.txt, corpus.sha256
-└── benchmarks/runs/<run_id>/
+└── benchmarks/README.md, benchmarks/runs/<run_id>/
 ```
 
 | Path | Owner |
 | --- | --- |
-| `services/crawler`, `docker-compose.yml`, `docker-compose.mirror.yml`, `Dockerfile` | A |
+| `services/crawler`, `docker-compose.yml`, its overrides, `activemq/` and `Dockerfile` | A |
 | `services/indexer` | B |
 | `services/query`, `nginx/`, `api/openapi.yaml`, `checks/` | C |
 | `services/control`, `scripts/recovery/` | D |
@@ -709,7 +734,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 - Before measuring, the script checks the corpus against `workload/corpus.sha256` (id and SHA-256 of each text) and stops if it does not match: Gutenberg updates its texts, so two caches filled on different days may differ.
 - Books come from the local mirror, as in Stage 1, so the network is not measured. One factor changes at a time, with the hypothesis written before measuring.
 - An experiment that measures several configurations, or repeats one, in a single run splits it into trials, one per configuration and repetition, named `<factor>-<value>-…-rep-<n>`, as in `replicas-2-workers-8-rep-1`. Once each trial's stack is up, the script runs `bench manifest trial <run dir> <trial>`, which adds that trial's replicas and threads per service to `manifest.json`, and when the trial ends it saves the trial's logs in `logs/<trial>/`. `bench wait <state|queue> [<minimum> [<timeout seconds>]]` returns once that state or queue holds at least `<minimum>`, 1 by default, so a trial can start and end on a whole phase instead of the first book, and gives up after the timeout, 300 s by default. `bench wait generation <n> [<timeout seconds>]` returns once `GET /control/status` reports a `generation` of at least `<n>`, so a trial can end when a rebuild has switched generation (§5.4), and gives up after the same timeout and default. `bench wait snapshot <books> [<timeout seconds>]` returns once the snapshot of every `query` replica, asked directly at each address of the `query` service name rather than through nginx, holds at least `<books>` books in `GET /search/filters`, so a trial that measures publication visibility saves its logs only after every replica has logged the `snapshot` line of its last batch (§4.8), however late its periodic refresh comes.
-- The runs the report cites are official: all of them run on the same machine, from a `dev` commit with a clean tree and the scripts as merged, and the owner of each experiment commits its run. A run made anywhere else is a test run and is not committed. Each configuration runs `TARANTINO_REPETITIONS` times (§4.7), and the repetitions are interleaved: repetition 1 of every configuration, then repetition 2, and so on, so drift over a long run, such as a laptop slowing down as it heats up, spreads across every configuration instead of falling on one.
+- The runs the report cites are official: all of them come from the campaign below, on the same machine and from one clean commit, and the owner of each experiment commits its run. The runs of 2 to 4 November, from clean `dev` commits, stay in git and are no longer cited. A run made anywhere else is a test run and is not committed. Each configuration runs `TARANTINO_REPETITIONS` times (§4.7), and the repetitions are interleaved: repetition 1 of every configuration, then repetition 2, and so on, so drift over a long run, such as a laptop slowing down as it heats up, spreads across every configuration instead of falling on one.
 - `workload/sample_ids.txt` holds 20 books of the corpus, so all of them are in the cache and in the mirror: with the mirror, a book outside it would end `FAILED` with `NOT_FOUND`. They include books in German and French and one in German and English, so the checks cover the `language` filter.
 - The `campaign` entry, `scripts/bench/all.sh`, runs every experiment and the recovery matrix in every mode, one after the other, and writes `benchmarks/runs/<run_id>/runs.txt` with each step, its exit code and its run folders. The campaign is official when it comes from a clean commit of `arch-testing` on the official machine, and every run it opens is official too.
 - Each complexity bound in the report states which assumptions it depends on and is checked with at least three sizes. In Mongo, the plan of each measured query is saved too.
