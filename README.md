@@ -5,8 +5,8 @@
 
 Search engine over [Project Gutenberg](https://www.gutenberg.org/) books in Java 25, with Javalin and Jackson.
 `crawler` downloads books, `indexer` indexes them in batches, `query` searches them with TF-IDF and `control`
-seeds and reconciles. The services coordinate through Hazelcast, keep the texts in a datalake and the source
-of truth in MongoDB, and everything runs on one machine with Docker Compose.
+seeds and reconciles. The services keep the texts in a datalake and the source of truth in MongoDB, coordinate
+through Hazelcast by default or in one of three other modes, and everything runs on one machine with Docker Compose.
 
 - [SPEC.md](SPEC.md) holds every contract: collections, messages, states, conditional writes, the HTTP API,
   the search algorithm, the failure matrix and the benchmark runs.
@@ -14,14 +14,18 @@ of truth in MongoDB, and everything runs on one machine with Docker Compose.
 
 ## Status
 
-The system runs end to end: `control` seeds the candidates and reconciles, `crawler` downloads them, `indexer` publishes
-them in batches and `query` answers the search API behind nginx. Every row of the failure matrix recovers with 1, 2 and
-3 replicas, and the five experiments have their official run, all in `benchmarks/runs/` (`SPEC.md` §9).
+The system runs end to end in its five coordination modes: `control` seeds the candidates and reconciles, `crawler`
+downloads them, `indexer` publishes them in batches and `query` answers the search API behind nginx, and the functional
+checks pass in every mode. Every row of the failure matrix recovers in mode `hazelcast` with 1, 2 and 3 replicas, and the five original
+experiments have their November runs in `benchmarks/runs/`. The report cites only the campaign of
+`scripts/bench/all.sh`, which runs every experiment and the recovery matrix again in every mode, from one commit of
+`arch-testing` on the official machine (`SPEC.md` §9).
 
 ## Requirements
 
 - Java 25 and Maven 3.9+
 - Docker with Compose, for MongoDB and Hazelcast and for the Testcontainers tests
+- Bash 4 or later for the scripts in `scripts/`; macOS ships 3.2, so install a newer one first with `brew install bash`
 
 On macOS with [Colima](https://github.com/abiosoft/colima) instead of Docker Desktop, export first:
 
@@ -40,8 +44,9 @@ mvn -pl services/indexer -am verify           # one module with what it needs
 Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` also runs the cases of
 `workload/conformance/` that still apply (`SPEC.md` §10).
 
-GitHub Actions runs `mvn clean verify`, the functional checks against the stack with the 20 sample books, first with
-one `query` replica and then with three behind nginx, and the workflow and shell linters on every push, and fails if the MongoDB tests were skipped. CodeQL scans every pull request
+GitHub Actions runs on every push `mvn clean verify`, failing if the MongoDB tests were skipped; the functional checks
+against the stack with the 20 sample books, in mode `hazelcast` with one `query` replica and then with three behind
+nginx, and once in each other coordination mode; and the workflow and shell linters. CodeQL scans every pull request
 to `dev` and `main`. Every row of the failure matrix runs with 1, 2 and 3 replicas on the benchmark corpus, as the
 official runs do, on every pull request to `main`, and to `dev` when it changes `scripts/recovery/`; those runs are
 test runs (`SPEC.md` §9), kept as workflow artifacts and never committed. The workflows are in `.github/workflows/`.
@@ -69,6 +74,7 @@ Without `docker-compose.mirror.yml`, `crawler` downloads over HTTP from Gutenber
 | Entry ports | Only nginx publishes ports: 8080 sends `/search`, `/search/filters` and `/books/` to `query`, and 8081 sends `/ingest/`, `/index/` and `/control/` to their service; any other path gives `404` |
 | Service ports | `TARANTINO_PORT`: 7001 `crawler`, 7002 `indexer`, 7003 `query` and 7004 `control`, inside the Compose network, each with its `/health`: `docker compose exec query curl -s localhost:7003/health` |
 | Addresses | `TARANTINO_MONGO_URI` and `TARANTINO_HAZELCAST`, which `docker-compose.yml` points to `mongo` and `hazelcast` |
+| Data paths | `TARANTINO_DATALAKE` (the `datalake` volume at `/data/datalake`), `TARANTINO_WORKLOAD` (`./workload` at `/app/workload`) and `TARANTINO_MIRROR` (`benchmarks/mirror` at `/data/mirror` with `docker-compose.mirror.yml`) |
 | Replicas | `docker compose up -d --scale crawler=3 --scale indexer=3 --scale query=2`; `control` always has one. Downloads at once: `crawler` replicas × `TARANTINO_PARALLEL_DOWNLOADS` (8) |
 | HTTP threads | `TARANTINO_HTTP_THREADS`; without it, Javalin's own pool, from 8 to 250 threads |
 | Timing | The `TARANTINO_*_SECONDS` variables of `SPEC.md` §4.7, read from the shell by `docker-compose.yml` and the same for every service |
@@ -81,6 +87,18 @@ Without `docker-compose.mirror.yml`, `crawler` downloads over HTTP from Gutenber
 Colima's default VM has 2 GiB, which fits one replica of each service; give it more before scaling, for example
 `colima start --memory 6`.
 
+Each service is a standalone Maven module that builds an executable jar, `services/<service>/target/<service>-1.0-SNAPSHOT.jar`,
+so one can also run on its own outside Compose. Its defaults point to MongoDB and Hazelcast on `localhost`, which
+Compose does not publish, so start them first:
+
+```bash
+docker run -d --name mongo -p 27017:27017 mongo:7.0
+docker run -d --name hazelcast -p 5701:5701 -e HZ_CLUSTERNAME=tarantino hazelcast/hazelcast:5.7.0
+TARANTINO_MIRROR=benchmarks/mirror java -jar services/crawler/target/crawler-1.0-SNAPSHOT.jar   # port 7001
+docker rm -f mongo hazelcast                                                                    # afterwards
+```
+
+Run that way, a service writes its datalake to `datalake/` in the current folder, which git ignores.
 
 ### Functional checks and benchmarks
 
@@ -88,6 +106,15 @@ Run the functional API checks (F4) against the running stack and validate every 
 
 ```bash
 java -jar checks/target/checks-1.0-SNAPSHOT.jar
+```
+
+In another coordination mode, give the checks the mode's Compose files, which they use to reach the service ports from
+inside the containers, and the mode itself; in mode `orchestrator` they also check the internal routes of `SPEC.md`
+§11.4 from inside the `control` container:
+
+```bash
+COMPOSE_FILE=docker-compose.yml:docker-compose.mirror.yml:docker-compose.orchestrator.yml TARANTINO_COORDINATION=orchestrator \
+  java -jar checks/target/checks-1.0-SNAPSHOT.jar
 ```
 
 Regenerate `checks/expected.json` when the corpus or schema changes:
@@ -99,7 +126,7 @@ java -jar checks/target/checks-1.0-SNAPSHOT.jar --generate-expected
 Each experiment of `SPEC.md` §9 is one script, run from a clean commit with `mvn -DskipTests package` done; each
 writes its own `benchmarks/runs/<run_id>/`:
 
-| Experiment | Command | Official run |
+| Experiment | Command | November run |
 | --- | --- | --- |
 | Ingestion throughput by crawler replicas and workers | `./scripts/bench/ingest-throughput.sh` | `20261102-204917-ingest-throughput-77ed00a` |
 | Indexing throughput by batch size and indexer replicas, rebuilding the index once per trial | `./scripts/bench/index-throughput.sh` | `20261103-204454-index-throughput-6925d4e` |
@@ -178,10 +205,19 @@ services/
 bench/                  load generator, recovery checks and benchmark metrics
 checks/                 functional API checks (F4) and OpenAPI validation
 api/openapi.yaml        HTTP API
-nginx/nginx.conf        entry ports 8080 and 8081
+nginx/nginx.conf        entry ports 8080 and 8081, and 8082 for the internal routes of mode orchestrator
 docker-compose.yml      the stack; docker-compose.mirror.yml adds the local mirror
+docker-compose.*.yml    one override per coordination mode other than hazelcast
+activemq/activemq.xml   the ActiveMQ broker configuration, with its statistics plugin
 Dockerfile              the image of the four services
-scripts/fill_cache.sh   benchmark corpus
+scripts/
+  fill_cache.sh         benchmark corpus
+  bench/                one script per experiment, the shared trials.sh and modes.sh, and all.sh for the campaign
+  recovery/             one script per row of the failure matrix, and lib.sh
+benchmarks/
+  README.md             what the runs show
+  runs/<run_id>/        every benchmark and recovery run, versioned
+.github/                CI, CodeQL and the recovery workflow
 workload/
   book_ids.txt          corpus candidates, in order
   sample_ids.txt        20 books of the corpus, seeded by default
@@ -191,6 +227,6 @@ workload/
 ```
 
 The services follow the Stage 1 hexagonal layout, `model`, `ports`, `adapters` and `commands`, wired by each
-`Main` and its factory (`SPEC.md` §3). `SPEC.md` §2.3 has the full layout, with the modules still to come and the owner of each path.
+`Main` and its factory (`SPEC.md` §3). `SPEC.md` §2.3 has the full layout and the owner of each path.
 Benchmark and recovery runs go in `benchmarks/runs/<run_id>/`, which is versioned; `benchmarks/cache/`,
 `benchmarks/mirror/` and `datalake/` are not.
