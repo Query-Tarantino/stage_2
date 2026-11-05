@@ -57,23 +57,28 @@ public record Snapshot(
         if (totalBooks == 0) {
             return FiltersSummary.empty();
         }
+        return new FiltersSummary(languages(filters), years(filters), totalBooks);
+    }
+
+    /** Each language with its books, from most to fewest and then by code, named from the {@code common} table. */
+    private static List<LanguageFilter> languages(Collection<BookFilter> filters) {
         Map<String, Integer> languageCounts = filters.stream()
                 .flatMap(filter -> filter.languages().stream().distinct())
                 .collect(Collectors.groupingBy(code -> code, Collectors.summingInt(code -> 1)));
-        List<LanguageFilter> languages = languageCounts.entrySet().stream()
+        return languageCounts.entrySet().stream()
                 .sorted(Comparator.comparingInt(Map.Entry<String, Integer>::getValue).reversed()
                         .thenComparing(Map.Entry::getKey))
                 .map(entry -> new LanguageFilter(entry.getKey(), LanguageCodes.name(entry.getKey()).orElse(entry.getKey()), entry.getValue()))
                 .toList();
+    }
+
+    private static YearRange years(Collection<BookFilter> filters) {
         IntSummaryStatistics yearStats = filters.stream()
                 .map(BookFilter::year)
                 .filter(Objects::nonNull)
                 .mapToInt(Integer::intValue)
                 .summaryStatistics();
-        YearRange years = yearStats.getCount() == 0
-                ? new YearRange(null, null)
-                : new YearRange(yearStats.getMin(), yearStats.getMax());
-        return new FiltersSummary(languages, years, totalBooks);
+        return yearStats.getCount() == 0 ? new YearRange(null, null) : new YearRange(yearStats.getMin(), yearStats.getMax());
     }
 
     public record BookFilter(List<String> languages, Integer year) {
