@@ -34,6 +34,13 @@ class RecoveryToolTest {
     }
 
     @Test
+    void waitsForTheSnapshotsOnlyWithTheirBooks() {
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("snapshot")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("snapshot", "0")));
+        assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.waitFor(List.of("snapshot", "20", "900", "1")));
+    }
+
+    @Test
     void recoversOnlyATwoDigitScriptWithAnIsoFailureInstant() {
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.recovery(List.of("4", "run", "2026-11-10T15:30:00Z")));
         assertEquals(RecoveryTool.WRONG_USAGE, RecoveryTool.recovery(List.of("04", "run", "2026-11-10 15:30:00")));
