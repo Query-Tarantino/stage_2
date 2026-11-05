@@ -12,12 +12,10 @@ import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +37,7 @@ public class ApiChecker {
     private final String operationalUrl;
     private final Tokenizer tokenizer;
     private final List<JsonNode> sampleBooks = new ArrayList<>();
+    private final HealthChecks health;
     private final EntryPortChecks entryPorts;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
@@ -50,6 +49,7 @@ public class ApiChecker {
                 ? new FileStopwordsLoader(stopwordsPath).stopwords()
                 : Set.of();
         this.tokenizer = new Tokenizer(stopwords);
+        this.health = new HealthChecks(client);
         this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
     }
 
@@ -58,7 +58,7 @@ public class ApiChecker {
             throw new AssertionError("Expected answers file not found at " + expectedPath);
         }
         LOGGER.info("Starting API conformance checks");
-        checkHealth();
+        health.check();
         entryPorts.check();
         checkOperationalEndpoints();
         ensurePublishedAndRefreshed(sampleIds);
@@ -70,84 +70,6 @@ public class ApiChecker {
         checkSearchEndpoints();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
-    }
-
-    public void checkHealth() throws IOException, InterruptedException {
-        LOGGER.info("Checking /health on service ports");
-        Map<String, String> serviceByPort = Map.of(
-                "7001", "crawler",
-                "7002", "indexer",
-                "7003", "query",
-                "7004", "control"
-        );
-        for (Map.Entry<String, String> entry : serviceByPort.entrySet()) {
-            String port = entry.getKey();
-            String service = entry.getValue();
-            CheckedClient.Response response;
-            try {
-                response = client.get("http://localhost:" + port + "/health");
-            } catch (IOException exception) {
-                response = checkHealthViaDocker(service, port);
-            }
-            assertTrue(response.status() == 200 || response.status() == 503, "/health of " + service + " answers 200 or 503");
-            assertTrue(response.json() != null && response.json().has("status"), "/health of " + service + " has a status");
-        }
-    }
-
-    private CheckedClient.Response checkHealthViaDocker(String service, String port) throws IOException, InterruptedException {
-        List<String> command = new ArrayList<>(List.of("docker", "compose"));
-        String composeFileEnv = System.getenv("COMPOSE_FILE");
-        if (composeFileEnv == null || composeFileEnv.isBlank()) {
-            findComposePath().ifPresent(composePath -> {
-                command.add("-f");
-                command.add(composePath.toString());
-            });
-        }
-        command.addAll(List.of("exec", "-T", service, "curl", "-isS", "http://localhost:" + port + "/health"));
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new IOException("docker compose exec failed for " + service + " with exit code " + exitCode + ": " + output);
-        }
-        return parseCurlResponse(output, "/health");
-    }
-
-    private static Optional<Path> findComposePath() {
-        List<Path> candidates = List.of(
-                Paths.get("docker-compose.yml"),
-                Paths.get("../docker-compose.yml"),
-                Paths.get("../../docker-compose.yml")
-        );
-        return candidates.stream().filter(Files::exists).findFirst();
-    }
-
-    private CheckedClient.Response parseCurlResponse(String rawOutput, String path) throws IOException {
-        String[] parts = rawOutput.split("\r?\n\r?\n", 2);
-        String headerSection = parts[0];
-        String body = parts.length > 1 ? parts[1].trim() : "";
-        String[] lines = headerSection.split("\r?\n");
-        int statusCode = 200;
-        Map<String, List<String>> headers = new LinkedHashMap<>();
-        for (int index = 0; index < lines.length; index++) {
-            String line = lines[index].trim();
-            if (index == 0) {
-                String[] tokens = line.split("\\s+");
-                if (tokens.length >= 2) {
-                    statusCode = Integer.parseInt(tokens[1]);
-                }
-            } else if (!line.isEmpty()) {
-                int colonIndex = line.indexOf(':');
-                if (colonIndex > 0) {
-                    String headerName = line.substring(0, colonIndex).trim();
-                    String headerValue = line.substring(colonIndex + 1).trim();
-                    headers.computeIfAbsent(headerName, key -> new ArrayList<>()).add(headerValue);
-                }
-            }
-        }
-        return client.validateAndWrap("GET", path, statusCode, headers, body);
     }
 
     public void checkOperationalEndpoints() throws IOException, InterruptedException {
