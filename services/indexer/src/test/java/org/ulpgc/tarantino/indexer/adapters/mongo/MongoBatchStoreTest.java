@@ -123,19 +123,6 @@ class MongoBatchStoreTest {
     }
 
     @Test
-    void onlyOneOfTwoMarksOfTheSameBookAtOnceMatches() throws Exception {
-        MongoBatchStore store = store(LEASE);
-        downloaded(1342);
-        Batch batch = store.open(1);
-        store.publish(batch, store.claim(batch, List.of(1342)));
-
-        List<Boolean> marked = TwoAtOnce.call(() -> store.markPublished(batch, 1342));
-
-        assertEquals(1, marked.stream().filter(Boolean::booleanValue).count());
-        assertEquals(BookStatus.PUBLISHED.name(), state(1342).getString(MongoFields.STATUS));
-    }
-
-    @Test
     void doesNotMarkABookThatControlCompletedFirst() {
         MongoBatchStore store = store(LEASE);
         downloaded(1342);

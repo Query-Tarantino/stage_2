@@ -9,6 +9,7 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.ulpgc.tarantino.common.model.BatchStatus;
 import org.ulpgc.tarantino.common.model.BookStatus;
+import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.control.model.GenerationBatch;
 import org.ulpgc.tarantino.control.model.IndexingBook;
@@ -22,11 +23,9 @@ import static org.ulpgc.tarantino.common.mongo.MongoFields.BATCH_ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ENQUEUED_AT;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.GENERATION;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ID;
-import static org.ulpgc.tarantino.common.mongo.MongoFields.PUBLISHED_AT;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.STATUS;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.UPDATED_AT;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.NOW;
-import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.set;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.setThenUnset;
 
 /** “Release its books” and “Complete a publication” (SPEC §5.1) over the {@code INDEXING} books of step 3 of SPEC §5.3. */
@@ -34,10 +33,12 @@ public class MongoIndexingBooks implements IndexingBooks {
 
     private final MongoDatabase database;
     private final MongoCollection<Document> states;
+    private final BookStates bookStates;
 
     public MongoIndexingBooks(MongoDatabase database) {
         this.database = database;
         this.states = database.getCollection(MongoCollections.BOOK_STATES);
+        this.bookStates = new BookStates(database);
     }
 
     @Override
@@ -68,10 +69,7 @@ public class MongoIndexingBooks implements IndexingBooks {
 
     @Override
     public boolean complete(IndexingBook book) {
-        Document published = new Document(STATUS, BookStatus.PUBLISHED.name())
-                .append(PUBLISHED_AT, NOW)
-                .append(UPDATED_AT, NOW);
-        return states.updateOne(inItsBatch(book), set(published)).getModifiedCount() == 1;
+        return bookStates.completePublication(book.bookId(), book.batch().batchId());
     }
 
     private static Bson inItsBatch(IndexingBook book) {
