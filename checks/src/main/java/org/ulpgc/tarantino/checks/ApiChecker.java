@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
 import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
@@ -27,7 +26,6 @@ public class ApiChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiChecker.class);
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
-    private static final int MAX_WAIT_SECONDS = 60;
     private static final int PRIDE_AND_PREJUDICE = 1342;
     private static final int LARGE_OFFSET = 1_000_000_000;
 
@@ -40,6 +38,7 @@ public class ApiChecker {
     private final EntryPortChecks entryPorts;
     private final OperationalChecks operational;
     private final SampleIngestion ingestion;
+    private final SnapshotRefreshWait snapshots;
     private final BookChecks books;
     private final SearchValidationChecks searchValidation;
 
@@ -57,6 +56,7 @@ public class ApiChecker {
         this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
         this.operational = new OperationalChecks(client, problems, this.operationalUrl);
         this.ingestion = new SampleIngestion(client, this.operationalUrl);
+        this.snapshots = new SnapshotRefreshWait(client, this.frontEndUrl);
         this.books = new BookChecks(client, problems, this.frontEndUrl);
         this.searchValidation = new SearchValidationChecks(problems, this.frontEndUrl);
     }
@@ -83,72 +83,7 @@ public class ApiChecker {
 
     public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
         ingestion.publish(sampleIds);
-        waitForSnapshotRefresh(sampleIds);
-    }
-
-    private void waitForSnapshotRefresh(List<Integer> sampleIds) throws IOException, InterruptedException {
-        long refreshMillis = (Integer.parseInt(System.getenv().getOrDefault(TarantinoConfig.SNAPSHOT_SECONDS,
-                String.valueOf(TarantinoConfig.DEFAULT_SNAPSHOT_SECONDS))) + 2) * 1000L;
-        waitForEveryReplicaToCount(sampleIds.size());
-        for (int bookId : sampleIds) {
-            waitForBook(bookId, refreshMillis);
-        }
-        waitForSearchToFindPrideAndPrejudice(refreshMillis);
-    }
-
-    private void waitForEveryReplicaToCount(int books) throws InterruptedException {
-        long filtersDeadline = System.currentTimeMillis() + (MAX_WAIT_SECONDS * 1000L);
-        int consecutiveSuccesses = 0;
-        while (System.currentTimeMillis() < filtersDeadline && consecutiveSuccesses < 10) {
-            consecutiveSuccesses = countsEveryBook(books) ? consecutiveSuccesses + 1 : 0;
-            Thread.sleep(200);
-        }
-        if (consecutiveSuccesses < 10) {
-            throw new AssertionError("Snapshot not refreshed on all replicas: search/filters did not return total_books >= "
-                    + books + " across 10 consecutive requests");
-        }
-    }
-
-    private boolean countsEveryBook(int books) throws InterruptedException {
-        try {
-            CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
-            return response.status() == 200 && response.json() != null && response.json().has("total_books")
-                    && response.json().get("total_books").asInt() >= books;
-        } catch (IOException exception) {
-            return false;
-        }
-    }
-
-    private void waitForBook(int bookId, long refreshMillis) throws IOException, InterruptedException {
-        long bookDeadline = System.currentTimeMillis() + refreshMillis;
-        while (System.currentTimeMillis() < bookDeadline) {
-            if (client.get(frontEndUrl + "/books/" + bookId).status() == 200) {
-                return;
-            }
-            Thread.sleep(500);
-        }
-        throw new AssertionError("Book " + bookId + " not visible in /books/" + bookId + " within snapshot refresh");
-    }
-
-    private void waitForSearchToFindPrideAndPrejudice(long refreshMillis) throws InterruptedException {
-        long searchDeadline = System.currentTimeMillis() + refreshMillis;
-        while (System.currentTimeMillis() < searchDeadline) {
-            if (searchFindsPrideAndPrejudice()) {
-                return;
-            }
-            Thread.sleep(200);
-        }
-        throw new AssertionError("Book 1342 not found by /search?q=pride within snapshot refresh");
-    }
-
-    private boolean searchFindsPrideAndPrejudice() throws InterruptedException {
-        try {
-            CheckedClient.Response response = client.get(frontEndUrl + "/search?q=pride");
-            return response.status() == 200 && response.json() != null && response.json().has("results")
-                    && SearchResults.containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE);
-        } catch (IOException exception) {
-            return false;
-        }
+        snapshots.waitUntilServed(sampleIds);
     }
 
     public void checkFiltersSummary() throws IOException, InterruptedException {

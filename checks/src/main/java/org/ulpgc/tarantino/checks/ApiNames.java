@@ -12,6 +12,7 @@ final class ApiNames {
     static final String CONTROL_STATUS = "/control/status";
     static final String BOOKS_PATH = "/books/";
     static final String SEARCH = "/search";
+    static final String SEARCH_FILTERS = "/search/filters";
 
     static final String CONTENT_TYPE = "Content-Type";
     static final String LOCATION = "Location";
@@ -31,8 +32,10 @@ final class ApiNames {
     static final String OFFSET = "offset";
     static final String PARAMETER = "parameter";
     static final String QUEUES = "queues";
+    static final String RESULTS = "results";
     static final String STATUS = "status";
     static final String TITLE = "title";
+    static final String TOTAL_BOOKS = "total_books";
     static final String YEAR = "year";
 
     private ApiNames() {
