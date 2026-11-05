@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+/** The {@code books-to-index} queue of Hazelcast, from which a batch takes its messages (SPEC §4.2). */
 public class HazelcastIndexQueue implements IndexQueue {
 
     private final BookTaskQueue queue;
