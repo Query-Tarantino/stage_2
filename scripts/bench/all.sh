@@ -14,6 +14,7 @@ readonly OFFICIAL_CPUS=24
 readonly MINIMUM_MEMORY_GIB=15
 readonly BYTES_PER_GIB=$((1024 * 1024 * 1024))
 readonly WRONG_USAGE=2
+readonly OVERRIDING_VARIABLES='^(TARANTINO_.*|JAVA_TOOL_OPTIONS|CRAWLER_CRASH_AT|INDEXER_CRASH_AT)$'
 readonly ROWS=(01 02 03 04 05 06 07 08 09 10 11 12 13 14)
 readonly DELAY_ROWS=(04 05 12)
 readonly EXPERIMENTS=(ingest-throughput index-throughput search-latency coordination-cost resource-usage
@@ -107,6 +108,9 @@ fail() {
 
 check_preconditions() {
     [[ $(git rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || fail "the current branch is not $BRANCH"
+    local overrides
+    overrides=$(compgen -e | grep -E "$OVERRIDING_VARIABLES" | tr '\n' ' ')
+    [[ -z $overrides ]] || fail "$overrides would change the defaults every step and its hypotheses rely on; unset them"
     [[ -z $(git status --porcelain -- ":(top,exclude)$RUNS_DIR") ]] || fail "git status shows changes outside $RUNS_DIR"
     local cpus memory
     cpus=$(docker info --format '{{.NCPU}}')
@@ -168,7 +172,7 @@ recovery_delay() {
 }
 
 print_dry_run() {
-    echo "Preconditions: branch $BRANCH; nothing changed outside $RUNS_DIR; docker info with $OFFICIAL_CPUS CPUs and at least $MINIMUM_MEMORY_GIB GiB; every book of $CORPUS_SHA in $MIRROR_DIR; $BENCH_JAR built"
+    echo "Preconditions: branch $BRANCH; no TARANTINO_*, JAVA_TOOL_OPTIONS or *_CRASH_AT variable set; nothing changed outside $RUNS_DIR; docker info with $OFFICIAL_CPUS CPUs and at least $MINIMUM_MEMORY_GIB GiB; every book of $CORPUS_SHA in $MIRROR_DIR; $BENCH_JAR built"
     echo "Opening: java -jar $BENCH_JAR manifest start $RUNS_DIR campaign 0 -- $0"
     local step number=0
     while read -r step; do
