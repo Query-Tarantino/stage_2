@@ -81,14 +81,14 @@ public class ApiChecker {
         if (contentTypes == null || contentTypes.isEmpty()) {
             contentTypes = response.headers().get("content-type");
         }
-        assertTrue(contentTypes != null && !contentTypes.isEmpty());
-        assertTrue(contentTypes.getFirst().toLowerCase().startsWith("application/problem+json"));
-        assertTrue(response.json() != null);
+        assertTrue(contentTypes != null && !contentTypes.isEmpty(), "the 404 of " + url + " has a Content-Type");
+        assertTrue(contentTypes.getFirst().toLowerCase().startsWith("application/problem+json"), "the 404 of " + url + " is application/problem+json");
+        assertTrue(response.json() != null, "the 404 of " + url + " has a JSON body");
         client.validator().validateProblem(response.json());
         assertEquals(404, response.json().get("status").asInt());
-        assertTrue(response.json().has("title"));
-        assertTrue(response.json().has("detail"));
-        assertTrue(!response.json().has("code"));
+        assertTrue(response.json().has("title"), "the 404 of " + url + " has a title");
+        assertTrue(response.json().has("detail"), "the 404 of " + url + " has a detail");
+        assertTrue(!response.json().has("code"), "the 404 of " + url + " has no code");
     }
 
     public void checkHealth() throws IOException, InterruptedException {
@@ -108,8 +108,8 @@ public class ApiChecker {
             } catch (IOException exception) {
                 response = checkHealthViaDocker(service, port);
             }
-            assertTrue(response.status() == 200 || response.status() == 503);
-            assertTrue(response.json() != null && response.json().has("status"));
+            assertTrue(response.status() == 200 || response.status() == 503, "/health of " + service + " answers 200 or 503");
+            assertTrue(response.json() != null && response.json().has("status"), "/health of " + service + " has a status");
         }
     }
 
@@ -173,17 +173,17 @@ public class ApiChecker {
         LOGGER.info("Checking operational status endpoints");
         CheckedClient.Response listResponse = client.get(operationalUrl + "/ingest/list");
         assertEquals(200, listResponse.status());
-        assertTrue(listResponse.json().has("books"));
+        assertTrue(listResponse.json().has("books"), "GET /ingest/list has books");
 
         CheckedClient.Response indexStatus = client.get(operationalUrl + "/index/status");
         assertEquals(200, indexStatus.status());
-        assertTrue(indexStatus.json().has("generation"));
-        assertTrue(indexStatus.json().has("books_indexed"));
+        assertTrue(indexStatus.json().has("generation"), "GET /index/status has a generation");
+        assertTrue(indexStatus.json().has("books_indexed"), "GET /index/status has books_indexed");
 
         CheckedClient.Response controlStatus = client.get(operationalUrl + "/control/status");
         assertEquals(200, controlStatus.status());
-        assertTrue(controlStatus.json().has("books"));
-        assertTrue(controlStatus.json().has("queues"));
+        assertTrue(controlStatus.json().has("books"), "GET /control/status has books");
+        assertTrue(controlStatus.json().has("queues"), "GET /control/status has queues");
     }
 
     public void checkStatusEndpoints() throws IOException, InterruptedException {
@@ -217,10 +217,10 @@ public class ApiChecker {
         List<BookStatusCheck> pendingChecks = new ArrayList<>();
         for (int bookId : sampleIds) {
             CheckedClient.Response ingestResponse = client.post(operationalUrl + "/ingest/" + bookId, "");
-            assertTrue(ingestResponse.status() == 200 || ingestResponse.status() == 202);
+            assertTrue(ingestResponse.status() == 200 || ingestResponse.status() == 202, "POST /ingest/" + bookId + " answers 200 or 202");
             if (ingestResponse.status() == 202) {
                 String location = ingestResponse.header("Location");
-                assertTrue(location != null && !location.isBlank());
+                assertTrue(location != null && !location.isBlank(), "the 202 of POST /ingest/" + bookId + " has a Location");
                 String statusUrl = operationalUrl + (location.startsWith("/") ? location : "/" + location);
                 pendingChecks.add(new BookStatusCheck(bookId, statusUrl));
             } else {
@@ -324,26 +324,26 @@ public class ApiChecker {
         for (int bookId : sampleIds) {
             CheckedClient.Response ingestResponse = client.post(operationalUrl + "/ingest/" + bookId, "");
             assertEquals(200, ingestResponse.status());
-            assertTrue(ingestResponse.header("Location") == null);
+            assertTrue(ingestResponse.header("Location") == null, "POST /ingest/" + bookId + " of a published book has no Location");
             assertEquals("PUBLISHED", ingestResponse.json().get("status").asText());
 
             CheckedClient.Response updateResponse = client.post(operationalUrl + "/index/update/" + bookId, "");
             assertEquals(200, updateResponse.status());
-            assertTrue(updateResponse.header("Location") == null);
+            assertTrue(updateResponse.header("Location") == null, "POST /index/update/" + bookId + " of a published book has no Location");
             assertEquals("PUBLISHED", updateResponse.json().get("status").asText());
         }
 
         CheckedClient.Response listResponse = client.get(operationalUrl + "/ingest/list");
         assertEquals(200, listResponse.status());
         JsonNode booksNode = listResponse.json().get("books");
-        assertTrue(booksNode != null && booksNode.isArray());
+        assertTrue(booksNode != null && booksNode.isArray(), "GET /ingest/list has a books array");
         List<Integer> ingestedBooks = StreamSupport.stream(booksNode.spliterator(), false)
                 .map(JsonNode::asInt)
                 .toList();
         assertEquals(ingestedBooks.size(), listResponse.json().get("count").asInt());
-        assertTrue(ingestedBooks.containsAll(sampleIds));
+        assertTrue(ingestedBooks.containsAll(sampleIds), "GET /ingest/list holds every sample book");
         IntStream.range(1, ingestedBooks.size()).forEach(index ->
-                assertTrue(ingestedBooks.get(index) > ingestedBooks.get(index - 1)));
+                assertTrue(ingestedBooks.get(index) > ingestedBooks.get(index - 1), "GET /ingest/list is in ascending book_id order at position " + index));
     }
 
     public void checkBooksEndpoints(List<Integer> sampleIds) throws IOException, InterruptedException {
@@ -362,7 +362,7 @@ public class ApiChecker {
         assertEquals("Pride and Prejudice", book1342.json().get("title").asText());
         assertEquals("Jane Austen", book1342.json().get("author").asText());
         assertEquals("en", book1342.json().get("language").asText());
-        assertTrue(book1342.json().has("languages") && book1342.json().get("languages").isArray());
+        assertTrue(book1342.json().has("languages") && book1342.json().get("languages").isArray(), "/books/1342 has a languages array");
         assertEquals("en", book1342.json().get("languages").get(0).asText());
 
         CheckedClient.Response notFound = client.get(frontEndUrl + "/books/999999");
@@ -381,9 +381,9 @@ public class ApiChecker {
         CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
         assertEquals(200, response.status());
         JsonNode json = response.json();
-        assertTrue(json.has("languages"));
-        assertTrue(json.has("years"));
-        assertTrue(json.has("total_books"));
+        assertTrue(json.has("languages"), "/search/filters has languages");
+        assertTrue(json.has("years"), "/search/filters has years");
+        assertTrue(json.has("total_books"), "/search/filters has total_books");
     }
 
     public void checkSearchParametersOrder() throws IOException, InterruptedException {
@@ -459,7 +459,8 @@ public class ApiChecker {
         JsonNode page1 = page("/search?q=pride&offset=1&limit=1", 1);
         assertEquals(page0.get("total").asInt(), page1.get("total").asInt());
         if (page0.get("total").asInt() >= 2) {
-            assertTrue(page0.get("results").get(0).get("book_id").asInt() != page1.get("results").get(0).get("book_id").asInt());
+            assertTrue(page0.get("results").get(0).get("book_id").asInt() != page1.get("results").get(0).get("book_id").asInt(),
+                    "pages 0 and 1 of /search?q=pride start with different books");
         }
         CheckedClient.Response largeOffset = client.get(frontEndUrl + "/search?q=pride&offset=" + LARGE_OFFSET);
         assertEquals(200, largeOffset.status());
@@ -483,8 +484,8 @@ public class ApiChecker {
     private JsonNode findsPrideAndPrejudice(String path) throws IOException, InterruptedException {
         CheckedClient.Response response = client.get(frontEndUrl + path);
         assertEquals(200, response.status());
-        assertTrue(response.json().get("total").asInt() >= 1);
-        assertTrue(containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE));
+        assertTrue(response.json().get("total").asInt() >= 1, path + " finds at least one book");
+        assertTrue(containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE), path + " finds book 1342");
         return response.json();
     }
 
@@ -518,9 +519,10 @@ public class ApiChecker {
                     ? searchExpected.get("path").asText()
                     : "/search?q=" + entry.getKey().replace(" ", "%20");
             CheckedClient.Response response = client.get(frontEndUrl + path);
-            assertEquals(200, response.status());
+            assertEquals(200, response.status(), "the status of expected search " + entry.getKey() + " (" + path + ")");
             if (searchExpected.has("total")) {
-                assertEquals(searchExpected.get("total").asInt(), response.json().get("total").asInt());
+                assertEquals(searchExpected.get("total").asInt(), response.json().get("total").asInt(),
+                        "the total of expected search " + entry.getKey() + " (" + path + ")");
             }
             if (searchExpected.has("book_ids") && searchExpected.get("book_ids").isArray()) {
                 List<Integer> expectedIds = StreamSupport.stream(searchExpected.get("book_ids").spliterator(), false)
@@ -529,7 +531,7 @@ public class ApiChecker {
                 List<Integer> actualIds = StreamSupport.stream(response.json().get("results").spliterator(), false)
                         .map(resultNode -> resultNode.get("book_id").asInt())
                         .toList();
-                assertEquals(expectedIds, actualIds);
+                assertEquals(expectedIds, actualIds, "the book_ids of expected search " + entry.getKey() + " (" + path + ")");
             }
         } catch (IOException | InterruptedException exception) {
             throw new RuntimeException(exception);
@@ -539,17 +541,18 @@ public class ApiChecker {
     private void checkBookAgainstExpected(Map.Entry<String, JsonNode> entry) {
         try {
             JsonNode bookExpected = entry.getValue();
-            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + entry.getKey());
-            assertEquals(200, response.status());
-            List.of("title", "author", "language").forEach(field -> assertSameText(bookExpected, response.json(), field));
+            String bookId = entry.getKey();
+            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
+            assertEquals(200, response.status(), "the status of expected book /books/" + bookId);
+            List.of("title", "author", "language").forEach(field -> assertSameText(bookId, bookExpected, response.json(), field));
             if (isPresent(bookExpected, "year")) {
-                assertEquals(bookExpected.get("year").asInt(), response.json().get("year").asInt());
+                assertEquals(bookExpected.get("year").asInt(), response.json().get("year").asInt(), "the year of /books/" + bookId);
             }
             if (isPresent(bookExpected, "languages")) {
-                assertEquals(bookExpected.get("languages"), response.json().get("languages"));
+                assertEquals(bookExpected.get("languages"), response.json().get("languages"), "the languages of /books/" + bookId);
             }
             if (bookExpected.has("original_year")) {
-                assertSameOriginalYear(bookExpected.get("original_year"), response.json().get("original_year"));
+                assertSameOriginalYear(bookId, bookExpected.get("original_year"), response.json().get("original_year"));
             }
         } catch (IOException | InterruptedException exception) {
             throw new RuntimeException(exception);
@@ -560,19 +563,19 @@ public class ApiChecker {
         return node.has(field) && !node.get(field).isNull();
     }
 
-    private static void assertSameText(JsonNode expected, JsonNode actual, String field) {
+    private static void assertSameText(String bookId, JsonNode expected, JsonNode actual, String field) {
         if (isPresent(expected, field)) {
-            assertEquals(expected.get(field).asText(), actual.get(field).asText());
+            assertEquals(expected.get(field).asText(), actual.get(field).asText(), "the " + field + " of /books/" + bookId);
         }
     }
 
-    private static void assertSameOriginalYear(JsonNode expectedOriginalYear, JsonNode actualOriginalYear) {
+    private static void assertSameOriginalYear(String bookId, JsonNode expectedOriginalYear, JsonNode actualOriginalYear) {
         if (expectedOriginalYear.isNull()) {
-            assertTrue(actualOriginalYear == null || actualOriginalYear.isNull());
+            assertTrue(actualOriginalYear == null || actualOriginalYear.isNull(), "/books/" + bookId + " has a null original_year");
             return;
         }
-        assertTrue(actualOriginalYear != null && !actualOriginalYear.isNull());
-        assertEquals(expectedOriginalYear.asInt(), actualOriginalYear.asInt());
+        assertTrue(actualOriginalYear != null && !actualOriginalYear.isNull(), "/books/" + bookId + " has an original_year");
+        assertEquals(expectedOriginalYear.asInt(), actualOriginalYear.asInt(), "the original_year of /books/" + bookId);
     }
 
     public void generateExpected(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -681,8 +684,8 @@ public class ApiChecker {
             CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + term + "&language=" + language);
             assertEquals(200, response.status());
             assertEquals(language, response.json().get("filters").get("language").asText());
-            assertTrue(response.json().get("total").asInt() >= 1);
-            assertTrue(containsBook(response.json().get("results"), bookId));
+            assertTrue(response.json().get("total").asInt() >= 1, "/search?q=" + term + "&language=" + language + " finds at least one book");
+            assertTrue(containsBook(response.json().get("results"), bookId), "/search?q=" + term + "&language=" + language + " finds book " + bookId);
         }
     }
 
@@ -760,11 +763,11 @@ public class ApiChecker {
         CheckedClient.Response response = client.get(url);
         assertEquals(expectedStatus, response.status());
         if (expectedCode != null) {
-            assertTrue(response.json() != null && response.json().has("code"));
+            assertTrue(response.json() != null && response.json().has("code"), "the " + expectedStatus + " of " + url + " has a code");
             assertEquals(expectedCode, response.json().get("code").asText());
         }
         if (expectedParam != null) {
-            assertTrue(response.json() != null && response.json().has("parameter"));
+            assertTrue(response.json() != null && response.json().has("parameter"), "the " + expectedStatus + " of " + url + " has a parameter");
             assertEquals(expectedParam, response.json().get("parameter").asText());
         }
     }
@@ -773,11 +776,11 @@ public class ApiChecker {
         CheckedClient.Response response = client.post(url, "");
         assertEquals(expectedStatus, response.status());
         if (expectedCode != null) {
-            assertTrue(response.json() != null && response.json().has("code"));
+            assertTrue(response.json() != null && response.json().has("code"), "the " + expectedStatus + " of " + url + " has a code");
             assertEquals(expectedCode, response.json().get("code").asText());
         }
         if (expectedParam != null) {
-            assertTrue(response.json() != null && response.json().has("parameter"));
+            assertTrue(response.json() != null && response.json().has("parameter"), "the " + expectedStatus + " of " + url + " has a parameter");
             assertEquals(expectedParam, response.json().get("parameter").asText());
         }
     }
@@ -788,9 +791,15 @@ public class ApiChecker {
         }
     }
 
-    private static void assertTrue(boolean condition) {
+    private static void assertEquals(Object expected, Object actual, String what) {
+        if (!expected.equals(actual)) {
+            throw new AssertionError(what + ": expected " + expected + " but was " + actual);
+        }
+    }
+
+    private static void assertTrue(boolean condition, String what) {
         if (!condition) {
-            throw new AssertionError("Assertion condition was false");
+            throw new AssertionError("Check failed: " + what);
         }
     }
 
