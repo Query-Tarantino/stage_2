@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+/** The book metadata {@code query} reads for results, details and filters (SPEC §6.4 and §7). */
 @FunctionalInterface
 public interface MetadataReader {
 

@@ -12,6 +12,7 @@ import org.ulpgc.tarantino.query.commands.SearchCommand;
 import org.ulpgc.tarantino.query.commands.SnapshotRefresher;
 import org.ulpgc.tarantino.query.ports.MetadataReader;
 
+/** Builds the snapshot refresher and the search routes of {@code query} over its Mongo connection (SPEC §2.2 and §7). */
 public final class QueryFactory {
 
     private QueryFactory() {

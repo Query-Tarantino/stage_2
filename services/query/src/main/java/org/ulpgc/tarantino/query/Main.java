@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/** Starts {@code query} (SPEC §2.2 and §2.4): its HTTP routes, the snapshot thread and the {@code published-batches} listener. */
 public class Main {
 
     public static void main(String[] args) {
