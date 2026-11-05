@@ -5,14 +5,19 @@ info:
   description: |
     HTTP API of Query Tarantino Stage 2, derived from SPEC.md §6; `info.version` follows the SPEC.md version.
 
-    The services also coordinate through Hazelcast (SPEC.md §4.2), which is not HTTP and has no paths here.
-    Its messages are the `BookTask` and `BatchPublished` schemas, carried as JSON text:
+    The services also coordinate in one of four modes (SPEC.md §11), and only mode `orchestrator` does it over HTTP, with
+    the routes tagged `internal`. Modes `hazelcast` (the default, SPEC.md §4.2) and `activemq` (§11.2) carry the
+    `BookTask` and `BatchPublished` schemas as JSON text on these queues and topic, which are not HTTP and have no paths
+    here; mode `polling` (§11.3) has no messages, because each worker claims its next book in MongoDB.
 
-    | Name | Type | Message |
-    | --- | --- | --- |
-    | `books-to-download` | Queue | `BookTask` |
-    | `books-to-index` | Queue | `BookTask` |
-    | `published-batches` | Topic | `BatchPublished` |
+    | Name | Type | Message | Producers | Consumers |
+    | --- | --- | --- | --- | --- |
+    | `books-to-download` | Queue | `BookTask` | `control`, `POST /ingest/{book_id}`, a `crawler` retrying a download | `crawler` workers |
+    | `books-to-index` | Queue | `BookTask` | `crawler`, `POST /index/update/{book_id}`, `control` | `indexer`, in batches |
+    | `published-batches` | Topic | `BatchPublished` | `indexer` | every `query` replica |
+
+    A message is only a hint: the conditional write that claims the book in MongoDB acknowledges it, and a duplicate or
+    stale message fails that write and is dropped (SPEC.md §4.2 and §5.1).
 
 tags:
   - name: front-end
@@ -22,7 +27,7 @@ tags:
   - name: health
     description: Health of each service on its own port, never through nginx.
   - name: internal
-    description: "Mode `orchestrator` only (SPEC.md §11.4): `control` dispatches through nginx's internal port 8082, not published to the host, and calls each `query` replica directly. In every other mode these routes do not exist and nginx answers `404`."
+    description: "Mode `orchestrator` only (SPEC.md §11.4): `control` dispatches through nginx's internal port 8082, not published to the host, and calls each `query` replica directly. In every other mode these routes do not exist, and the service behind nginx answers `404` without `code`, as for any path it lacks (SPEC.md §6.6)."
 
 paths:
   /search:
