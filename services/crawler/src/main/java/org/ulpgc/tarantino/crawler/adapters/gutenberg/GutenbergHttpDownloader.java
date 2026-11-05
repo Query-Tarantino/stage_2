@@ -21,6 +21,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
+
 /**
  * Downloads books from the official Project Gutenberg mirror of Old Dominion University, never from
  * www.gutenberg.org, whose robot policy forbids automated access: redirects are followed only within the mirror.
@@ -161,8 +164,8 @@ public class GutenbergHttpDownloader implements BookDownloader {
 
     private static String body(HttpResponse<String> response, int bookId) {
         return switch (response.statusCode()) {
-            case 200 -> response.body();
-            case 404 -> throw new DownloadException(BookErrorCode.NOT_FOUND, "Book " + bookId + " not found");
+            case HTTP_OK -> response.body();
+            case HTTP_NOT_FOUND -> throw new DownloadException(BookErrorCode.NOT_FOUND, "Book " + bookId + " not found");
             default -> throw new DownloadException(BookErrorCode.NETWORK_ERROR, "HTTP " + response.statusCode() + " for book " + bookId);
         };
     }

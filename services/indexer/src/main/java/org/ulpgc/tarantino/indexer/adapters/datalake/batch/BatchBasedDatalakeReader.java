@@ -8,6 +8,7 @@ import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 import java.nio.file.Path;
 import java.util.Optional;
 
+/** Reads books from the {@code batch} layout of the datalake (SPEC §4.6). */
 public class BatchBasedDatalakeReader implements DatalakeReader {
 
     private final DatalakePaths paths;

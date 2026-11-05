@@ -1,0 +1,209 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Build and run every test
+        run: mvn -B -ntp clean verify
+
+      - name: Fail if the MongoDB tests were skipped
+        run: |
+          if grep -rl --include='TEST-*.xml' 'No MongoDB answers' .; then
+            echo "::error::MongoDB tests were skipped instead of running against Testcontainers"
+            exit 1
+          fi
+
+      - name: Publish the test report
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@4a26df3e2ae132254ba12a53f65a388d0961e786
+        with:
+          report_paths: "**/target/surefire-reports/TEST-*.xml"
+          check_name: Test report
+          detailed_summary: true
+
+      - name: Keep the jars for the end-to-end checks
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: jars
+          path: |
+            services/*/target/*-1.0-SNAPSHOT.jar
+            checks/target/checks-1.0-SNAPSHOT.jar
+            !**/target/original-*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  e2e:
+    name: End-to-end checks
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.mirror.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: jars
+
+      - name: Fill the mirror with the sample books
+        uses: ./.github/actions/mirror
+        with:
+          candidates: workload/sample_ids.txt
+
+      - name: Start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Run the functional API checks
+        run: java -jar checks/target/checks-1.0-SNAPSHOT.jar
+
+      - name: Scale query to three replicas
+        run: docker compose up -d --wait --wait-timeout 300 --scale query=3
+
+      - name: Let nginx resolve the new replicas
+        run: sleep 6
+
+      - name: Run the functional API checks against three query replicas
+        run: java -jar checks/target/checks-1.0-SNAPSHOT.jar
+
+      - name: Collect the service logs
+        if: ${{ failure() }}
+        run: docker compose logs --no-color --timestamps > compose.log
+
+      - name: Keep the service logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: compose-logs
+          path: compose.log
+          retention-days: 7
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: docker compose down -v
+
+  modes:
+    name: End-to-end checks in mode ${{ matrix.mode }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: activemq
+            coordination: activemq
+            files: docker-compose.yml:docker-compose.mirror.yml:docker-compose.activemq.yml
+            profiles: activemq
+          - mode: activemq-persistent
+            coordination: activemq
+            files: docker-compose.yml:docker-compose.mirror.yml:docker-compose.activemq.yml:docker-compose.activemq-persistent.yml
+            profiles: activemq
+          - mode: polling
+            coordination: polling
+            files: docker-compose.yml:docker-compose.mirror.yml:docker-compose.polling.yml
+            profiles: ""
+          - mode: orchestrator
+            coordination: orchestrator
+            files: docker-compose.yml:docker-compose.mirror.yml:docker-compose.orchestrator.yml
+            profiles: ""
+    env:
+      COMPOSE_FILE: ${{ matrix.files }}
+      COMPOSE_PROFILES: ${{ matrix.profiles }}
+      TARANTINO_COORDINATION: ${{ matrix.coordination }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: jars
+
+      - name: Fill the mirror with the sample books
+        uses: ./.github/actions/mirror
+        with:
+          candidates: workload/sample_ids.txt
+
+      - name: Start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Run the functional API checks
+        run: java -jar checks/target/checks-1.0-SNAPSHOT.jar
+
+      - name: Collect the service logs
+        if: ${{ failure() }}
+        run: docker compose logs --no-color --timestamps > compose.log
+
+      - name: Keep the service logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: compose-logs-${{ matrix.mode }}
+          path: compose.log
+          retention-days: 7
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: docker compose down -v
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Lint the workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+      - name: Lint the shell scripts
+        run: find scripts -name '*.sh' -print0 | xargs -0 docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 --severity=error

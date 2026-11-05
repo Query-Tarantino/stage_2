@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** Reads {@code stopwords.txt} from {@code TARANTINO_WORKLOAD}, the stopwords the common tokenizer drops when indexing and searching (SPEC §4.7 and §7). */
 public class FileStopwordsLoader {
 
     private final Path file;

@@ -105,11 +105,10 @@ class GutenbergHttpDownloaderTest {
     }
 
     @Test
-    void makesEveryDownloadWaitWhileTheMirrorIsBusy() {
+    void makesTheNextDownloadWaitTooWhenItStartsBeforeTheRetryTime() {
         answers.add(new Answer(429, Map.of("Retry-After", "60")));
 
         downloader.rawText(1342);
-        // The clock stands still, so the second download starts while the mirror still asks to wait
         downloader.rawText(84);
 
         assertEquals(List.of(Duration.ofSeconds(60), Duration.ofSeconds(60)), waits);

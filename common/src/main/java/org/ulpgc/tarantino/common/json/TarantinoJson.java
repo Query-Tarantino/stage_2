@@ -10,7 +10,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.UncheckedIOException;
 
-/** The only {@link ObjectMapper} of the system (SPEC §4.1), shared by the API, Mongo and Hazelcast. */
+/** The only {@link ObjectMapper} of the system (SPEC §4.1), shared by the API, Mongo and the messages of every broker. */
 public final class TarantinoJson {
 
     private static final ObjectMapper MAPPER = JsonMapper.builder()

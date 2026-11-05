@@ -15,6 +15,8 @@
         <module>services/indexer</module>
         <module>services/query</module>
         <module>services/control</module>
+        <module>bench</module>
+        <module>checks</module>
     </modules>
 
     <properties>
@@ -23,11 +25,15 @@
 
         <mongodb-driver.version>5.13.0</mongodb-driver.version>
         <hazelcast.version>5.7.0</hazelcast.version>
+        <activemq.version>6.1.8</activemq.version>
         <javalin.version>6.7.0</javalin.version>
         <jackson.version>2.22.3</jackson.version>
         <junit.version>5.11.4</junit.version>
         <slf4j.version>2.0.20</slf4j.version>
         <testcontainers.version>2.0.5</testcontainers.version>
+        <jmh.version>1.37</jmh.version>
+        <xchart.version>3.8.8</xchart.version>
+        <commons-math3.version>3.6.1</commons-math3.version>
     </properties>
 
     <dependencyManagement>
@@ -54,6 +60,16 @@
                 <version>${hazelcast.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-client</artifactId>
+                <version>${activemq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-broker</artifactId>
+                <version>${activemq.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.javalin</groupId>
                 <artifactId>javalin</artifactId>
                 <version>${javalin.version}</version>
@@ -74,6 +90,21 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${jmh.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.knowm.xchart</groupId>
+                <artifactId>xchart</artifactId>
+                <version>${xchart.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-math3</artifactId>
+                <version>${commons-math3.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
@@ -107,11 +138,30 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
+                    <executions>
+                        <execution>
+                            <id>default-testCompile</id>
+                            <configuration>
+                                <annotationProcessorPaths>
+                                    <path>
+                                        <groupId>org.openjdk.jmh</groupId>
+                                        <artifactId>jmh-generator-annprocess</artifactId>
+                                        <version>${jmh.version}</version>
+                                    </path>
+                                </annotationProcessorPaths>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>3.5.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

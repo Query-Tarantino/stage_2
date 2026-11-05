@@ -1,16 +1,25 @@
 package org.ulpgc.tarantino.common.http;
 
+import com.hazelcast.client.HazelcastClientOfflineException;
+import com.mongodb.MongoSocketException;
+import com.mongodb.MongoTimeoutException;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.javalin.http.Header;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
+import org.ulpgc.tarantino.common.messaging.BrokerUnavailableException;
 import org.ulpgc.tarantino.common.model.ProblemCode;
+
+import java.time.Duration;
 
 /**
  * Answers every error as Problem Details (RFC 9457, SPEC §6.6): {@code parameter} only in {@code 400} responses,
- * {@code Retry-After} on every {@code 503} and {@code 500} without {@code code} for anything unexpected.
+ * {@code Retry-After} on every {@code 503}, {@code 500} without {@code code} for anything unexpected and {@code 404} without
+ * {@code code} for a path or method the service does not have, as nginx answers an unknown path (SPEC §6.6). Mongo or
+ * the broker of the mode not answering is {@code 503} with {@code DEPENDENCY_UNAVAILABLE} (SPEC §4.5 and §11).
  */
 public final class ProblemDetails {
 
@@ -19,16 +28,41 @@ public final class ProblemDetails {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProblemDetails.class);
     private static final String TYPE = "about:blank";
     private static final String INTERNAL_SERVER_ERROR_TITLE = "Internal Server Error";
+    private static final String MONGO_DOWN = "MongoDB does not answer";
+    private static final String HAZELCAST_DOWN = "Hazelcast does not answer";
 
     private ProblemDetails() {
     }
 
     public static void register(Javalin app) {
         app.exception(ProblemException.class, (problem, context) -> answer(context, problem));
+        app.exception(MongoTimeoutException.class, (error, context) -> unavailable(context, MONGO_DOWN));
+        app.exception(MongoSocketException.class, (error, context) -> unavailable(context, MONGO_DOWN));
+        app.exception(HazelcastClientOfflineException.class, (error, context) -> unavailable(context, HAZELCAST_DOWN));
+        app.exception(BrokerUnavailableException.class, (error, context) -> unavailable(context, error.getMessage()));
         app.exception(Exception.class, (error, context) -> {
             LOGGER.error("Unexpected error answering {} {}", context.method(), context.path(), error);
             answer(context, HttpStatus.INTERNAL_SERVER_ERROR, null, null, null);
         });
+        app.error(HttpStatus.NOT_FOUND, ProblemDetails::answerUnknownRoute);
+    }
+
+    /** A {@code 503} that asks to retry after {@code retryAfter} instead of the usual 5 s (SPEC §11.4). */
+    public static void unavailable(Context context, String detail, Duration retryAfter) {
+        unavailable(context, detail);
+        context.header(Header.RETRY_AFTER, String.valueOf(retryAfter.toSeconds()));
+    }
+
+    /** Javalin's own 404, for a route the service lacks; a {@code 404} the handlers already answered stays as it is. */
+    private static void answerUnknownRoute(Context context) {
+        String contentType = context.res().getContentType();
+        if (contentType == null || !contentType.startsWith(CONTENT_TYPE)) {
+            answer(context, HttpStatus.NOT_FOUND, null, null, "No route for " + context.method() + " " + context.path());
+        }
+    }
+
+    private static void unavailable(Context context, String detail) {
+        answer(context, HttpStatus.SERVICE_UNAVAILABLE, ProblemCode.DEPENDENCY_UNAVAILABLE, null, detail);
     }
 
     private static void answer(Context context, ProblemException problem) {

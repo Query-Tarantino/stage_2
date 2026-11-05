@@ -8,15 +8,19 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.messaging.MessagingContracts;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HazelcastClientsTest {
@@ -31,25 +35,30 @@ class HazelcastClientsTest {
     }
 
     @Test
-    void retriesInTheBackgroundWithoutLimit() {
+    void keepsRetryingInTheBackgroundForYearsButNotForever() {
         ClientConfig config = HazelcastClients.config(List.of("hazelcast:5701"), HazelcastContracts.DEFAULT_CLUSTER);
 
         assertEquals(HazelcastContracts.DEFAULT_CLUSTER, config.getClusterName());
         assertEquals(List.of("hazelcast:5701"), config.getNetworkConfig().getAddresses());
         assertTrue(config.getConnectionStrategyConfig().isAsyncStart());
         assertEquals(ReconnectMode.ASYNC, config.getConnectionStrategyConfig().getReconnectMode());
-        assertEquals(-1, config.getConnectionStrategyConfig().getConnectionRetryConfig().getClusterConnectTimeoutMillis());
+        long connectTimeout = config.getConnectionStrategyConfig().getConnectionRetryConfig().getClusterConnectTimeoutMillis();
+        assertTrue(connectTimeout >= Duration.ofDays(365).toMillis());
+        assertTrue(connectTimeout < Long.MAX_VALUE / 2);
     }
 
     @Test
     void startsBeforeTheMemberAndConnectsWhenItComesUp() throws IOException, InterruptedException {
         int port = freePort();
-        HazelcastInstance client = started(HazelcastClients.connect(List.of("127.0.0.1:" + port), CLUSTER));
+        HazelcastConnection connection = HazelcastClients.connect(List.of("127.0.0.1:" + port), CLUSTER);
+        started(connection.client());
+        assertFalse(connection.connected());
         HazelcastInstance member = started(Hazelcast.newHazelcastInstance(member(port)));
 
-        offerWhenConnected(client, "{\"book_id\":1342}");
+        offerWhenConnected(connection.client(), "{\"book_id\":1342}");
 
-        assertEquals("{\"book_id\":1342}", member.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).poll());
+        assertTrue(becomesTrue(connection::connected));
+        assertEquals("{\"book_id\":1342}", member.getQueue(MessagingContracts.BOOKS_TO_DOWNLOAD).poll());
     }
 
     private HazelcastInstance started(HazelcastInstance instance) {
@@ -68,7 +77,7 @@ class HazelcastClientsTest {
         Instant deadline = Instant.now().plusSeconds(30);
         while (true) {
             try {
-                client.getQueue(HazelcastContracts.BOOKS_TO_DOWNLOAD).offer(message);
+                client.getQueue(MessagingContracts.BOOKS_TO_DOWNLOAD).offer(message);
                 return;
             } catch (HazelcastClientOfflineException e) {
                 if (Instant.now().isAfter(deadline)) {
@@ -77,6 +86,14 @@ class HazelcastClientsTest {
                 Thread.sleep(100);
             }
         }
+    }
+
+    private static boolean becomesTrue(BooleanSupplier condition) throws InterruptedException {
+        Instant deadline = Instant.now().plusSeconds(10);
+        while (!condition.getAsBoolean() && Instant.now().isBefore(deadline)) {
+            Thread.sleep(100);
+        }
+        return condition.getAsBoolean();
     }
 
     private static int freePort() throws IOException {

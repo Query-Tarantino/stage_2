@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+source "$(dirname "${BASH_SOURCE[0]}")/trials.sh"
+
+state_hypotheses() {
+    echo "Factor: replicas of crawler and indexer together ($REPLICAS_LIST), $REPETITIONS repetitions each, interleaved: repetition 1 of every N, then repetition 2, so drift over the run spreads across every N"
+    echo "H1: with 1 replica the wait in books-to-download dominates: its median is far above the download time"
+    echo "H2: the wait in books-to-download falls with N but less than 1/N: from N=2 the crawlers and indexers no longer fit in the 8 P cores of the official machine and spill onto its slower E cores, so the download and indexing times per book grow with N"
+    echo "H3: the wait in books-to-index falls less than the wait in books-to-download, because a book also waits for its batch to fill"
+}
+
+start_trial_with_consumers_ready() {
+    local trial=$1 replicas=$2
+    echo "=== Trial $trial: $replicas crawlers and indexers ready before control seeds, so the queue waits leave out their startup ==="
+    "${COMPOSE[@]}" down -v
+    "${COMPOSE[@]}" up -d --wait --scale "crawler=$replicas" --scale "indexer=$replicas" mongo hazelcast crawler indexer query nginx
+    "${COMPOSE[@]}" up -d control
+    current_trial=$trial
+}
+
+measure() {
+    local books replicas repetition
+    books=$(expected_books)
+    for repetition in $(seq 1 "$REPETITIONS"); do
+        for replicas in $REPLICAS_LIST; do
+            start_trial_with_consumers_ready "$(trial_name "$replicas" "$repetition")" "$replicas"
+            record_trial
+            wait_for PUBLISHED "$books"
+            save_trial_logs
+        done
+    done
+}
+
+summarise_run() {
+    java -jar "$BENCH_JAR" coordination "$run_dir"
+}
+
+main() {
+    open_run coordination-cost "$0" "$@"
+    state_hypotheses
+    check_corpus
+    build_stack
+    measure
+}
+
+main "$@"

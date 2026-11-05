@@ -15,6 +15,7 @@ public final class Health {
 
     public static final String MONGO = "mongo";
     public static final String HAZELCAST = "hazelcast";
+    public static final String ACTIVEMQ = "activemq";
     public static final String SNAPSHOT = "snapshot";
 
     private Health() {

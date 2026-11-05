@@ -1,0 +1,20 @@
+x-activemq: &activemq
+  TARANTINO_COORDINATION: activemq
+  TARANTINO_ACTIVEMQ: failover:(tcp://activemq:61616)?timeout=1000
+
+services:
+  hazelcast:
+    deploy:
+      replicas: 0
+
+  crawler:
+    environment: *activemq
+
+  indexer:
+    environment: *activemq
+
+  query:
+    environment: *activemq
+
+  control:
+    environment: *activemq

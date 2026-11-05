@@ -1,0 +1,2297 @@
+{
+  "control_status" : {
+    "generation" : 1,
+    "books" : {
+      "QUEUED" : 0,
+      "DOWNLOADING" : 0,
+      "DOWNLOADED" : 0,
+      "INDEXING" : 0,
+      "PUBLISHED" : 2800,
+      "FAILED" : 0
+    },
+    "queues" : {
+      "books-to-download" : 0,
+      "books-to-index" : 0
+    },
+    "last_reconciliation" : "2026-11-03T10:04:53.716862480Z"
+  },
+  "search" : {
+    "love" : {
+      "query" : "love",
+      "filters" : { },
+      "total" : 2463,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2620,
+        "title" : "The Home Book of Verse — Volume 2",
+        "author" : "Burton Egbert Stevenson",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1304,
+        "title" : "Bulchevy's Book of English Verse",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 266,
+        "title" : "Confessio Amantis; Or, Tales of the Seven Deadly Sins",
+        "author" : "John Gower",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2383,
+        "title" : "The Canterbury Tales, and Other Poems",
+        "author" : "Geoffrey Chaucer",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 808,
+        "title" : "The Complete Plays of Gilbert and Sullivan",
+        "author" : "Arthur Sullivan",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1399,
+        "title" : "Anna Karenina",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 615,
+        "title" : "Orlando Furioso",
+        "author" : "Lodovico Ariosto",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1365,
+        "title" : "The Complete Poetical Works of Henry Wadsworth Longfellow",
+        "author" : "Henry Wadsworth Longfellow",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 1957,
+        "title" : "Beatrix",
+        "author" : "Honoré de Balzac",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2374,
+        "title" : "Dora Thorne",
+        "author" : "Charlotte M. Brame",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2735,
+        "title" : "The Golden Dog",
+        "author" : "William Kirby",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2619,
+        "title" : "The Home Book of Verse — Volume 1",
+        "author" : "Burton Egbert Stevenson",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1941,
+        "title" : "Letters of Two Brides",
+        "author" : "Honoré de Balzac",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 1569,
+        "title" : "The Lily of the Valley",
+        "author" : "Honoré de Balzac",
+        "language" : "en",
+        "year" : 2005
+      }, {
+        "book_id" : 2853,
+        "title" : "Quo Vadis: A Narrative of the Time of Nero",
+        "author" : "Henryk Sienkiewicz",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 831,
+        "title" : "Four Arthurian Romances",
+        "author" : "active 12th century de Troyes Chrétien",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1600,
+        "title" : "Symposium",
+        "author" : "Plato",
+        "language" : "en",
+        "year" : 1999
+      } ]
+    },
+    "night" : {
+      "query" : "night",
+      "filters" : { },
+      "total" : 2570,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2270,
+        "title" : "Shakespeare's First Folio",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 1365,
+        "title" : "The Complete Poetical Works of Henry Wadsworth Longfellow",
+        "author" : "Henry Wadsworth Longfellow",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 917,
+        "title" : "Barnaby Rudge: A Tale of the Riots of 'Eighty",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 1023,
+        "title" : "Bleak House",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 2760,
+        "title" : "Celebrated Crimes (Complete)",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 766,
+        "title" : "David Copperfield",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2620,
+        "title" : "The Home Book of Verse — Volume 2",
+        "author" : "Burton Egbert Stevenson",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1581,
+        "title" : "The Bible, Douay-Rheims, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 821,
+        "title" : "Dombey and Son",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 700,
+        "title" : "The Old Curiosity Shop",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1304,
+        "title" : "Bulchevy's Book of English Verse",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 674,
+        "title" : "Plutarch: Lives of the noble Grecians and Romans",
+        "author" : "Plutarch",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 1895,
+        "title" : "Armadale",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 883,
+        "title" : "Our Mutual Friend",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 963,
+        "title" : "Little Dorrit",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 10,
+        "title" : "The King James Version of the Bible",
+        "author" : null,
+        "language" : "en",
+        "year" : 1989
+      }, {
+        "book_id" : 30,
+        "title" : "The Bible, King James Version, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1992
+      } ]
+    },
+    "old" : {
+      "query" : "old",
+      "filters" : { },
+      "total" : 2642,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 599,
+        "title" : "Vanity Fair",
+        "author" : "William Makepeace Thackeray",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 580,
+        "title" : "The Pickwick Papers",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 700,
+        "title" : "The Old Curiosity Shop",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 821,
+        "title" : "Dombey and Son",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1023,
+        "title" : "Bleak House",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1198,
+        "title" : "Robbery under Arms",
+        "author" : "Rolf Boldrewood",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 968,
+        "title" : "Martin Chuzzlewit",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 1365,
+        "title" : "The Complete Poetical Works of Henry Wadsworth Longfellow",
+        "author" : "Henry Wadsworth Longfellow",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 766,
+        "title" : "David Copperfield",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2270,
+        "title" : "Shakespeare's First Folio",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 200,
+        "title" : "The Project Gutenberg Encyclopedia, Volume 1 of 28",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 963,
+        "title" : "Little Dorrit",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 967,
+        "title" : "Nicholas Nickleby",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2441,
+        "title" : "The Burgess Animal Book for Children",
+        "author" : "Thornton W. Burgess",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 648,
+        "title" : "Wild Wales: Its People, Language and Scenery",
+        "author" : "George Borrow",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1860,
+        "title" : "Westward Ho! Or, The Voyages and Adventures of Sir Amyas Leigh, Knight, of Burrough, in the County of Devon, in the Reign of Her Most Glorious Majesty Queen Elizabeth",
+        "author" : "Charles Kingsley",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2158,
+        "title" : "The Prime Minister",
+        "author" : "Anthony Trollope",
+        "language" : "en",
+        "year" : 2000
+      } ]
+    },
+    "time" : {
+      "query" : "time",
+      "filters" : { },
+      "total" : 2692,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 674,
+        "title" : "Plutarch: Lives of the noble Grecians and Romans",
+        "author" : "Plutarch",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 200,
+        "title" : "The Project Gutenberg Encyclopedia, Volume 1 of 28",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2760,
+        "title" : "Celebrated Crimes (Complete)",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1581,
+        "title" : "The Bible, Douay-Rheims, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2270,
+        "title" : "Shakespeare's First Folio",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1895,
+        "title" : "Armadale",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 2848,
+        "title" : "Antiquities of the Jews",
+        "author" : "Flavius Josephus",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 747,
+        "title" : "Anomalies and Curiosities of Medicine",
+        "author" : "George M. Gould",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1184,
+        "title" : "The Count of Monte Cristo",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 967,
+        "title" : "Nicholas Nickleby",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 583,
+        "title" : "The Woman in White",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1438,
+        "title" : "No Name",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 820,
+        "title" : "Edison: His Life and Inventions",
+        "author" : "Frank Lewis Dyer",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 766,
+        "title" : "David Copperfield",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1946,
+        "title" : "On War",
+        "author" : "Carl von Clausewitz",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 996,
+        "title" : "Don Quixote",
+        "author" : "Miguel de Cervantes Saavedra",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1023,
+        "title" : "Bleak House",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      } ]
+    },
+    "man" : {
+      "query" : "man",
+      "filters" : { },
+      "total" : 2713,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 1581,
+        "title" : "The Bible, Douay-Rheims, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 10,
+        "title" : "The King James Version of the Bible",
+        "author" : null,
+        "language" : "en",
+        "year" : 1989
+      }, {
+        "book_id" : 30,
+        "title" : "The Bible, King James Version, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1992
+      }, {
+        "book_id" : 2100,
+        "title" : "Bibeln, Gamla och Nya Testamentet",
+        "author" : null,
+        "language" : "sv",
+        "year" : 2000
+      }, {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2270,
+        "title" : "Shakespeare's First Folio",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 1184,
+        "title" : "The Count of Monte Cristo",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 674,
+        "title" : "Plutarch: Lives of the noble Grecians and Romans",
+        "author" : "Plutarch",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1610,
+        "title" : "The Bible, Douay-Rheims, Old Testament — Part 2",
+        "author" : null,
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 2300,
+        "title" : "The Descent of Man, and Selection in Relation to Sex",
+        "author" : "Charles Darwin",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2158,
+        "title" : "The Prime Minister",
+        "author" : "Anthony Trollope",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2760,
+        "title" : "Celebrated Crimes (Complete)",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2334,
+        "title" : "The Works of Rudyard Kipling: One Volume Edition",
+        "author" : "Rudyard Kipling",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 747,
+        "title" : "Anomalies and Curiosities of Medicine",
+        "author" : "George M. Gould",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 580,
+        "title" : "The Pickwick Papers",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1609,
+        "title" : "The Bible, Douay-Rheims, Old Testament — Part 1",
+        "author" : null,
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 1564,
+        "title" : "Boswell's Life of Johnson",
+        "author" : "James Boswell",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 968,
+        "title" : "Martin Chuzzlewit",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 2006
+      } ]
+    },
+    "pyromaniac" : {
+      "query" : "pyromaniac",
+      "filters" : { },
+      "total" : 3,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 22,
+        "title" : "Roget's Thesaurus",
+        "author" : "Peter Mark Roget",
+        "language" : "en",
+        "year" : 1991
+      }, {
+        "book_id" : 663,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section F, G and H",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1923,
+        "title" : "The Poisoned Pen",
+        "author" : "Arthur B. Reeve",
+        "language" : "en",
+        "year" : 1999
+      } ]
+    },
+    "liliput" : {
+      "query" : "liliput",
+      "filters" : { },
+      "total" : 3,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2947,
+        "title" : "Die von denen Faunen gepeitschte Laster",
+        "author" : "Sidonia Hedwig Zäunemann",
+        "language" : "de",
+        "year" : 2001
+      }, {
+        "book_id" : 21,
+        "title" : "Three hundred Aesop’s fables",
+        "author" : "Aesop",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1322,
+        "title" : "Leaves of Grass",
+        "author" : "Walt Whitman",
+        "language" : "en",
+        "year" : 1998
+      } ]
+    },
+    "boardinghouses" : {
+      "query" : "boardinghouses",
+      "filters" : { },
+      "total" : 8,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 51,
+        "title" : "Anne of the Island",
+        "author" : "L. M. Montgomery",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2900,
+        "title" : "The Age of Invention: A Chronicle of Mechanical Conquest",
+        "author" : "Holland Thompson",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 44,
+        "title" : "The Song of the Lark",
+        "author" : "Willa Cather",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 140,
+        "title" : "The Jungle",
+        "author" : "Upton Sinclair",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2348,
+        "title" : "The Disappearance of Lady Frances Carfax",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2350,
+        "title" : "His last bow",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2616,
+        "title" : "Memoirs of General William T. Sherman — Volume 1",
+        "author" : "William T. Sherman",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2666,
+        "title" : "The Poet at the Breakfast-Table",
+        "author" : "Oliver Wendell Holmes",
+        "language" : "en",
+        "year" : 2004
+      } ]
+    },
+    "phytography" : {
+      "query" : "phytography",
+      "filters" : { },
+      "total" : 2,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 666,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section P and Q",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 22,
+        "title" : "Roget's Thesaurus",
+        "author" : "Peter Mark Roget",
+        "language" : "en",
+        "year" : 1991
+      } ]
+    },
+    "bepowdered" : {
+      "query" : "bepowdered",
+      "filters" : { },
+      "total" : 4,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 86,
+        "title" : "A Connecticut Yankee in King Arthur's Court",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 453,
+        "title" : "Emma McChesney and Co.",
+        "author" : "Edna Ferber",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1200,
+        "title" : "Gargantua and Pantagruel",
+        "author" : "François Rabelais",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2783,
+        "title" : "The Trampling of the Lilies",
+        "author" : "Rafael Sabatini",
+        "language" : "en",
+        "year" : 2001
+      } ]
+    },
+    "love pyromaniac" : {
+      "query" : "love pyromaniac",
+      "filters" : { },
+      "total" : 3,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 663,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section F, G and H",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 22,
+        "title" : "Roget's Thesaurus",
+        "author" : "Peter Mark Roget",
+        "language" : "en",
+        "year" : 1991
+      }, {
+        "book_id" : 1923,
+        "title" : "The Poisoned Pen",
+        "author" : "Arthur B. Reeve",
+        "language" : "en",
+        "year" : 1999
+      } ]
+    },
+    "old liliput" : {
+      "query" : "old liliput",
+      "filters" : { },
+      "total" : 2,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 1322,
+        "title" : "Leaves of Grass",
+        "author" : "Walt Whitman",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 21,
+        "title" : "Three hundred Aesop’s fables",
+        "author" : "Aesop",
+        "language" : "en",
+        "year" : 2008
+      } ]
+    },
+    "night boardinghouses" : {
+      "query" : "night boardinghouses",
+      "filters" : { },
+      "total" : 8,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 51,
+        "title" : "Anne of the Island",
+        "author" : "L. M. Montgomery",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2900,
+        "title" : "The Age of Invention: A Chronicle of Mechanical Conquest",
+        "author" : "Holland Thompson",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 140,
+        "title" : "The Jungle",
+        "author" : "Upton Sinclair",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 44,
+        "title" : "The Song of the Lark",
+        "author" : "Willa Cather",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2616,
+        "title" : "Memoirs of General William T. Sherman — Volume 1",
+        "author" : "William T. Sherman",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2350,
+        "title" : "His last bow",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2666,
+        "title" : "The Poet at the Breakfast-Table",
+        "author" : "Oliver Wendell Holmes",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2348,
+        "title" : "The Disappearance of Lady Frances Carfax",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 2000
+      } ]
+    },
+    "time phytography" : {
+      "query" : "time phytography",
+      "filters" : { },
+      "total" : 2,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 666,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section P and Q",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 22,
+        "title" : "Roget's Thesaurus",
+        "author" : "Peter Mark Roget",
+        "language" : "en",
+        "year" : 1991
+      } ]
+    },
+    "man bepowdered" : {
+      "query" : "man bepowdered",
+      "filters" : { },
+      "total" : 4,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 1200,
+        "title" : "Gargantua and Pantagruel",
+        "author" : "François Rabelais",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 86,
+        "title" : "A Connecticut Yankee in King Arthur's Court",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2783,
+        "title" : "The Trampling of the Lilies",
+        "author" : "Rafael Sabatini",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 453,
+        "title" : "Emma McChesney and Co.",
+        "author" : "Edna Ferber",
+        "language" : "en",
+        "year" : 1996
+      } ]
+    },
+    "ship captain sea voyage" : {
+      "query" : "ship captain sea voyage",
+      "filters" : { },
+      "total" : 806,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2055,
+        "title" : "Two Years Before the Mast",
+        "author" : "Richard Henry Dana",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 15,
+        "title" : "Moby-Dick; or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 1991
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2489,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2415,
+        "title" : "The Mutiny of the Elsinore",
+        "author" : "Jack London",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2488,
+        "title" : "Twenty Thousand Leagues Under the Seas: An Underwater Tour of the World",
+        "author" : "Jules Verne",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1860,
+        "title" : "Westward Ho! Or, The Voyages and Adventures of Sir Amyas Leigh, Knight, of Burrough, in the County of Devon, in the Reign of Her Most Glorious Majesty Queen Elizabeth",
+        "author" : "Charles Kingsley",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 200,
+        "title" : "The Project Gutenberg Encyclopedia, Volume 1 of 28",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 1371,
+        "title" : "Astoria; Or, Anecdotes of an Enterprise Beyond the Rocky Mountains",
+        "author" : "Washington Irving",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 521,
+        "title" : "The Life and Adventures of Robinson Crusoe",
+        "author" : "Daniel Defoe",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1268,
+        "title" : "The Mysterious Island",
+        "author" : "Jules Verne",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2690,
+        "title" : "Coral Reefs",
+        "author" : "Charles Darwin",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 781,
+        "title" : "Sinking of the Titanic and Great Sea Disasters",
+        "author" : null,
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 944,
+        "title" : "The Voyage of the Beagle",
+        "author" : "Charles Darwin",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 561,
+        "title" : "The Further Adventures of Robinson Crusoe",
+        "author" : "Daniel Defoe",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 821,
+        "title" : "Dombey and Son",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 2083,
+        "title" : "In Search of the Castaways; Or, The Children of Captain Grant",
+        "author" : "Jules Verne",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 1476,
+        "title" : "Chance: A Tale in Two Parts",
+        "author" : "Joseph Conrad",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 674,
+        "title" : "Plutarch: Lives of the noble Grecians and Romans",
+        "author" : "Plutarch",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2087,
+        "title" : "Life and Letters of Charles Darwin — Volume 1",
+        "author" : "Charles Darwin",
+        "language" : "en",
+        "year" : 2000
+      } ]
+    },
+    "king queen ancient castle" : {
+      "query" : "king queen ancient castle",
+      "filters" : { },
+      "total" : 850,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2760,
+        "title" : "Celebrated Crimes (Complete)",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 750,
+        "title" : "The High History of the Holy Graal",
+        "author" : null,
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 200,
+        "title" : "The Project Gutenberg Encyclopedia, Volume 1 of 28",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 1252,
+        "title" : "Le Morte d'Arthur: Volume 2",
+        "author" : "Sir Thomas Malory",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 699,
+        "title" : "A Child's History of England",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1251,
+        "title" : "Le Morte d'Arthur: Volume 1",
+        "author" : "Sir Thomas Malory",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 598,
+        "title" : "Heimskringla; Or, The Chronicle of the Kings of Norway",
+        "author" : "Snorri Sturluson",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2866,
+        "title" : "Windsor Castle",
+        "author" : "William Harrison Ainsworth",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1606,
+        "title" : "Kenilworth",
+        "author" : "Walter Scott",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2744,
+        "title" : "Mary Stuart",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 169,
+        "title" : "The Well at the World's End: A Tale",
+        "author" : "William Morris",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1581,
+        "title" : "The Bible, Douay-Rheims, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 82,
+        "title" : "Ivanhoe: A Romance",
+        "author" : "Walter Scott",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2612,
+        "title" : "The History of England, from the Accession of James II — Volume 3",
+        "author" : "Baron Thomas Babington Macaulay Macaulay",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 615,
+        "title" : "Orlando Furioso",
+        "author" : "Lodovico Ariosto",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 996,
+        "title" : "Don Quixote",
+        "author" : "Miguel de Cervantes Saavedra",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 378,
+        "title" : "The White Knight: Tirant Lo Blanc",
+        "author" : "Joanot Martorell",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 2270,
+        "title" : "Shakespeare's First Folio",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 674,
+        "title" : "Plutarch: Lives of the noble Grecians and Romans",
+        "author" : "Plutarch",
+        "language" : "en",
+        "year" : 1996
+      } ]
+    },
+    "dark night murder mystery" : {
+      "query" : "dark night murder mystery",
+      "filters" : { },
+      "total" : 1118,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2760,
+        "title" : "Celebrated Crimes (Complete)",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2868,
+        "title" : "The Green Mummy",
+        "author" : "Fergus Hume",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1218,
+        "title" : "The Adventures of Jimmie Dale",
+        "author" : "Frank L. Packard",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2073,
+        "title" : "The Valet's Tragedy, and Other Studies",
+        "author" : "Andrew Lang",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 1831,
+        "title" : "The Lock and Key Library: Classic Mystery and Detective Stories: Old Time English",
+        "author" : null,
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 446,
+        "title" : "A Book of Remarkable Criminals",
+        "author" : "H. B. Irving",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2147,
+        "title" : "The Works of Edgar Allan Poe — Volume 1",
+        "author" : "Edgar Allan Poe",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2735,
+        "title" : "The Golden Dog",
+        "author" : "William Kirby",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 200,
+        "title" : "The Project Gutenberg Encyclopedia, Volume 1 of 28",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 968,
+        "title" : "Martin Chuzzlewit",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2047,
+        "title" : "The Lock and Key Library: the Most Interesting Stories of All Nations: French Novels",
+        "author" : null,
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2172,
+        "title" : "That Mainwaring Affair",
+        "author" : "A. Maynard Barbour",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2043,
+        "title" : "The Lock and Key Library: The most interesting stories of all nations: American",
+        "author" : null,
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 1685,
+        "title" : "The Mystery of the Yellow Room",
+        "author" : "Gaston Leroux",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 1023,
+        "title" : "Bleak House",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1581,
+        "title" : "The Bible, Douay-Rheims, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 221,
+        "title" : "The Return of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 108,
+        "title" : "The Return of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 1955,
+        "title" : "The Darrow Enigma",
+        "author" : "Melvin L. Severy",
+        "language" : "en",
+        "year" : 1999
+      } ]
+    },
+    "young woman love letter" : {
+      "query" : "young woman love letter",
+      "filters" : { },
+      "total" : 1924,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2760,
+        "title" : "Celebrated Crimes (Complete)",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1895,
+        "title" : "Armadale",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1257,
+        "title" : "The three musketeers",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 1438,
+        "title" : "No Name",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1184,
+        "title" : "The Count of Monte Cristo",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 1586,
+        "title" : "Man and Wife",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 599,
+        "title" : "Vanity Fair",
+        "author" : "William Makepeace Thackeray",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1023,
+        "title" : "Bleak House",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 2497,
+        "title" : "Put Yourself in His Place",
+        "author" : "Charles Reade",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 1366,
+        "title" : "The Cloister and the Hearth",
+        "author" : "Charles Reade",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 583,
+        "title" : "The Woman in White",
+        "author" : "Wilkie Collins",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1399,
+        "title" : "Anna Karenina",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2158,
+        "title" : "The Prime Minister",
+        "author" : "Anthony Trollope",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 766,
+        "title" : "David Copperfield",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1957,
+        "title" : "Beatrix",
+        "author" : "Honoré de Balzac",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1581,
+        "title" : "The Bible, Douay-Rheims, Complete",
+        "author" : null,
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 926,
+        "title" : "Ten Thousand Dreams Interpreted; Or, What's in a Dream",
+        "author" : "Gustavus Hindman Miller",
+        "language" : "en",
+        "year" : 1997
+      } ]
+    },
+    "old man sea fish" : {
+      "query" : "old man sea fish",
+      "filters" : { },
+      "total" : 1566,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 668,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section S",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 663,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section F, G and H",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2016,
+        "title" : "The 1998 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 1662,
+        "title" : "The 1997 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 15,
+        "title" : "Moby-Dick; or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 1991
+      }, {
+        "book_id" : 571,
+        "title" : "The 1995 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2489,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 180,
+        "title" : "The 1994 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 87,
+        "title" : "The 1993 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 48,
+        "title" : "The 1992 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 25,
+        "title" : "The 1991 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1992
+      }, {
+        "book_id" : 2488,
+        "title" : "Twenty Thousand Leagues Under the Seas: An Underwater Tour of the World",
+        "author" : "Jules Verne",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 14,
+        "title" : "The 1990 CIA World Factbook",
+        "author" : "United States. Central Intelligence Agency",
+        "language" : "en",
+        "year" : 1991
+      }, {
+        "book_id" : 683,
+        "title" : "The Compleat Angler",
+        "author" : "Izaak Walton",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 200,
+        "title" : "The Project Gutenberg Encyclopedia, Volume 1 of 28",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 660,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section A and B",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 669,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section T, U, V, and W",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1838,
+        "title" : "A New Voyage to Carolina",
+        "author" : "John Lawson",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      } ]
+    },
+    "pyromaniac liliput" : {
+      "query" : "pyromaniac liliput",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "phytography boardinghouses" : {
+      "query" : "phytography boardinghouses",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "bepowdered pyromaniac" : {
+      "query" : "bepowdered pyromaniac",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "liliput phytography" : {
+      "query" : "liliput phytography",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "boardinghouses bepowdered" : {
+      "query" : "boardinghouses bepowdered",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "cæsar" : {
+      "query" : "cæsar",
+      "filters" : { },
+      "total" : 161,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2853,
+        "title" : "Quo Vadis: A Narrative of the Time of Nero",
+        "author" : "Henryk Sienkiewicz",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2848,
+        "title" : "Antiquities of the Jews",
+        "author" : "Flavius Josephus",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 731,
+        "title" : "History of the Decline and Fall of the Roman Empire — Volume 1",
+        "author" : "Edward Gibbon",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2769,
+        "title" : "Cleopatra",
+        "author" : "H. Rider Haggard",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 732,
+        "title" : "History of the Decline and Fall of the Roman Empire — Volume 2",
+        "author" : "Edward Gibbon",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 890,
+        "title" : "History of the Decline and Fall of the Roman Empire — Volume 1",
+        "author" : "Edward Gibbon",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2074,
+        "title" : "The Civilisation of the Renaissance in Italy",
+        "author" : "Jacob Burckhardt",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2145,
+        "title" : "Ben-Hur: A tale of the Christ",
+        "author" : "Lew Wallace",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 736,
+        "title" : "History of the Decline and Fall of the Roman Empire — Volume 6",
+        "author" : "Edward Gibbon",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1184,
+        "title" : "The Count of Monte Cristo",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2615,
+        "title" : "Discourses on Satire and on Epic Poetry",
+        "author" : "John Dryden",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2811,
+        "title" : "Letters of Pliny",
+        "author" : "the Younger Pliny",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 100,
+        "title" : "The Complete Works of William Shakespeare",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1844,
+        "title" : "The Scholemaster",
+        "author" : "Roger Ascham",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 1538,
+        "title" : "Cymbeline",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2270,
+        "title" : "Shakespeare's First Folio",
+        "author" : "William Shakespeare",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 892,
+        "title" : "History of the Decline and Fall of the Roman Empire — Volume 3",
+        "author" : "Edward Gibbon",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 586,
+        "title" : "Religio Medici, Hydriotaphia, and the Letter to a Friend",
+        "author" : "Sir Thomas Browne",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 660,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section A and B",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      } ]
+    },
+    "tête" : {
+      "query" : "tête",
+      "filters" : { },
+      "total" : 121,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 798,
+        "title" : "Le rouge et le noir: chronique du XIXe siècle",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 796,
+        "title" : "La Chartreuse De Parme",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 2650,
+        "title" : "Du côté de chez Swann",
+        "author" : "Marcel Proust",
+        "language" : "fr",
+        "year" : 2001
+      }, {
+        "book_id" : 800,
+        "title" : "Le tour du monde en quatre-vingts jours",
+        "author" : "Jules Verne",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 2419,
+        "title" : "La dame aux camélias",
+        "author" : "Alexandre Dumas",
+        "language" : "fr",
+        "year" : 2000
+      }, {
+        "book_id" : 1256,
+        "title" : "Cyrano de Bergerac",
+        "author" : "Edmond Rostand",
+        "language" : "fr",
+        "year" : 1998
+      }, {
+        "book_id" : 2682,
+        "title" : "Henri III et sa Cour",
+        "author" : "Alexandre Dumas",
+        "language" : "fr",
+        "year" : 2001
+      }, {
+        "book_id" : 799,
+        "title" : "De la terre à la lune: trajet direct en 97 heures 20 minutes",
+        "author" : "Jules Verne",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 1339,
+        "title" : "Salomé",
+        "author" : "Oscar Wilde",
+        "language" : "fr",
+        "year" : 1998
+      }, {
+        "book_id" : 145,
+        "title" : "Middlemarch",
+        "author" : "George Eliot",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 669,
+        "title" : "The Gutenberg Webster's Unabridged Dictionary: Section T, U, V, and W",
+        "author" : "Project Gutenberg",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 969,
+        "title" : "The Tenant of Wildfell Hall",
+        "author" : "Anne Brontë",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 2610,
+        "title" : "Notre-Dame de Paris",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 797,
+        "title" : "L'Abbesse De Castro",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 801,
+        "title" : "Les Cenci",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 141,
+        "title" : "Mansfield Park",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 158,
+        "title" : "Emma",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 802,
+        "title" : "Vittoria Accoramboni",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      } ]
+    },
+    "père" : {
+      "query" : "père",
+      "filters" : { },
+      "total" : 86,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2650,
+        "title" : "Du côté de chez Swann",
+        "author" : "Marcel Proust",
+        "language" : "fr",
+        "year" : 2001
+      }, {
+        "book_id" : 796,
+        "title" : "La Chartreuse De Parme",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 2419,
+        "title" : "La dame aux camélias",
+        "author" : "Alexandre Dumas",
+        "language" : "fr",
+        "year" : 2000
+      }, {
+        "book_id" : 798,
+        "title" : "Le rouge et le noir: chronique du XIXe siècle",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 797,
+        "title" : "L'Abbesse De Castro",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 1069,
+        "title" : "Four Short Stories By Emile Zola",
+        "author" : "Émile Zola",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 2682,
+        "title" : "Henri III et sa Cour",
+        "author" : "Alexandre Dumas",
+        "language" : "fr",
+        "year" : 2001
+      }, {
+        "book_id" : 801,
+        "title" : "Les Cenci",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 1301,
+        "title" : "The French Revolution: A History",
+        "author" : "Thomas Carlyle",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 60,
+        "title" : "The Scarlet Pimpernel",
+        "author" : "Baroness Emmuska Orczy Orczy",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 736,
+        "title" : "History of the Decline and Fall of the Roman Empire — Volume 6",
+        "author" : "Edward Gibbon",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1184,
+        "title" : "The Count of Monte Cristo",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2768,
+        "title" : "The Paris Sketch Book of Mr. M. A. Titmarsh",
+        "author" : "William Makepeace Thackeray",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2579,
+        "title" : "The French Revolution - Volume 2",
+        "author" : "Hippolyte Taine",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1259,
+        "title" : "Twenty years after",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2577,
+        "title" : "The Ancient Regime",
+        "author" : "Hippolyte Taine",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 388,
+        "title" : "The Crossing",
+        "author" : "Winston Churchill",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1256,
+        "title" : "Cyrano de Bergerac",
+        "author" : "Edmond Rostand",
+        "language" : "fr",
+        "year" : 1998
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      } ]
+    },
+    "façade" : {
+      "query" : "façade",
+      "filters" : { },
+      "total" : 49,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2610,
+        "title" : "Notre-Dame de Paris",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2873,
+        "title" : "The Prehistoric World; Or, Vanished Races",
+        "author" : "Emory Adams Allen",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2523,
+        "title" : "The Memoirs of Victor Hugo",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2576,
+        "title" : "Alps and Sanctuaries of Piedmont and the Canton Ticino",
+        "author" : "Samuel Butler",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 319,
+        "title" : "The Ways of Men",
+        "author" : "Eliot Gregory",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 718,
+        "title" : "Tono-Bungay",
+        "author" : "H. G. Wells",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 204,
+        "title" : "The innocence of Father Brown",
+        "author" : "G. K. Chesterton",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 27,
+        "title" : "Far from the Madding Crowd",
+        "author" : "Thomas Hardy",
+        "language" : "en",
+        "year" : 1992
+      }, {
+        "book_id" : 177,
+        "title" : "The American",
+        "author" : "Henry James",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 796,
+        "title" : "La Chartreuse De Parme",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 798,
+        "title" : "Le rouge et le noir: chronique du XIXe siècle",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 2641,
+        "title" : "A Room with a View",
+        "author" : "E. M. Forster",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 107,
+        "title" : "Far from the Madding Crowd",
+        "author" : "Thomas Hardy",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 122,
+        "title" : "The Return of the Native",
+        "author" : "Thomas Hardy",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 153,
+        "title" : "Jude the Obscure",
+        "author" : "Thomas Hardy",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 560,
+        "title" : "Mr. Standfast",
+        "author" : "John Buchan",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 2074,
+        "title" : "The Civilisation of the Renaissance in Italy",
+        "author" : "Jacob Burckhardt",
+        "language" : "en",
+        "year" : 2000
+      }, {
+        "book_id" : 2650,
+        "title" : "Du côté de chez Swann",
+        "author" : "Marcel Proust",
+        "language" : "fr",
+        "year" : 2001
+      } ]
+    },
+    "manœuvre" : {
+      "query" : "manœuvre",
+      "filters" : { },
+      "total" : 56,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 164,
+        "title" : "Twenty Thousand Leagues under the Sea",
+        "author" : "Jules Verne",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1074,
+        "title" : "The Sea-Wolf",
+        "author" : "Jack London",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1184,
+        "title" : "The Count of Monte Cristo",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 1259,
+        "title" : "Twenty years after",
+        "author" : "Alexandre Dumas",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 1946,
+        "title" : "On War",
+        "author" : "Carl von Clausewitz",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 911,
+        "title" : "Tales of the Fish Patrol",
+        "author" : "Jack London",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 135,
+        "title" : "Les Misérables",
+        "author" : "Victor Hugo",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 799,
+        "title" : "De la terre à la lune: trajet direct en 97 heures 20 minutes",
+        "author" : "Jules Verne",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 796,
+        "title" : "La Chartreuse De Parme",
+        "author" : "Stendhal",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 1301,
+        "title" : "The French Revolution: A History",
+        "author" : "Thomas Carlyle",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 541,
+        "title" : "The Age of Innocence",
+        "author" : "Edith Wharton",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 589,
+        "title" : "Catriona",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 1079,
+        "title" : "The life and opinions of Tristram Shandy, gentleman",
+        "author" : "Laurence Sterne",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1235,
+        "title" : "Captain Fracasse",
+        "author" : "Théophile Gautier",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 27,
+        "title" : "Far from the Madding Crowd",
+        "author" : "Thomas Hardy",
+        "language" : "en",
+        "year" : 1992
+      }, {
+        "book_id" : 107,
+        "title" : "Far from the Madding Crowd",
+        "author" : "Thomas Hardy",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 122,
+        "title" : "The Return of the Native",
+        "author" : "Thomas Hardy",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 269,
+        "title" : "Beasts and Super-Beasts",
+        "author" : "Saki",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 464,
+        "title" : "In the South Seas",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 1996
+      }, {
+        "book_id" : 471,
+        "title" : "The Bride of Lammermoor",
+        "author" : "Walter Scott",
+        "language" : "en",
+        "year" : 2006
+      } ]
+    }
+  },
+  "failed_at" : "2026-11-03T09:59:41.949Z",
+  "recovered_at" : "2026-11-03T10:04:54.573493482Z",
+  "recovery_seconds" : 312.624
+}

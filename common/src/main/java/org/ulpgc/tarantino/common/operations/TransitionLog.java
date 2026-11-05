@@ -3,11 +3,8 @@ package org.ulpgc.tarantino.common.operations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.Clock;
 import java.util.Objects;
-import java.util.Optional;
 
 /** Writes one INFO line per transition with the keys of SPEC §4.8 in their order, from which {@code bench} measures. */
 public class TransitionLog {
@@ -19,7 +16,7 @@ public class TransitionLog {
     private final Clock clock;
 
     public TransitionLog() {
-        this(hostname(), Clock.systemUTC());
+        this(Replica.name(), Clock.systemUTC());
     }
 
     TransitionLog(String replica, Clock clock) {
@@ -40,17 +37,5 @@ public class TransitionLog {
 
     private static String orNotApplicable(Object value) {
         return Objects.toString(value, NOT_APPLICABLE);
-    }
-
-    private static String hostname() {
-        return Optional.ofNullable(System.getenv("HOSTNAME")).orElseGet(TransitionLog::localHostName);
-    }
-
-    private static String localHostName() {
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            return NOT_APPLICABLE;
-        }
     }
 }

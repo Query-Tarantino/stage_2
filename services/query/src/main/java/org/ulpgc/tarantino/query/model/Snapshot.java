@@ -1,0 +1,89 @@
+package org.ulpgc.tarantino.query.model;
+
+import org.ulpgc.tarantino.common.language.LanguageCodes;
+import org.ulpgc.tarantino.query.model.FiltersSummary.LanguageFilter;
+import org.ulpgc.tarantino.query.model.FiltersSummary.YearRange;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IntSummaryStatistics;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * What {@code query} can see (SPEC §7): the {@code PUBLISHED} batches of a generation, their books, and the
+ * precalculated {@code /search/filters} summary. It is immutable, so a request reads it once and uses it whole.
+ */
+public record Snapshot(
+        int generation,
+        Set<String> batchIds,
+        Set<Integer> bookIds,
+        FiltersSummary filtersSummary,
+        Map<Integer, BookFilter> bookFilters) {
+
+    public Snapshot {
+        batchIds = Set.copyOf(batchIds);
+        bookIds = Set.copyOf(bookIds);
+        bookFilters = Map.copyOf(bookFilters);
+    }
+
+    public static Snapshot empty(int generation) {
+        return new Snapshot(generation, Set.of(), Set.of(), FiltersSummary.empty(), Map.of());
+    }
+
+    /** {@code N} of TF-IDF: the books of the snapshot, never a count of the collection. */
+    public int bookCount() {
+        return bookIds.size();
+    }
+
+    /** The same snapshot plus newly published batches, their books, and each book's filter metadata. */
+    public Snapshot with(Map<String, List<Integer>> booksByBatch, Map<Integer, BookFilter> newFilters) {
+        Set<String> batches = new HashSet<>(batchIds);
+        batches.addAll(booksByBatch.keySet());
+        Set<Integer> books = new HashSet<>(bookIds);
+        booksByBatch.values().forEach(books::addAll);
+        Map<Integer, BookFilter> combined = new HashMap<>(bookFilters);
+        combined.putAll(newFilters);
+        FiltersSummary summary = computeSummary(books.size(), combined.values());
+        return new Snapshot(generation, batches, books, summary, combined);
+    }
+
+    private static FiltersSummary computeSummary(int totalBooks, Collection<BookFilter> filters) {
+        if (totalBooks == 0) {
+            return FiltersSummary.empty();
+        }
+        return new FiltersSummary(languages(filters), years(filters), totalBooks);
+    }
+
+    /** Each language with its books, from most to fewest and then by code, named from the {@code common} table. */
+    private static List<LanguageFilter> languages(Collection<BookFilter> filters) {
+        Map<String, Integer> languageCounts = filters.stream()
+                .flatMap(filter -> filter.languages().stream().distinct())
+                .collect(Collectors.groupingBy(code -> code, Collectors.summingInt(code -> 1)));
+        return languageCounts.entrySet().stream()
+                .sorted(Comparator.comparingInt(Map.Entry<String, Integer>::getValue).reversed()
+                        .thenComparing(Map.Entry::getKey))
+                .map(entry -> new LanguageFilter(entry.getKey(), LanguageCodes.name(entry.getKey()).orElse(entry.getKey()), entry.getValue()))
+                .toList();
+    }
+
+    private static YearRange years(Collection<BookFilter> filters) {
+        IntSummaryStatistics yearStats = filters.stream()
+                .map(BookFilter::year)
+                .filter(Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .summaryStatistics();
+        return yearStats.getCount() == 0 ? new YearRange(null, null) : new YearRange(yearStats.getMin(), yearStats.getMax());
+    }
+
+    public record BookFilter(List<String> languages, Integer year) {
+        public BookFilter {
+            languages = languages == null ? List.of() : List.copyOf(languages);
+        }
+    }
+}

@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.crawler.commands;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.crawler.model.book.StoredPaths;
 
+/** Where a book was stored in the datalake, or the {@code error_code} why it was not (SPEC §4.5 and §4.6). */
 public record IngestResult(int bookId, StoredPaths paths, BookErrorCode failure) {
 
     public static IngestResult success(int bookId, StoredPaths paths) {

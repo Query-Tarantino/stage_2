@@ -1,0 +1,400 @@
+package org.ulpgc.tarantino.indexer.commands;
+
+import org.junit.jupiter.api.Test;
+import org.ulpgc.tarantino.common.config.CrashPoint;
+import org.ulpgc.tarantino.common.model.BatchPublished;
+import org.ulpgc.tarantino.common.model.BookStatus;
+import org.ulpgc.tarantino.common.operations.CrashPoints;
+import org.ulpgc.tarantino.common.operations.Lease;
+import org.ulpgc.tarantino.common.operations.Transition;
+import org.ulpgc.tarantino.common.operations.TransitionLog;
+import org.ulpgc.tarantino.common.terms.Tokenizer;
+import org.ulpgc.tarantino.indexer.model.batch.Batch;
+import org.ulpgc.tarantino.indexer.model.batch.ClaimedBook;
+import org.ulpgc.tarantino.indexer.model.book.BookMetadata;
+import org.ulpgc.tarantino.indexer.model.book.BookText;
+import org.ulpgc.tarantino.indexer.model.terms.TermPostings;
+import org.ulpgc.tarantino.indexer.ports.BatchStore;
+import org.ulpgc.tarantino.indexer.ports.IndexWriter;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class IndexBatchCommandTest {
+
+    private static final Instant ENQUEUED_AT = Instant.parse("2026-10-21T10:05:00Z");
+    private static final Instant PUBLISHED_AT = Instant.parse("2026-10-21T10:05:32Z");
+    private static final String BATCH_ID = "6716f0c2a1b2c3d4e5f60718";
+    private static final int LETTERS = 26;
+
+    private final List<String> steps = new ArrayList<>();
+    private final CrashPoints crashPoints = new CrashPoints(Optional.empty()) {
+        @Override
+        public void hit(CrashPoint point) {
+            steps.add(point.point());
+        }
+    };
+    private final Lease lease = new Lease() {
+        @Override
+        public boolean lost() {
+            return steps.contains(leaseLostAfterStep);
+        }
+
+        @Override
+        public void close() {
+            leaseClosed = true;
+        }
+    };
+    private String leaseLostAfterStep = "never";
+    private boolean leaseClosed;
+    private BooleanSupplier renewal;
+    private final FakeBatchStore batches = new FakeBatchStore();
+    private final RecordingWriter writer = new RecordingWriter();
+    private final List<BatchPublished> announced = new ArrayList<>();
+    private final List<Transition> transitions = new ArrayList<>();
+    private final TransitionLog log = new TransitionLog() {
+        @Override
+        public void write(Transition transition) {
+            transitions.add(transition);
+        }
+    };
+    private final Map<Integer, BookText> datalake = new HashMap<>();
+
+    @Test
+    void publishesTheClaimedBooksWithTheirMetadataAndPostings() {
+        store(1342, "Title: Pride and Prejudice", "pride and prejudice, pride");
+        store(84, "Title: Frankenstein", "pride");
+
+        command().execute(books(1342, 84));
+
+        assertEquals(List.of(84, 1342), writer.metadata.stream().map(BookMetadata::bookId).toList());
+        assertEquals(List.of(new TermPostings("prejudice", List.of(1342), List.of(1)),
+                new TermPostings("pride", List.of(84, 1342), List.of(1, 2))), writer.postings);
+        assertEquals(Map.of(BATCH_ID, List.of(84, 1342)), batches.published);
+        assertEquals(Set.of(84, 1342), batches.marked);
+        assertEquals(List.of(new BatchPublished(BATCH_ID, 1, 2, PUBLISHED_AT)), announced);
+    }
+
+    @Test
+    void logsThePublicationOnlyOfTheBooksItMarkedItself() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        store(84, "Title: Frankenstein", "pride");
+        batches.completedByControl.add(84);
+
+        command().execute(books(1342, 84));
+
+        assertEquals(Set.of(1342), batches.marked);
+        assertEquals(List.of(Transition.book(1342, BookStatus.INDEXING, BookStatus.PUBLISHED).inBatch(BATCH_ID, 1)),
+                transitions.stream().filter(transition -> BookStatus.INDEXING.name().equals(transition.from())).toList());
+    }
+
+    @Test
+    void leavesOutTheBooksItCouldNotClaim() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        store(84, "Title: Frankenstein", "monster");
+        batches.downloaded.remove(84);
+
+        command().execute(books(1342, 84));
+
+        assertEquals(Map.of(BATCH_ID, List.of(1342)), batches.published);
+    }
+
+    @Test
+    void failsABookMissingFromTheDatalakeAndPublishesTheRest() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        batches.downloaded.add(84);
+
+        command().execute(books(1342, 84));
+
+        assertEquals(List.of(84), batches.failed);
+        assertEquals(Map.of(BATCH_ID, List.of(1342)), batches.published);
+    }
+
+    @Test
+    void neverPublishesABatchLeftWithoutBooks() {
+        batches.downloaded.add(84);
+
+        command().execute(books(84));
+
+        assertEquals(List.of(), writer.metadata);
+        assertEquals(Map.of(), batches.published);
+        assertEquals(List.of(), announced);
+    }
+
+    @Test
+    void writesThePostingsInChunksOfAThousandTerms() {
+        store(1342, "Title: Pride and Prejudice", distinctWords(2_500));
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1_000, 1_000, 500), writer.postingsChunkSizes);
+        assertEquals(2_500, writer.postings.size());
+    }
+
+    @Test
+    void reachesEachCrashPointBetweenTheRightSteps() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().execute(books(1342));
+
+        assertEquals(List.of("after-dequeue", "open", "metadata", "postings", "during-batch-write", "publish",
+                "after-publish", "mark", "after-mark", "announce"), steps);
+    }
+
+    @Test
+    void renewsTheLeaseOfItsOwnBatchUntilItEnds() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().execute(books(1342));
+
+        assertTrue(renewal.getAsBoolean());
+        assertEquals(List.of(BATCH_ID), batches.renewed);
+        assertTrue(leaseClosed);
+    }
+
+    @Test
+    void writesNothingOnceItsLeaseIsLostBeforeTheFirstWrite() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        leaseLostAfterStep = "open";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(), writer.metadata);
+        assertEquals(List.of(), writer.postings);
+        assertEquals(Map.of(), batches.published);
+    }
+
+    @Test
+    void failsNoBookAtIndexingOnceItsLeaseIsLost() {
+        batches.downloaded.add(84);
+        leaseLostAfterStep = "open";
+
+        command().execute(books(84));
+
+        assertEquals(List.of(), batches.failed);
+    }
+
+    @Test
+    void stopsWritingTheBatchOnceItsLeaseIsLost() {
+        store(1342, "Title: Pride and Prejudice", distinctWords(2_500));
+        leaseLostAfterStep = "postings";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1_000), writer.postingsChunkSizes);
+        assertEquals(Map.of(), batches.published);
+        assertEquals(List.of(), announced);
+    }
+
+    @Test
+    void neverPublishesABatchWhoseLeaseWasLostAfterItsLastWrite() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        leaseLostAfterStep = "postings";
+
+        command().execute(books(1342));
+
+        assertEquals(List.of(1), writer.postingsChunkSizes);
+        assertEquals(Map.of(), batches.published);
+        assertEquals(Set.of(), batches.marked);
+    }
+
+    @Test
+    void neitherMarksNorAnnouncesABatchThatLostItsLease() {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        batches.leaseLost = true;
+
+        command().execute(books(1342));
+
+        assertEquals(Set.of(), batches.marked);
+        assertEquals(List.of(), announced);
+    }
+
+    @Test
+    void pollsTheOldestDownloadedBooksUntilTheBatchIsFull() throws InterruptedException {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        store(84, "Title: Frankenstein", "pride");
+        store(11, "Title: Alice", "pride");
+
+        command().executeClaimingNext(2, Duration.ofSeconds(5), Duration.ofMillis(1));
+
+        assertEquals(Map.of(BATCH_ID, List.of(11, 84)), batches.published);
+        assertEquals(Set.of(1342), batches.downloaded);
+        assertEquals(List.of(new BatchPublished(BATCH_ID, 1, 2, PUBLISHED_AT)), announced);
+    }
+
+    @Test
+    void closesAPolledBatchOnceItsTimeoutPassesSinceTheFirstClaim() throws InterruptedException {
+        store(1342, "Title: Pride and Prejudice", "pride");
+
+        command().executeClaimingNext(100, Duration.ofMillis(20), Duration.ofMillis(5));
+
+        assertEquals(Map.of(BATCH_ID, List.of(1342)), batches.published);
+    }
+
+    @Test
+    void stopsClaimingPolledBooksOnceItsLeaseIsLost() throws InterruptedException {
+        store(1342, "Title: Pride and Prejudice", "pride");
+        store(84, "Title: Frankenstein", "pride");
+        leaseLostAfterStep = "claim-next";
+
+        command().executeClaimingNext(100, Duration.ofSeconds(5), Duration.ofMillis(1));
+
+        assertEquals(Set.of(1342), batches.downloaded);
+        assertEquals(Map.of(), batches.published);
+    }
+
+    @Test
+    void leavesAPolledBatchToExpireWhenNoBookWaits() throws InterruptedException {
+        command().executeClaimingNext(100, Duration.ofSeconds(5), Duration.ofMillis(1));
+
+        assertEquals(Map.of(), batches.published);
+        assertEquals(List.of(), announced);
+        assertTrue(leaseClosed);
+    }
+
+    private void store(int bookId, String header, String body) {
+        datalake.put(bookId, new BookText(bookId, header, body));
+        batches.downloaded.add(bookId);
+    }
+
+    private static String distinctWords(int count) {
+        return IntStream.range(0, count).mapToObj(IndexBatchCommandTest::distinctWord).collect(Collectors.joining(" "));
+    }
+
+    private static String distinctWord(int index) {
+        return Integer.toString(index, LETTERS).chars()
+                .mapToObj(digit -> String.valueOf((char) ('a' + Character.digit(digit, LETTERS))))
+                .collect(Collectors.joining("", "w", ""));
+    }
+
+    private static Map<Integer, Instant> books(Integer... bookIds) {
+        Map<Integer, Instant> books = new HashMap<>();
+        List.of(bookIds).forEach(bookId -> books.put(bookId, ENQUEUED_AT));
+        return books;
+    }
+
+    private IndexBatchCommand command() {
+        BookReader reader = new BookReader(bookId -> Optional.ofNullable(datalake.get(bookId)), new Tokenizer(Set.of("and")));
+        return new IndexBatchCommand(batches, reader, writer, this::announce, log, crashPoints, renewal -> {
+            this.renewal = renewal;
+            return lease;
+        });
+    }
+
+    private void announce(BatchPublished batch) {
+        steps.add("announce");
+        announced.add(batch);
+    }
+
+    private final class FakeBatchStore implements BatchStore {
+
+        private final Set<Integer> downloaded = new HashSet<>();
+        private final Set<Integer> indexing = new HashSet<>();
+        private final List<Integer> failed = new ArrayList<>();
+        private final Map<String, List<Integer>> published = new HashMap<>();
+        private final Set<Integer> marked = new HashSet<>();
+        private final Set<Integer> completedByControl = new HashSet<>();
+        private final List<String> renewed = new ArrayList<>();
+        private boolean leaseLost;
+
+        @Override
+        public Optional<ClaimedBook> claimNext(Batch batch) {
+            return downloaded.stream().sorted().findFirst().map(bookId -> {
+                steps.add("claim-next");
+                downloaded.remove(bookId);
+                indexing.add(bookId);
+                return new ClaimedBook(bookId, ENQUEUED_AT);
+            });
+        }
+
+        @Override
+        public boolean anyDownloaded() {
+            return !downloaded.isEmpty();
+        }
+
+        @Override
+        public int writeGeneration() {
+            return 1;
+        }
+
+        @Override
+        public Batch open(int generation) {
+            steps.add("open");
+            return new Batch(BATCH_ID, "claim", generation);
+        }
+
+        @Override
+        public List<Integer> claim(Batch batch, Collection<Integer> bookIds) {
+            List<Integer> claimed = bookIds.stream().filter(downloaded::contains).sorted().toList();
+            downloaded.removeAll(claimed);
+            indexing.addAll(claimed);
+            return claimed;
+        }
+
+        @Override
+        public boolean renew(Batch batch) {
+            renewed.add(batch.batchId());
+            return !leaseLost;
+        }
+
+        @Override
+        public boolean failAtIndexing(Batch batch, int bookId) {
+            failed.add(bookId);
+            return indexing.remove(bookId);
+        }
+
+        @Override
+        public Optional<Instant> publish(Batch batch, List<Integer> bookIds) {
+            steps.add("publish");
+            if (leaseLost) {
+                return Optional.empty();
+            }
+            published.put(batch.batchId(), bookIds);
+            return Optional.of(PUBLISHED_AT);
+        }
+
+        @Override
+        public boolean markPublished(Batch batch, int bookId) {
+            steps.add("mark");
+            boolean stillIndexing = indexing.remove(bookId) && !completedByControl.contains(bookId);
+            if (stillIndexing) {
+                marked.add(bookId);
+            }
+            return stillIndexing;
+        }
+    }
+
+    private final class RecordingWriter implements IndexWriter {
+
+        private final List<BookMetadata> metadata = new ArrayList<>();
+        private final List<TermPostings> postings = new ArrayList<>();
+        private final List<Integer> postingsChunkSizes = new ArrayList<>();
+
+        @Override
+        public void writeMetadata(int generation, List<BookMetadata> books) {
+            steps.add("metadata");
+            metadata.addAll(books);
+        }
+
+        @Override
+        public void writePostings(Batch batch, List<TermPostings> batchPostings) {
+            steps.add("postings");
+            postings.addAll(batchPostings);
+            postingsChunkSizes.add(batchPostings.size());
+        }
+    }
+}

@@ -1,0 +1,97 @@
+package org.ulpgc.tarantino.bench.jmh;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.common.json.TarantinoJson;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+/** {@code bench jmh-csv <json> <csv>}: the CSV of the raw JMH output a run keeps in {@code jmh/} (SPEC §9). */
+public class JmhCsvConverter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmhCsvConverter.class);
+    private static final ObjectMapper MAPPER = TarantinoJson.mapper();
+    private static final int FAILED = 1;
+    private static final int WRONG_USAGE = 2;
+    private static final String PARAMS = "params";
+    private static final String PARAM_COLUMN_PREFIX = "Param: ";
+
+    public static Path convert(Path jsonFile, Path csvFile) throws IOException {
+        String jsonContent = Files.readString(jsonFile, StandardCharsets.UTF_8);
+        String csvContent = convertJsonToCsv(jsonContent);
+        if (csvFile.getParent() != null) {
+            Files.createDirectories(csvFile.getParent());
+        }
+        Files.writeString(csvFile, csvContent, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        return csvFile;
+    }
+
+    /** One row per benchmark and parameter combination, with a {@code Param: <name>} column per {@code @Param} in the file. */
+    public static String convertJsonToCsv(String jsonContent) throws IOException {
+        JsonNode root = MAPPER.readTree(jsonContent);
+        List<JsonNode> benchmarks = root.isArray() ? StreamSupport.stream(root.spliterator(), false).toList() : List.of();
+        List<String> paramNames = paramNames(benchmarks);
+        String header = "\"Benchmark\",\"Mode\",\"Score\",\"Score Error (99.9%)\",\"Unit\",\"Forks\",\"Warmup Iterations\",\"Measurement Iterations\",\"JVM Args\""
+                + paramNames.stream().map(name -> ",\"" + PARAM_COLUMN_PREFIX + name + "\"").collect(Collectors.joining()) + "\n";
+        return header + benchmarks.stream()
+                .map(benchmarkNode -> formatRow(benchmarkNode) + paramValues(benchmarkNode, paramNames) + "\n")
+                .collect(Collectors.joining());
+    }
+
+    private static List<String> paramNames(List<JsonNode> benchmarks) {
+        return benchmarks.stream()
+                .flatMap(benchmarkNode -> benchmarkNode.path(PARAMS).properties().stream())
+                .map(Map.Entry::getKey)
+                .distinct()
+                .toList();
+    }
+
+    private static String paramValues(JsonNode benchmarkNode, List<String> paramNames) {
+        return paramNames.stream()
+                .map(name -> ",\"" + benchmarkNode.path(PARAMS).path(name).asText("") + "\"")
+                .collect(Collectors.joining());
+    }
+
+    private static String formatRow(JsonNode benchmarkNode) {
+        String benchmarkName = benchmarkNode.path("benchmark").asText("");
+        String benchmarkMode = benchmarkNode.path("mode").asText("");
+        JsonNode primaryMetric = benchmarkNode.path("primaryMetric");
+        double score = primaryMetric.path("score").asDouble(0.0);
+        double scoreError = primaryMetric.path("scoreError").asDouble(0.0);
+        String scoreUnit = primaryMetric.path("scoreUnit").asText("");
+        int forks = benchmarkNode.path("forks").asInt();
+        int warmupIterations = benchmarkNode.path("warmupIterations").asInt();
+        int measurementIterations = benchmarkNode.path("measurementIterations").asInt();
+        String jvmArgs = StreamSupport.stream(benchmarkNode.path("jvmArgs").spliterator(), false)
+                .map(JsonNode::asText)
+                .collect(Collectors.joining(" "));
+        return String.format(Locale.ROOT, "\"%s\",\"%s\",%.4f,%.4f,\"%s\",%d,%d,%d,\"%s\"",
+                benchmarkName, benchmarkMode, score, scoreError, scoreUnit,
+                forks, warmupIterations, measurementIterations, jvmArgs);
+    }
+
+    public static void main(String[] args) {
+        if (args.length < 2) {
+            LOGGER.error("Usage: bench jmh-csv <input json> <output csv>");
+            System.exit(WRONG_USAGE);
+        }
+        try {
+            convert(Paths.get(args[0]), Paths.get(args[1]));
+        } catch (Exception exception) {
+            LOGGER.error("Failed to convert JMH JSON to CSV: {}", exception.getMessage(), exception);
+            System.exit(FAILED);
+        }
+    }
+}

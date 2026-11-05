@@ -1,0 +1,156 @@
+{
+  "explainVersion": "1",
+  "queryPlanner": {
+    "namespace": "tarantino.metadata_g1",
+    "indexFilterSet": false,
+    "parsedQuery": {
+      "author_terms": {
+        "$eq": "austen"
+      }
+    },
+    "queryHash": "5F10276D",
+    "planCacheKey": "D5689B52",
+    "optimizationTimeMillis": 0,
+    "maxIndexedOrSolutionsReached": false,
+    "maxIndexedAndSolutionsReached": false,
+    "maxScansToExplodeReached": false,
+    "winningPlan": {
+      "stage": "PROJECTION_SIMPLE",
+      "transformBy": {
+        "_id": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "inputStage": {
+          "stage": "IXSCAN",
+          "keyPattern": {
+            "author_terms": 1
+          },
+          "indexName": "author_terms_1",
+          "isMultiKey": true,
+          "multiKeyPaths": {
+            "author_terms": [
+              "author_terms"
+            ]
+          },
+          "isUnique": false,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "author_terms": [
+              "[\"austen\", \"austen\"]"
+            ]
+          }
+        }
+      }
+    },
+    "rejectedPlans": []
+  },
+  "executionStats": {
+    "executionSuccess": true,
+    "nReturned": 8,
+    "executionTimeMillis": 0,
+    "totalKeysExamined": 8,
+    "totalDocsExamined": 8,
+    "executionStages": {
+      "stage": "PROJECTION_SIMPLE",
+      "nReturned": 8,
+      "executionTimeMillisEstimate": 0,
+      "works": 9,
+      "advanced": 8,
+      "needTime": 0,
+      "needYield": 0,
+      "saveState": 0,
+      "restoreState": 0,
+      "isEOF": 1,
+      "transformBy": {
+        "_id": 1
+      },
+      "inputStage": {
+        "stage": "FETCH",
+        "nReturned": 8,
+        "executionTimeMillisEstimate": 0,
+        "works": 9,
+        "advanced": 8,
+        "needTime": 0,
+        "needYield": 0,
+        "saveState": 0,
+        "restoreState": 0,
+        "isEOF": 1,
+        "docsExamined": 8,
+        "alreadyHasObj": 0,
+        "inputStage": {
+          "stage": "IXSCAN",
+          "nReturned": 8,
+          "executionTimeMillisEstimate": 0,
+          "works": 9,
+          "advanced": 8,
+          "needTime": 0,
+          "needYield": 0,
+          "saveState": 0,
+          "restoreState": 0,
+          "isEOF": 1,
+          "keyPattern": {
+            "author_terms": 1
+          },
+          "indexName": "author_terms_1",
+          "isMultiKey": true,
+          "multiKeyPaths": {
+            "author_terms": [
+              "author_terms"
+            ]
+          },
+          "isUnique": false,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "author_terms": [
+              "[\"austen\", \"austen\"]"
+            ]
+          },
+          "keysExamined": 8,
+          "seeks": 1,
+          "dupsTested": 8,
+          "dupsDropped": 0
+        }
+      }
+    }
+  },
+  "command": {
+    "find": "metadata_g1",
+    "filter": {
+      "author_terms": {
+        "$all": [
+          "austen"
+        ]
+      }
+    },
+    "projection": {
+      "_id": 1
+    },
+    "maxTimeMS": 0,
+    "$db": "tarantino"
+  },
+  "serverInfo": {
+    "host": "cd85a345c3db",
+    "port": 27017,
+    "version": "7.0.45",
+    "gitVersion": "a52313e13ab55c9bddf7c3ff91dab286fa381796"
+  },
+  "serverParameters": {
+    "internalQueryFacetBufferSizeBytes": 104857600,
+    "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+    "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+    "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+    "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+    "internalQueryProhibitBlockingMergeOnMongoS": 0,
+    "internalQueryMaxAddToSetBytes": 104857600,
+    "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+    "internalQueryFrameworkControl": "forceClassicEngine"
+  },
+  "ok": 1.0
+}

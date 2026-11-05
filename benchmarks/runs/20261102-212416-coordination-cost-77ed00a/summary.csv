@@ -1,0 +1,16 @@
+metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit
+download_queue_wait,"replicas=1",1436.49,305.74,379.63,1482.00,2956.00,3197.00,ms
+download,"replicas=1",13.10,1.51,1.88,11.00,29.00,55.00,ms
+index_queue_wait,"replicas=1",46724.38,979.47,1216.17,47461.00,87546.00,91227.00,ms
+indexing,"replicas=1",3489.71,60.71,75.38,3268.00,5656.00,6628.00,ms
+time_to_publication,"replicas=1",51665.27,796.93,989.52,51527.00,92999.00,96234.00,ms
+download_queue_wait,"replicas=2",793.81,54.65,67.86,761.00,1558.00,1771.00,ms
+download,"replicas=2",27.36,0.87,1.08,24.00,54.00,98.00,ms
+index_queue_wait,"replicas=2",26011.75,1117.08,1387.03,27186.00,48653.00,53406.00,ms
+indexing,"replicas=2",4117.65,168.63,209.38,3777.00,7007.00,7679.00,ms
+time_to_publication,"replicas=2",30952.21,1268.41,1574.93,31430.00,53999.00,58940.00,ms
+download_queue_wait,"replicas=3",835.61,71.92,89.30,876.00,1656.00,1700.00,ms
+download,"replicas=3",45.06,2.18,2.71,40.00,87.00,144.00,ms
+index_queue_wait,"replicas=3",19656.52,876.46,1088.26,20145.00,38548.00,41167.00,ms
+indexing,"replicas=3",5076.04,231.94,288.00,4556.00,8304.00,9779.00,ms
+time_to_publication,"replicas=3",25614.92,1119.66,1390.24,25024.00,43902.00,47192.00,ms

@@ -1,47 +1,143 @@
 package org.ulpgc.tarantino.query.commands;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
-import org.ulpgc.tarantino.query.model.BookMetadata;
+import org.ulpgc.tarantino.query.model.SearchQuery;
+import org.ulpgc.tarantino.query.model.SearchResponse;
 import org.ulpgc.tarantino.query.model.SearchResult;
-import org.ulpgc.tarantino.query.ports.InvertedIndexReader;
+import org.ulpgc.tarantino.query.model.Snapshot;
+import org.ulpgc.tarantino.query.model.TermPostings;
 import org.ulpgc.tarantino.query.ports.MetadataReader;
+import org.ulpgc.tarantino.query.ports.PostingsReader;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.TreeSet;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+/** Executes a search over an immutable snapshot using TF-IDF ranking (SPEC §7). */
 public class SearchCommand {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SearchCommand.class);
+    private static final Comparator<ScoredBook> RANKING = Comparator
+            .comparingDouble(ScoredBook::score).reversed()
+            .thenComparingInt(ScoredBook::bookId);
 
-    private final InvertedIndexReader invertedIndex;
+    private final PostingsReader postings;
     private final MetadataReader metadata;
     private final Tokenizer tokenizer;
 
-    public SearchCommand(InvertedIndexReader invertedIndex, MetadataReader metadata, Tokenizer tokenizer) {
-        this.invertedIndex = invertedIndex;
+    public SearchCommand(PostingsReader postings, MetadataReader metadata, Tokenizer tokenizer) {
+        this.postings = postings;
         this.metadata = metadata;
         this.tokenizer = tokenizer;
     }
 
-    public SearchResult execute(String query) {
-        return new SearchResult(query, booksContainingAll(tokenizer.distinctTerms(query)));
+    public SearchResponse execute(Snapshot snapshot, SearchQuery query) {
+        List<String> terms = tokenizer.distinctTerms(query.q());
+        if (terms.isEmpty() || snapshot.bookCount() == 0) {
+            return nothingFound(query);
+        }
+        Optional<Set<Integer>> filteredIds = filteredIds(snapshot, query);
+        if (filteredIds.filter(Set::isEmpty).isPresent()) {
+            return nothingFound(query);
+        }
+        Map<String, Map<Integer, Integer>> index = booksByTerm(
+                postings.postings(snapshot.generation(), terms, snapshot.batchIds()));
+        if (!index.keySet().containsAll(terms)) {
+            return nothingFound(query);
+        }
+        List<ScoredBook> ranked = rank(intersection(terms, index, filteredIds), terms, index, snapshot.bookCount());
+        return response(query, ranked, page(snapshot, query, ranked));
     }
 
-    private List<BookMetadata> booksContainingAll(List<String> terms) {
-        return idsContainingAll(terms).stream()
-                .map(metadata::book)
-                .flatMap(Optional::stream)
+    private Optional<Set<Integer>> filteredIds(Snapshot snapshot, SearchQuery query) {
+        if (!query.hasFilters()) {
+            return Optional.empty();
+        }
+        Set<Integer> filteredIds = new HashSet<>(metadata.matchingBookIds(
+                snapshot.generation(), query.authorTerms(), query.language(), query.year()));
+        filteredIds.retainAll(snapshot.bookIds());
+        return Optional.of(filteredIds);
+    }
+
+    private static List<ScoredBook> rank(
+            Set<Integer> matches, List<String> terms, Map<String, Map<Integer, Integer>> index, int totalBooks) {
+        return matches.stream()
+                .map(bookId -> new ScoredBook(bookId, score(bookId, terms, index, totalBooks)))
+                .sorted(RANKING)
                 .toList();
     }
 
-    private TreeSet<Integer> idsContainingAll(List<String> terms) {
-        return terms.stream()
-                .map(term -> new TreeSet<>(invertedIndex.postings(term)))
-                .reduce(SearchCommand::intersection)
-                .orElseGet(TreeSet::new);
+    private List<SearchResult> page(Snapshot snapshot, SearchQuery query, List<ScoredBook> ranked) {
+        List<Integer> page = ranked.stream()
+                .skip(query.offset())
+                .limit(query.limit())
+                .map(ScoredBook::bookId)
+                .toList();
+        return page.isEmpty() ? List.of() : inPageOrder(page, metadata.results(snapshot.generation(), page));
     }
 
-    private static TreeSet<Integer> intersection(TreeSet<Integer> ids, TreeSet<Integer> others) {
-        ids.retainAll(others);
-        return ids;
+    private static Map<String, Map<Integer, Integer>> booksByTerm(List<TermPostings> documents) {
+        Map<String, Map<Integer, Integer>> index = new HashMap<>();
+        for (TermPostings document : documents) {
+            Map<Integer, Integer> books = index.computeIfAbsent(document.term(), key -> new HashMap<>());
+            for (int position = 0; position < document.bookIds().size(); position++) {
+                Integer bookId = document.bookIds().get(position);
+                if (books.containsKey(bookId)) {
+                    LOGGER.error("Book {} appears twice in the postings of {}", bookId, document.term());
+                } else {
+                    books.put(bookId, document.tfs().get(position));
+                }
+            }
+        }
+        return index;
+    }
+
+    private static Set<Integer> intersection(
+            List<String> terms, Map<String, Map<Integer, Integer>> index, Optional<Set<Integer>> filteredIds) {
+        List<Set<Integer>> candidateSets = new ArrayList<>(
+                terms.stream().map(term -> index.get(term).keySet()).toList());
+        filteredIds.ifPresent(candidateSets::add);
+        candidateSets.sort(Comparator.comparingInt(Set::size));
+        Set<Integer> matches = new HashSet<>(candidateSets.getFirst());
+        candidateSets.subList(1, candidateSets.size()).forEach(matches::retainAll);
+        return matches;
+    }
+
+    private static double score(
+            int bookId, List<String> terms, Map<String, Map<Integer, Integer>> index, int totalBooks) {
+        return terms.stream()
+                .map(index::get)
+                .mapToDouble(books -> (1 + Math.log(books.get(bookId))) * Math.log((double) totalBooks / books.size()))
+                .sum();
+    }
+
+    private static List<SearchResult> inPageOrder(List<Integer> page, List<SearchResult> results) {
+        Map<Integer, SearchResult> byBook = results.stream()
+                .collect(Collectors.toMap(SearchResult::bookId, Function.identity()));
+        return page.stream()
+                .filter(byBook::containsKey)
+                .map(byBook::get)
+                .toList();
+    }
+
+    private static SearchResponse nothingFound(SearchQuery query) {
+        return response(query, List.of(), List.of());
+    }
+
+    private static SearchResponse response(
+            SearchQuery query, List<ScoredBook> ranked, List<SearchResult> pageResults) {
+        return new SearchResponse(
+                query.q(), query.filters(), ranked.size(), query.offset(), query.limit(), pageResults);
+    }
+
+    private record ScoredBook(int bookId, double score) {
     }
 }

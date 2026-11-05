@@ -11,6 +11,8 @@ import java.util.regex.Pattern;
 /** Environment variables where a blank value counts as unset, as {@code TARANTINO_MIRROR} did in Stage 1. */
 final class Variables {
 
+    private static final String TRUE = "true";
+    private static final String FALSE = "false";
     private static final Pattern POSITIVE_INTEGER = Pattern.compile("[1-9][0-9]{0,8}");
 
     private final Map<String, String> environment;
@@ -48,6 +50,21 @@ final class Variables {
 
     Duration seconds(String name, int defaultValue) {
         return Duration.ofSeconds(positive(name, defaultValue));
+    }
+
+    Duration millis(String name, int defaultValue) {
+        return Duration.ofMillis(positive(name, defaultValue));
+    }
+
+    boolean bool(String name, boolean defaultValue) {
+        return optionalText(name).map(value -> bool(name, value)).orElse(defaultValue);
+    }
+
+    private static boolean bool(String name, String value) {
+        if (!TRUE.equals(value) && !FALSE.equals(value)) {
+            throw new InvalidConfigurationException(name, "must be true or false, not " + value);
+        }
+        return TRUE.equals(value);
     }
 
     private static int positive(String name, String value) {
