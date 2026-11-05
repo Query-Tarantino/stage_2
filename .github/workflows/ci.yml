@@ -102,6 +102,9 @@ jobs:
       - name: Scale query to three replicas
         run: docker compose up -d --wait --wait-timeout 300 --scale query=3
 
+      - name: Let nginx resolve the new replicas
+        run: sleep 6
+
       - name: Run the functional API checks against three query replicas
         run: java -jar checks/target/checks-1.0-SNAPSHOT.jar
 
