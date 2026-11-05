@@ -521,6 +521,7 @@ paths:
         Consumer: the `control` orchestrator. Service: `crawler` (7001). nginx port: 8082, which hands a `503` to the next replica.
         Asynchronous: the handler only offers the book to the replica's local queue; completion is the book reaching `DOWNLOADED`, read by the orchestrator from MongoDB.
         Idempotency: a repeated dispatch does no harm, because the claim in MongoDB decides.
+        Caller: connect timeout 1 s and request timeout 2 s. On a `503`, a timeout or an error it stops dispatching this stage until its next tick, and it dispatches the book again once its last dispatch is older than `TARANTINO_REQUEUE_SECONDS` (SPEC.md §11.4).
       requestBody:
         required: true
         content:
@@ -552,6 +553,7 @@ paths:
         Consumer: the `control` orchestrator. Service: `indexer` (7002). nginx port: 8082, which hands a `503` to the next replica.
         Asynchronous: the handler only offers the book to the replica's local queue; completion is the book reaching `PUBLISHED`, read by the orchestrator from MongoDB.
         Idempotency: a repeated dispatch does no harm, because the claim in MongoDB decides.
+        Caller: connect timeout 1 s and request timeout 2 s. On a `503`, a timeout or an error it stops dispatching this stage until its next tick, and it dispatches the book again once its last dispatch is older than `TARANTINO_REQUEUE_SECONDS` (SPEC.md §11.4).
       requestBody:
         required: true
         content:
@@ -586,6 +588,7 @@ paths:
         Consumer: the `control` orchestrator, once per newly published batch. Service: `query` (7003). nginx port: none.
         Asynchronous: it only asks the snapshot thread for a refresh, like a `BatchPublished`; the periodic refresh remains.
         Idempotency: repeating it only refreshes again.
+        Caller: connect timeout 1 s and request timeout 2 s. A replica that does not answer is skipped: its periodic refresh shows the batch within `TARANTINO_SNAPSHOT_SECONDS`.
       responses:
         "202":
           description: The snapshot thread was asked to refresh.
