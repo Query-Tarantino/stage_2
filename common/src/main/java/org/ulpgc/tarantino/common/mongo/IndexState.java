@@ -21,7 +21,8 @@ import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.set;
 /** The {@code index_state} collection, with the generation pointer and the rebuild (SPEC §4.3), and “Create the pointer” (SPEC §5.1). */
 public class IndexState {
 
-    private static final int FIRST_GENERATION = 1;
+    /** The generation of a new {@code current} pointer, before any rebuild. */
+    public static final int FIRST_GENERATION = 1;
 
     private final MongoCollection<Document> collection;
 

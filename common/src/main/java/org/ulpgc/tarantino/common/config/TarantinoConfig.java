@@ -41,6 +41,12 @@ public record TarantinoConfig(
 
     /** The {@code TARANTINO_CANDIDATES} value that seeds every book of the local mirror. */
     public static final String MIRROR_CANDIDATES = "mirror";
+    /** The Mongo URI variable, which {@code bench explain} also reads, and its default. */
+    public static final String MONGO_URI = "TARANTINO_MONGO_URI";
+    public static final String DEFAULT_MONGO_URI = "mongodb://localhost:27017";
+    /** The snapshot refresh variable, which {@code checks} also reads to time its waits, and its default. */
+    public static final String SNAPSHOT_SECONDS = "TARANTINO_SNAPSHOT_SECONDS";
+    public static final int DEFAULT_SNAPSHOT_SECONDS = 5;
 
     private static final int MIN_LEASES_BEFORE_DELETING = 10;
     private static final int MIN_HEARTBEATS_PER_LEASE = 3;
@@ -54,7 +60,7 @@ public record TarantinoConfig(
         TarantinoConfig config = new TarantinoConfig(
                 variables.positive("TARANTINO_PORT", service.defaultPort()),
                 variables.optionalPositive("TARANTINO_HTTP_THREADS"),
-                variables.text("TARANTINO_MONGO_URI", "mongodb://localhost:27017"),
+                variables.text(MONGO_URI, DEFAULT_MONGO_URI),
                 variables.list("TARANTINO_HAZELCAST", "localhost:5701"),
                 variables.text("TARANTINO_HAZELCAST_CLUSTER", HazelcastContracts.DEFAULT_CLUSTER),
                 Path.of(variables.text("TARANTINO_DATALAKE", "datalake")),
@@ -72,7 +78,7 @@ public record TarantinoConfig(
                 variables.seconds("TARANTINO_GC_SECONDS", 600),
                 variables.seconds("TARANTINO_TMP_MAX_AGE_SECONDS", 600),
                 variables.seconds("TARANTINO_CLEANUP_SECONDS", 3600),
-                variables.seconds("TARANTINO_SNAPSHOT_SECONDS", 5),
+                variables.seconds(SNAPSHOT_SECONDS, DEFAULT_SNAPSHOT_SECONDS),
                 variables.text("TARANTINO_CORS_ORIGIN", "*"),
                 variables.optionalText("TARANTINO_CRASH_AT").map(point -> crashPoint(service, point)));
         config.checkInvariants();

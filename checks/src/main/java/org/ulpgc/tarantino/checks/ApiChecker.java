@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
 import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
@@ -257,7 +258,8 @@ public class ApiChecker {
     }
 
     private void waitForSnapshotRefresh(List<Integer> sampleIds) throws IOException, InterruptedException {
-        long refreshMillis = (Integer.parseInt(System.getenv().getOrDefault("TARANTINO_SNAPSHOT_SECONDS", "5")) + 2) * 1000L;
+        long refreshMillis = (Integer.parseInt(System.getenv().getOrDefault(TarantinoConfig.SNAPSHOT_SECONDS,
+                String.valueOf(TarantinoConfig.DEFAULT_SNAPSHOT_SECONDS))) + 2) * 1000L;
         waitForEveryReplicaToCount(sampleIds.size());
         for (int bookId : sampleIds) {
             waitForBook(bookId, refreshMillis);

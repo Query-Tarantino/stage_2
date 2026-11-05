@@ -12,7 +12,9 @@ import org.bson.json.JsonWriterSettings;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.model.BatchStatus;
+import org.ulpgc.tarantino.common.mongo.IndexState;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.common.mongo.MongoFields;
@@ -34,6 +36,8 @@ public class ExplainPlanExporter {
     private static final String LANGUAGE = "en";
     private static final int YEAR = 1998;
     private static final List<Integer> RESULT_BOOK_IDS = List.of(1342, 84, 11);
+    private static final String DEFAULT_EXPLAIN_DIRECTORY = "benchmarks/runs/latest/explain";
+    private static final int FAILED = 1;
 
     public static void exportPlans(String mongoUri, Path explainDir, int generation) throws IOException {
         Files.createDirectories(explainDir);
@@ -92,13 +96,13 @@ public class ExplainPlanExporter {
 
     public static void main(String[] args) {
         try {
-            Path explainDir = Paths.get(args.length > 0 ? args[0] : "benchmarks/runs/latest/explain");
-            String mongoUri = args.length > 1 ? args[1] : System.getenv().getOrDefault("TARANTINO_MONGO_URI", "mongodb://localhost:27017");
-            int generation = args.length > 2 ? Integer.parseInt(args[2]) : 1;
+            Path explainDir = Paths.get(args.length > 0 ? args[0] : DEFAULT_EXPLAIN_DIRECTORY);
+            String mongoUri = args.length > 1 ? args[1] : System.getenv().getOrDefault(TarantinoConfig.MONGO_URI, TarantinoConfig.DEFAULT_MONGO_URI);
+            int generation = args.length > 2 ? Integer.parseInt(args[2]) : IndexState.FIRST_GENERATION;
             exportPlans(mongoUri, explainDir, generation);
         } catch (Exception exception) {
             LOGGER.error("Failed to export explain plans: {}", exception.getMessage(), exception);
-            System.exit(1);
+            System.exit(FAILED);
         }
     }
 }
