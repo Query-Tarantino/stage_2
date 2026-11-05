@@ -22,6 +22,7 @@ class ActiveMqMessagesTest {
 
     private static final Duration WAIT = Duration.ofSeconds(2);
     private static final Instant ENQUEUED_AT = Instant.parse("2026-10-21T10:05:00Z");
+    private static final Duration PREFETCH_PAUSE = Duration.ofMillis(10);
 
     private final String queue = "test-" + UUID.randomUUID();
     private Connection connection;
@@ -46,15 +47,25 @@ class ActiveMqMessagesTest {
     }
 
     @Test
-    void drainsAtMostTheTasksAskedForFromThosePrefetched() {
+    void drainsAtMostTheTasksAskedForFromThosePrefetched() throws InterruptedException {
         ActiveMqBookTasks producer = handle();
         List.of(1342, 84, 11).forEach(bookId -> producer.offer(new BookTask(bookId, ENQUEUED_AT)));
         ActiveMqBookTasks consumer = handle(5);
         consumer.poll(WAIT);
 
-        assertEquals(List.of(84), consumer.drain(1).stream().map(BookTask::bookId).toList());
-        assertEquals(List.of(11), consumer.drain(5).stream().map(BookTask::bookId).toList());
+        assertEquals(List.of(84), drainOnceSomethingArrives(consumer, 1));
+        assertEquals(List.of(11), drainOnceSomethingArrives(consumer, 5));
         assertEquals(List.of(), consumer.drain(5));
+    }
+
+    private static List<Integer> drainOnceSomethingArrives(ActiveMqBookTasks consumer, int max) throws InterruptedException {
+        Instant deadline = Instant.now().plus(WAIT);
+        List<BookTask> drained = consumer.drain(max);
+        while (drained.isEmpty() && Instant.now().isBefore(deadline)) {
+            Thread.sleep(PREFETCH_PAUSE);
+            drained = consumer.drain(max);
+        }
+        return drained.stream().map(BookTask::bookId).toList();
     }
 
     @Test
