@@ -5,6 +5,8 @@ readonly CONFIGURATIONS=("1 1" "10 1" "100 1" "250 1" "100 2" "100 3")
 readonly REBUILD_URL=http://localhost:8081/index/rebuild
 readonly CONTROL_STATUS_URL=http://localhost:8081/control/status
 readonly REBUILD_ATTEMPTS=60
+readonly WITHOUT_JMH=--without-jmh
+readonly REUSED_JMH_RUN=20261103-204454-index-throughput-6925d4e
 
 export TARANTINO_BATCH_TIMEOUT_SECONDS=2
 
@@ -21,6 +23,21 @@ state_hypotheses() {
     echo "Series replicas: 1, 2 and 3 indexer replicas with batches of 100"
     echo "H2: books per second grow with replicas but less than linearly: three indexing threads do not run out of CPU, and every replica writes its postings to the same Mongo, which becomes the bottleneck"
     echo "H3: batches of 250 fit in -Xmx512m without OutOfMemoryError, but the indexer's memory in stats.csv peaks higher than with batches of 100, because a batch keeps the term frequencies and postings of all its books until it writes them"
+}
+
+check_arguments() {
+    if (( $# > 1 )) || [[ $# -eq 1 && $1 != "$WITHOUT_JMH" ]]; then
+        echo "Usage: $0 [$WITHOUT_JMH]" >&2
+        exit 2
+    fi
+}
+
+run_jmh_unless_reused() {
+    if [[ ${1:-} == "$WITHOUT_JMH" ]]; then
+        echo "JMH: not run; the report cites jmh/ of $REUSED_JMH_RUN, because the tokenizer, the header parser and the batch writer it measures did not change"
+        return
+    fi
+    run_jmh
 }
 
 run_jmh() {
@@ -103,10 +120,11 @@ summarise_run() {
 }
 
 main() {
+    check_arguments "$@"
     open_run index-throughput "$0" "$@"
     state_hypotheses
     check_corpus
-    run_jmh
+    run_jmh_unless_reused "$@"
     build_stack
     ingest_corpus
     start_stats
