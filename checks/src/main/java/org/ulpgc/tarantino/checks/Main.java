@@ -17,7 +17,7 @@ public class Main {
     public static void main(String[] args) {
         try {
             ApiChecker checker = checker();
-            List<Integer> sampleIds = sampleIds(findFile("workload/sample_ids.txt"));
+            List<Integer> sampleIds = sampleIds(RepositoryFiles.require("workload/sample_ids.txt"));
             Path expectedPath = resolveExpectedPath();
             if (List.of(args).contains("--generate-expected")) {
                 checker.generateExpected(sampleIds, expectedPath);
@@ -35,7 +35,7 @@ public class Main {
     private static ApiChecker checker() throws IOException {
         String frontEndUrl = System.getenv().getOrDefault("TARANTINO_FRONTEND_URL", "http://localhost:8080");
         String operationalUrl = System.getenv().getOrDefault("TARANTINO_OPERATIONAL_URL", "http://localhost:8081");
-        OpenApiValidator validator = OpenApiValidator.load(findFile("api/openapi.yaml"));
+        OpenApiValidator validator = OpenApiValidator.load(RepositoryFiles.require("api/openapi.yaml"));
         return new ApiChecker(new CheckedClient(validator), frontEndUrl, operationalUrl);
     }
 
@@ -59,17 +59,5 @@ public class Main {
                 .filter(Files::exists)
                 .findFirst()
                 .orElse(Paths.get("checks/expected.json"));
-    }
-
-    private static Path findFile(String relativePath) {
-        List<Path> candidates = List.of(
-                Paths.get(relativePath),
-                Paths.get("../" + relativePath),
-                Paths.get("../../" + relativePath)
-        );
-        return candidates.stream()
-                .filter(Files::exists)
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Could not find file: " + relativePath));
     }
 }

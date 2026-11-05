@@ -39,6 +39,7 @@ public class ApiChecker {
     private final String operationalUrl;
     private final Tokenizer tokenizer;
     private final List<JsonNode> sampleBooks = new ArrayList<>();
+    private final EntryPortChecks entryPorts;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
@@ -49,6 +50,7 @@ public class ApiChecker {
                 ? new FileStopwordsLoader(stopwordsPath).stopwords()
                 : Set.of();
         this.tokenizer = new Tokenizer(stopwords);
+        this.entryPorts = new EntryPortChecks(client, this.frontEndUrl, this.operationalUrl);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -57,7 +59,7 @@ public class ApiChecker {
         }
         LOGGER.info("Starting API conformance checks");
         checkHealth();
-        checkNginxUnknownPaths();
+        entryPorts.check();
         checkOperationalEndpoints();
         ensurePublishedAndRefreshed(sampleIds);
         checkStatusEndpoints();
@@ -68,29 +70,6 @@ public class ApiChecker {
         checkSearchEndpoints();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
-    }
-
-    public void checkNginxUnknownPaths() throws IOException, InterruptedException {
-        LOGGER.info("Checking nginx 404 Problem Details on unknown paths");
-        checkUnknownPath(frontEndUrl + "/unknown-path");
-        checkUnknownPath(operationalUrl + "/unknown-path");
-    }
-
-    private void checkUnknownPath(String url) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.getRaw(url);
-        assertEquals(404, response.status());
-        List<String> contentTypes = response.headers().get("Content-Type");
-        if (contentTypes == null || contentTypes.isEmpty()) {
-            contentTypes = response.headers().get("content-type");
-        }
-        assertTrue(contentTypes != null && !contentTypes.isEmpty(), "the 404 of " + url + " has a Content-Type");
-        assertTrue(contentTypes.getFirst().toLowerCase().startsWith("application/problem+json"), "the 404 of " + url + " is application/problem+json");
-        assertTrue(response.json() != null, "the 404 of " + url + " has a JSON body");
-        client.validator().validateProblem(response.json());
-        assertEquals(404, response.json().get("status").asInt());
-        assertTrue(response.json().has("title"), "the 404 of " + url + " has a title");
-        assertTrue(response.json().has("detail"), "the 404 of " + url + " has a detail");
-        assertTrue(!response.json().has("code"), "the 404 of " + url + " has no code");
     }
 
     public void checkHealth() throws IOException, InterruptedException {
