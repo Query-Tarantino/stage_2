@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+/** The folder {@code benchmarks/runs/<run_id>/} of a run and its {@code load/}, {@code jmh/} and {@code explain/} (SPEC §9). */
 public class RunContext {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");

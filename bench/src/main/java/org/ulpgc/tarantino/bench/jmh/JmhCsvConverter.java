@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+/** {@code bench jmh-csv <json> <csv>}: the CSV of the raw JMH output a run keeps in {@code jmh/} (SPEC §9). */
 public class JmhCsvConverter {
 
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();

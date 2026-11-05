@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
+/** {@code bench load}: the closed-loop load generator of {@code search-latency}, one row per measured request in {@code load/<trial>.csv.gz} (SPEC §9). */
 public class SearchLoadGenerator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SearchLoadGenerator.class);

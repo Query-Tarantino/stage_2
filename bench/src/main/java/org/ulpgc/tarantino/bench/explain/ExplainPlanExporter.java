@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+/** {@code bench explain <dir> <mongo uri> <generation>}: writes the {@code explain("executionStats")} of each Mongo query {@code query} runs to the run's {@code explain/} (SPEC §9). */
 public class ExplainPlanExporter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExplainPlanExporter.class);
