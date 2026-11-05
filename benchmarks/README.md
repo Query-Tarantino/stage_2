@@ -168,3 +168,30 @@ the runs of a row give the same books and `/search` answers whatever N. Recovery
 2. Ingestion stops growing at about 600 books/s whatever the replicas, with the CPU far from full: the shared queue,
    Mongo and datalake volume limit it.
 3. Search saturates one `query` replica at about 4,400 requests/s; a second replica adds 29 % and a third nothing.
+
+## Coordination modes: the campaign
+
+`scripts/bench/all.sh` runs every experiment above again, plus `publication-visibility`, `broker-latency`,
+`coordination-variants` and `recovery-delay`, and the recovery matrix in each of the five coordination modes
+(`SPEC.md` §11): 217 steps from one commit of `arch-testing` on the machine above. The report cites only that campaign,
+so the November runs of this file are superseded once its runs are in `benchmarks/runs/`. Each script prints its
+hypotheses before measuring; `scripts/bench/all.sh --dry-run` lists every step and its command.
+
+## What belongs to the single machine, and what Stage 3 changes
+
+These runs measure one host: every replica shares its CPUs, its disk and the one MongoDB and Hazelcast member, so a
+speedup here says how the design uses one machine, not how it scales across several. What the runs show depends on
+these single-host assumptions of `SPEC.md` §1:
+
+| Measured limit | Single-host cause | What changes in a cluster |
+| --- | --- | --- |
+| Indexing: 29 books/s per indexer, ×2.1 with 3, while Mongo's CPU grows faster than the indexers' | Every indexer writes postings to one MongoDB server | Postings sharded by `term` across a sharded MongoDB, so indexers on several nodes write to different shards; the batch, its lease and its publication stay single-document writes |
+| Ingestion: about 600 books/s whatever the replicas, with the CPU far from full | One `books-to-download` queue on one Hazelcast member, one MongoDB and one datalake volume | A Hazelcast cluster with one queue per partition of `book_id`, and a datalake on storage every node mounts, or one per node with the book's node in `book_states` |
+| Search: one `query` replica saturates at about 4,400 requests/s, and a third replica adds nothing to two | Replicas share nginx, the one MongoDB and the host's CPUs with the load generator | `query` replicas on several nodes behind a load balancer, reading a MongoDB replica set; the snapshot already lets each replica answer on its own |
+| Recovery: a lost message waits `TARANTINO_REQUEUE_SECONDS` for `control` | `control` is one process, which a single host makes acceptable | `control` elected among several nodes, or the persistent ActiveMQ mode, whose broker redelivers without `control` |
+
+The conditional writes of `SPEC.md` §5.1 already work across machines: claims, leases and expirations compare with
+MongoDB's clock (`$$NOW`), never a host's, and no process keeps a lock another one needs. What a cluster replaces is
+everything named after the host: Compose service names and nginx's resolver `127.0.0.11`, the local `datalake` volume,
+the single Hazelcast member and MongoDB server, and, in mode `orchestrator`, the JVM's 30-second DNS cache with which
+`control` finds the `query` replicas.
