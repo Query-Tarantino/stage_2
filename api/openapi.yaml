@@ -1050,6 +1050,7 @@ components:
               format: int32
               minimum: 0
         queues:
+          description: "The messages waiting in each queue of the broker; in mode `polling`, the `QUEUED` and `DOWNLOADED` books, and in mode `orchestrator`, the books dispatched to each stage and not yet claimed (SPEC.md §11.3 and §11.4)."
           type: object
           additionalProperties: false
           required: [books-to-download, books-to-index]
@@ -1068,7 +1069,7 @@ components:
             - type: "null"
 
     Health:
-      description: SPEC.md §6.5; `down` only when `DOWN`.
+      description: "SPEC.md §6.5; `down` only when `DOWN`. It can hold `mongo`, the broker of the mode (`hazelcast` or `activemq`) and, in `query`, `snapshot`; modes `polling` and `orchestrator` have no broker to list."
       type: object
       additionalProperties: false
       required: [status]
@@ -1082,7 +1083,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            enum: [mongo, hazelcast, snapshot]
+            enum: [mongo, hazelcast, activemq, snapshot]
 
     Problem:
       description: "Problem Details (RFC 9457, SPEC.md §6.6); `code` is absent on an unexpected `500` and on nginx's own `404` for an unknown path."
