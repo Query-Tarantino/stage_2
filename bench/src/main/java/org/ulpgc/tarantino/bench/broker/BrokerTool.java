@@ -57,6 +57,8 @@ public final class BrokerTool {
     private static final String DEFAULT_HAZELCAST = "hazelcast:5701";
     private static final String DEFAULT_ACTIVEMQ = "failover:(tcp://activemq:61616)?timeout=1000";
     private static final String LOAD_FOLDER = "load";
+    private static final String LATENCY_ROUND = "-latency";
+    private static final String THROUGHPUT_ROUND = "-throughput";
     private static final String RAW_HEADER = "sent_ns,received_ns,latency_us,consumer\n";
     private static final double NANOS_PER_SECOND = 1e9;
 
@@ -84,12 +86,13 @@ public final class BrokerTool {
     private static void measure(Path runDirectory, String trial, String brokerName, int consumers, Broker broker)
             throws InterruptedException {
         awaitConnected(broker);
-        BrokerRound latency = new BrokerRound(broker, consumers);
+        BrokerRound latency = new BrokerRound(broker, BrokerRound.QUEUE + "-" + trial + LATENCY_ROUND, consumers);
         Map<Integer, BrokerSample> latencyRound = latency.run(0, LATENCY_RATE * LATENCY_SECONDS,
                 Duration.ofSeconds(1).dividedBy(LATENCY_RATE));
         long firstKept = latency.startNanos() + Duration.ofSeconds(WARMUP_SECONDS).toNanos();
         List<BrokerSample> kept = BrokerRound.sentAfter(latencyRound, firstKept);
-        Map<Integer, BrokerSample> throughputRound = new BrokerRound(broker, consumers).run(THROUGHPUT_FIRST_ID, THROUGHPUT_MESSAGES, Duration.ZERO);
+        Map<Integer, BrokerSample> throughputRound = new BrokerRound(broker, BrokerRound.QUEUE + "-" + trial + THROUGHPUT_ROUND, consumers)
+                .run(THROUGHPUT_FIRST_ID, THROUGHPUT_MESSAGES, Duration.ZERO);
         writeRaw(runDirectory.resolve(LOAD_FOLDER).resolve(trial + ".csv.gz"), kept);
         SummaryStats.Metrics latencies = SummaryStats.calculate(kept.stream().map(BrokerSample::latencyMicros).toList());
         appendRow(runDirectory.resolve(FILE_NAME), String.format(Locale.ROOT, "%s,%d,%d,%d,%.0f,%.0f,%.0f,%.1f", brokerName,

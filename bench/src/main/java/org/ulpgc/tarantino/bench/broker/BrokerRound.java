@@ -16,8 +16,10 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.stream.IntStream;
 
 /**
- * Sends messages to the {@code bench-broker} queue and receives them on {@code consumers} threads of the same JVM, each
- * with its own handle, keeping the send and receive {@code System.nanoTime()} of each message by its id.
+ * Sends messages to a queue of its own, named after {@code bench-broker}, and receives them on {@code consumers} threads
+ * of the same JVM, each with its own handle, keeping the send and receive {@code System.nanoTime()} of each message by
+ * its id. A message it did not send, such as one a consumer of an earlier round had prefetched when it closed, is not
+ * counted.
  */
 final class BrokerRound {
 
@@ -27,14 +29,16 @@ final class BrokerRound {
     private static final Duration DRAIN_DEADLINE = Duration.ofSeconds(30);
 
     private final Broker broker;
+    private final String queue;
     private final int consumers;
     private final Map<Integer, Long> sentAt = new ConcurrentHashMap<>();
     private final Map<Integer, BrokerSample> received = new ConcurrentHashMap<>();
     private final AtomicBoolean receiving = new AtomicBoolean(true);
     private long startNanos;
 
-    BrokerRound(Broker broker, int consumers) {
+    BrokerRound(Broker broker, String queue, int consumers) {
         this.broker = broker;
+        this.queue = queue;
         this.consumers = consumers;
     }
 
@@ -50,7 +54,7 @@ final class BrokerRound {
     }
 
     private void send(int firstId, int count, Duration interval) {
-        try (BookTasks producer = broker.queue(QUEUE)) {
+        try (BookTasks producer = broker.queue(queue)) {
             startNanos = System.nanoTime();
             for (int index = 0; index < count; index++) {
                 waitUntil(startNanos + index * interval.toNanos());
@@ -62,11 +66,12 @@ final class BrokerRound {
     }
 
     private void receive(int consumer) {
-        try (BookTasks queue = broker.queue(QUEUE)) {
+        try (BookTasks handle = broker.queue(queue)) {
             while (receiving.get()) {
-                queue.poll(POLL_WAIT).ifPresent(task -> received.put(task.bookId(),
-                        new BrokerSample(sentAt.getOrDefault(task.bookId(), System.nanoTime()), System.nanoTime(), consumer)));
-                queue.acknowledge();
+                handle.poll(POLL_WAIT)
+                        .filter(task -> sentAt.containsKey(task.bookId()))
+                        .ifPresent(task -> received.put(task.bookId(), new BrokerSample(sentAt.get(task.bookId()), System.nanoTime(), consumer)));
+                handle.acknowledge();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
