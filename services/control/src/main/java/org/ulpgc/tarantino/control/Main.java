@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/** Starts {@code control} (SPEC §2.2 and §2.4): its HTTP routes, the seeding and the periodic reconciliation and cleanup. */
 public class Main {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);

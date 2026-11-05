@@ -6,6 +6,7 @@ import org.ulpgc.tarantino.control.model.DownloadLease;
 import java.util.List;
 import java.util.Optional;
 
+/** The expired downloads and “Release an expired download” (SPEC §5.1 and §5.3, step 1). */
 public interface DownloadLeases {
 
     /** The {@code DOWNLOADING} books whose lease has passed by the server's time (SPEC §5.3, step 1). */

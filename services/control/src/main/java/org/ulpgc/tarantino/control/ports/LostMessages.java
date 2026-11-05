@@ -4,6 +4,7 @@ import org.ulpgc.tarantino.common.model.BookStatus;
 
 import java.util.List;
 
+/** The waiting books whose message was lost and “Requeue a lost message” (SPEC §5.1 and §5.3, step 4). */
 public interface LostMessages {
 
     /**

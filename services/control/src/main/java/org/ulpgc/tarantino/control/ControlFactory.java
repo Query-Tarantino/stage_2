@@ -41,6 +41,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
 
+/** Builds the commands of {@code control}, the seeding, the reconciliation and the datalake cleanup, over its Mongo and Hazelcast connections (SPEC §2.2 and §5.3). */
 public final class ControlFactory {
 
     private ControlFactory() {
