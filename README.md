@@ -16,7 +16,7 @@ of truth in MongoDB, and everything runs on one machine with Docker Compose.
 
 The system runs end to end: `control` seeds the candidates and reconciles, `crawler` downloads them, `indexer` publishes
 them in batches and `query` answers the search API behind nginx. Every row of the failure matrix recovers with 1, 2 and
-3 replicas, in the runs in `benchmarks/runs/`. Still to come: the official `index-throughput` and `search-latency` runs.
+3 replicas, and the five experiments have their official run, all in `benchmarks/runs/` (`SPEC.md` §9).
 
 ## Requirements
 
@@ -96,17 +96,28 @@ Regenerate `checks/expected.json` when the corpus or schema changes:
 java -jar checks/target/checks-1.0-SNAPSHOT.jar --generate-expected
 ```
 
-Run the search latency benchmark:
+Each experiment of `SPEC.md` §9 is one script, run from a clean commit with `mvn -DskipTests package` done; each
+writes its own `benchmarks/runs/<run_id>/`:
+
+| Experiment | Command | Official run |
+| --- | --- | --- |
+| Ingestion throughput by crawler replicas and workers | `./scripts/bench/ingest-throughput.sh` | `20261102-204917-ingest-throughput-77ed00a` |
+| Indexing throughput by batch size and indexer replicas, rebuilding the index once per trial | `./scripts/bench/index-throughput.sh` | `20261103-204454-index-throughput-6925d4e` |
+| Search latency by clients, HTTP threads and `query` replicas | `./scripts/bench/search-latency.sh` | `20261104-140900-search-latency-8e1c1e8` |
+| Coordination cost by replicas | `./scripts/bench/coordination-cost.sh` | `20261102-212416-coordination-cost-77ed00a` |
+| CPU and memory per service and of the whole stack | `./scripts/bench/resource-usage.sh` | `20261102-215134-resource-usage-77ed00a` |
+
+The JMH benchmarks also run on their own, after `mvn -DskipTests install`, with `<service>` and its main class
+`crawler` `org.ulpgc.tarantino.crawler.benchmarks.CrawlerBenchmarks`, `indexer` `org.ulpgc.tarantino.indexer.benchmarks.IndexerBenchmarks`
+or `query` `org.ulpgc.tarantino.query.benchmarks.SearchBenchmark`, and an absolute run folder:
 
 ```bash
-./scripts/bench/search-latency.sh
+mvn -f services/<service>/pom.xml exec:exec -Dexec.executable=java -Dexec.classpathScope=test "-Dexec.args=-classpath %classpath <main class> <absolute run dir>"
 ```
 
-Run the index throughput benchmark, which ingests the corpus once and rebuilds the index once per trial:
-
-```bash
-./scripts/bench/index-throughput.sh
-```
+Each row of the failure matrix (`SPEC.md` §8) is `scripts/recovery/<nn>-<row>.sh <N>`, for example
+`./scripts/recovery/04-crawler-after-dequeue.sh 2`, and `java -jar bench/target/bench-1.0-SNAPSHOT.jar recovery-compare 04`
+checks that the runs of a row give the same books and `/search` answers.
 
 To summarise an existing run again, delete its `summary.csv` and run its command on the run folder, then redraw its charts; a `search-latency` run keeps its per-trial rows and only needs `bench search-latency`, which appends the per-configuration ones (SPEC §9):
 
