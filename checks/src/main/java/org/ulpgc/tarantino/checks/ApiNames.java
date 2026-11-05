@@ -31,6 +31,7 @@ final class ApiNames {
     static final String LAST_ERROR = "last_error";
     static final String LIMIT = "limit";
     static final String OFFSET = "offset";
+    static final String ORIGINAL_YEAR = "original_year";
     static final String PARAMETER = "parameter";
     static final String QUERY = "query";
     static final String QUEUES = "queues";

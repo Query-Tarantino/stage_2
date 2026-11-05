@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
@@ -39,6 +38,7 @@ public class ApiChecker {
     private final SearchValidationChecks searchValidation;
     private final SearchChecks searches;
     private final SearchPageChecks pages;
+    private final ExpectedAnswers expectedAnswers;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
@@ -60,6 +60,7 @@ public class ApiChecker {
         SearchAnswers answers = new SearchAnswers(client, this.frontEndUrl);
         this.searches = new SearchChecks(client, answers, terms, this.frontEndUrl);
         this.pages = new SearchPageChecks(answers);
+        this.expectedAnswers = new ExpectedAnswers(client, this.frontEndUrl);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -78,94 +79,13 @@ public class ApiChecker {
         searchValidation.check();
         searches.check(sampleBooks);
         pages.check();
-        checkAgainstExpected(expectedPath);
+        expectedAnswers.check(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
     }
 
     public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
         ingestion.publish(sampleIds);
         snapshots.waitUntilServed(sampleIds);
-    }
-
-    public void checkAgainstExpected(Path expectedPath) throws IOException, InterruptedException {
-        LOGGER.info("Validating responses against expected.json: {}", expectedPath);
-        JsonNode expected = MAPPER.readTree(expectedPath.toFile());
-        if (expected.has("searches")) {
-            Iterable<Map.Entry<String, JsonNode>> searchEntries = () -> expected.get("searches").fields();
-            StreamSupport.stream(searchEntries.spliterator(), false)
-                    .forEach(this::checkSearchAgainstExpected);
-        }
-        if (expected.has("books")) {
-            Iterable<Map.Entry<String, JsonNode>> bookEntries = () -> expected.get("books").fields();
-            StreamSupport.stream(bookEntries.spliterator(), false)
-                    .forEach(this::checkBookAgainstExpected);
-        }
-    }
-
-    private void checkSearchAgainstExpected(Map.Entry<String, JsonNode> entry) {
-        try {
-            JsonNode searchExpected = entry.getValue();
-            String path = searchExpected.has("path")
-                    ? searchExpected.get("path").asText()
-                    : "/search?q=" + entry.getKey().replace(" ", "%20");
-            CheckedClient.Response response = client.get(frontEndUrl + path);
-            assertEquals(200, response.status(), "the status of expected search " + entry.getKey() + " (" + path + ")");
-            if (searchExpected.has("total")) {
-                assertEquals(searchExpected.get("total").asInt(), response.json().get("total").asInt(),
-                        "the total of expected search " + entry.getKey() + " (" + path + ")");
-            }
-            if (searchExpected.has("book_ids") && searchExpected.get("book_ids").isArray()) {
-                List<Integer> expectedIds = StreamSupport.stream(searchExpected.get("book_ids").spliterator(), false)
-                        .map(JsonNode::asInt)
-                        .toList();
-                List<Integer> actualIds = StreamSupport.stream(response.json().get("results").spliterator(), false)
-                        .map(resultNode -> resultNode.get("book_id").asInt())
-                        .toList();
-                assertEquals(expectedIds, actualIds, "the book_ids of expected search " + entry.getKey() + " (" + path + ")");
-            }
-        } catch (IOException | InterruptedException exception) {
-            throw new RuntimeException(exception);
-        }
-    }
-
-    private void checkBookAgainstExpected(Map.Entry<String, JsonNode> entry) {
-        try {
-            JsonNode bookExpected = entry.getValue();
-            String bookId = entry.getKey();
-            CheckedClient.Response response = client.get(frontEndUrl + "/books/" + bookId);
-            assertEquals(200, response.status(), "the status of expected book /books/" + bookId);
-            List.of("title", "author", "language").forEach(field -> assertSameText(bookId, bookExpected, response.json(), field));
-            if (isPresent(bookExpected, "year")) {
-                assertEquals(bookExpected.get("year").asInt(), response.json().get("year").asInt(), "the year of /books/" + bookId);
-            }
-            if (isPresent(bookExpected, "languages")) {
-                assertEquals(bookExpected.get("languages"), response.json().get("languages"), "the languages of /books/" + bookId);
-            }
-            if (bookExpected.has("original_year")) {
-                assertSameOriginalYear(bookId, bookExpected.get("original_year"), response.json().get("original_year"));
-            }
-        } catch (IOException | InterruptedException exception) {
-            throw new RuntimeException(exception);
-        }
-    }
-
-    private static boolean isPresent(JsonNode node, String field) {
-        return node.has(field) && !node.get(field).isNull();
-    }
-
-    private static void assertSameText(String bookId, JsonNode expected, JsonNode actual, String field) {
-        if (isPresent(expected, field)) {
-            assertEquals(expected.get(field).asText(), actual.get(field).asText(), "the " + field + " of /books/" + bookId);
-        }
-    }
-
-    private static void assertSameOriginalYear(String bookId, JsonNode expectedOriginalYear, JsonNode actualOriginalYear) {
-        if (expectedOriginalYear.isNull()) {
-            assertTrue(actualOriginalYear == null || actualOriginalYear.isNull(), "/books/" + bookId + " has a null original_year");
-            return;
-        }
-        assertTrue(actualOriginalYear != null && !actualOriginalYear.isNull(), "/books/" + bookId + " has an original_year");
-        assertEquals(expectedOriginalYear.asInt(), actualOriginalYear.asInt(), "the original_year of /books/" + bookId);
     }
 
     public void generateExpected(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -287,24 +207,6 @@ public class ApiChecker {
                 .filter(Files::exists)
                 .findFirst()
                 .orElse(Paths.get("workload/sample_ids.txt"));
-    }
-
-    private static void assertEquals(Object expected, Object actual) {
-        if (!expected.equals(actual)) {
-            throw new AssertionError("Expected " + expected + " but was " + actual);
-        }
-    }
-
-    private static void assertEquals(Object expected, Object actual, String what) {
-        if (!expected.equals(actual)) {
-            throw new AssertionError(what + ": expected " + expected + " but was " + actual);
-        }
-    }
-
-    private static void assertTrue(boolean condition, String what) {
-        if (!condition) {
-            throw new AssertionError("Check failed: " + what);
-        }
     }
 
     private static String trimSlash(String url) {
