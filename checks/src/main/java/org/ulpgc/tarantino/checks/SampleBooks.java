@@ -4,6 +4,7 @@ package org.ulpgc.tarantino.checks;
 final class SampleBooks {
 
     static final int PRIDE_AND_PREJUDICE = 1342;
+    static final int PRIDE_AND_PREJUDICE_YEAR = 1998;
     static final int MISSING_BOOK = 999_999;
     static final long BEYOND_INT32 = Integer.MAX_VALUE + 1L;
 

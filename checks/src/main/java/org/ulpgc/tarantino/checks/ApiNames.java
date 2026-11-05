@@ -24,6 +24,7 @@ final class ApiNames {
     static final String CODE = "code";
     static final String COUNT = "count";
     static final String DETAIL = "detail";
+    static final String FILTERS = "filters";
     static final String GENERATION = "generation";
     static final String LANGUAGE = "language";
     static final String LANGUAGES = "languages";
@@ -31,12 +32,15 @@ final class ApiNames {
     static final String LIMIT = "limit";
     static final String OFFSET = "offset";
     static final String PARAMETER = "parameter";
+    static final String QUERY = "query";
     static final String QUEUES = "queues";
     static final String RESULTS = "results";
     static final String STATUS = "status";
     static final String TITLE = "title";
+    static final String TOTAL = "total";
     static final String TOTAL_BOOKS = "total_books";
     static final String YEAR = "year";
+    static final String YEARS = "years";
 
     private ApiNames() {
     }

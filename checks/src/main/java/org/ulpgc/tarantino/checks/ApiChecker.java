@@ -17,7 +17,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
@@ -26,14 +25,12 @@ public class ApiChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiChecker.class);
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();
-    private static final int PRIDE_AND_PREJUDICE = 1342;
     private static final int LARGE_OFFSET = 1_000_000_000;
 
     private final CheckedClient client;
     private final String frontEndUrl;
     private final String operationalUrl;
     private final SearchTerms terms;
-    private final List<JsonNode> sampleBooks = new ArrayList<>();
     private final HealthChecks health;
     private final EntryPortChecks entryPorts;
     private final OperationalChecks operational;
@@ -41,6 +38,7 @@ public class ApiChecker {
     private final SnapshotRefreshWait snapshots;
     private final BookChecks books;
     private final SearchValidationChecks searchValidation;
+    private final SearchChecks searches;
 
     public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl) {
         this.client = client;
@@ -59,6 +57,7 @@ public class ApiChecker {
         this.snapshots = new SnapshotRefreshWait(client, this.frontEndUrl);
         this.books = new BookChecks(client, problems, this.frontEndUrl);
         this.searchValidation = new SearchValidationChecks(problems, this.frontEndUrl);
+        this.searches = new SearchChecks(client, new SearchAnswers(client, this.frontEndUrl), terms, this.frontEndUrl);
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -72,11 +71,12 @@ public class ApiChecker {
         ensurePublishedAndRefreshed(sampleIds);
         operational.checkBookStatus();
         operational.checkIdempotency(sampleIds);
-        sampleBooks.clear();
-        sampleBooks.addAll(books.check(sampleIds));
-        checkFiltersSummary();
+        List<JsonNode> sampleBooks = books.check(sampleIds);
+        searches.checkFilters();
         searchValidation.check();
-        checkSearchEndpoints();
+        searches.check(sampleBooks);
+        checkPagination();
+        checkSearchesWithoutResults();
         checkAgainstExpected(expectedPath);
         LOGGER.info("All API conformance checks passed successfully");
     }
@@ -84,42 +84,6 @@ public class ApiChecker {
     public void ensurePublishedAndRefreshed(List<Integer> sampleIds) throws IOException, InterruptedException {
         ingestion.publish(sampleIds);
         snapshots.waitUntilServed(sampleIds);
-    }
-
-    public void checkFiltersSummary() throws IOException, InterruptedException {
-        LOGGER.info("Checking /search/filters");
-        CheckedClient.Response response = client.get(frontEndUrl + "/search/filters");
-        assertEquals(200, response.status());
-        JsonNode json = response.json();
-        assertTrue(json.has("languages"), "/search/filters has languages");
-        assertTrue(json.has("years"), "/search/filters has years");
-        assertTrue(json.has("total_books"), "/search/filters has total_books");
-    }
-
-    public void checkSearchEndpoints() throws IOException, InterruptedException {
-        LOGGER.info("Checking search endpoints");
-        checkWordSearches();
-        checkFilteredSearches();
-        checkPagination();
-        checkSearchesWithoutResults();
-    }
-
-    private void checkWordSearches() throws IOException, InterruptedException {
-        assertEquals("pride", findsPrideAndPrejudice("/search?q=pride").get("query").asText());
-        assertEquals("pride prejudice", findsPrideAndPrejudice("/search?q=pride%20prejudice").get("query").asText());
-    }
-
-    private void checkFilteredSearches() throws IOException, InterruptedException {
-        assertEquals("Austen", findsPrideAndPrejudice("/search?q=pride&author=Austen").get("filters").get("author").asText());
-        assertEquals("en", findsPrideAndPrejudice("/search?q=pride&language=en").get("filters").get("language").asText());
-        checkLanguageFilter(sampleBooks, "de");
-        checkLanguageFilter(sampleBooks, "fr");
-        assertEquals("zz", findsNothing("/search?q=pride&language=zz").get("filters").get("language").asText());
-        assertEquals(1998, findsPrideAndPrejudice("/search?q=pride&year=1998").get("filters").get("year").asInt());
-        JsonNode combined = findsPrideAndPrejudice("/search?q=pride&author=Austen&language=en&year=1998").get("filters");
-        assertEquals("Austen", combined.get("author").asText());
-        assertEquals("en", combined.get("language").asText());
-        assertEquals(1998, combined.get("year").asInt());
     }
 
     private void checkPagination() throws IOException, InterruptedException {
@@ -147,14 +111,6 @@ public class ApiChecker {
     private void checkSearchesWithoutResults() throws IOException, InterruptedException {
         findsNothing("/search?q=the%20and");
         findsNothing("/search?q=pyromaniac%20liliput");
-    }
-
-    private JsonNode findsPrideAndPrejudice(String path) throws IOException, InterruptedException {
-        CheckedClient.Response response = client.get(frontEndUrl + path);
-        assertEquals(200, response.status());
-        assertTrue(response.json().get("total").asInt() >= 1, path + " finds at least one book");
-        assertTrue(SearchResults.containsBook(response.json().get("results"), PRIDE_AND_PREJUDICE), path + " finds book 1342");
-        return response.json();
     }
 
     private JsonNode findsNothing(String path) throws IOException, InterruptedException {
@@ -327,20 +283,6 @@ public class ApiChecker {
             }
         } catch (IOException | InterruptedException exception) {
             throw new RuntimeException(exception);
-        }
-    }
-
-    private void checkLanguageFilter(List<JsonNode> books, String language) throws IOException, InterruptedException {
-        Optional<JsonNode> match = SearchTerms.bookIn(books, language);
-        if (match.isPresent()) {
-            JsonNode book = match.get();
-            String term = terms.termOf(book);
-            int bookId = book.get("book_id").asInt();
-            CheckedClient.Response response = client.get(frontEndUrl + "/search?q=" + term + "&language=" + language);
-            assertEquals(200, response.status());
-            assertEquals(language, response.json().get("filters").get("language").asText());
-            assertTrue(response.json().get("total").asInt() >= 1, "/search?q=" + term + "&language=" + language + " finds at least one book");
-            assertTrue(SearchResults.containsBook(response.json().get("results"), bookId), "/search?q=" + term + "&language=" + language + " finds book " + bookId);
         }
     }
 
