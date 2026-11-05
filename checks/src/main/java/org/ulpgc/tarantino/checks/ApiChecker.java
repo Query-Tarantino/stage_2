@@ -99,7 +99,7 @@ public class ApiChecker {
         ObjectNode searchesNode = root.putObject("searches");
         ObjectNode booksNode = root.putObject("books");
         List<JsonNode> bookNodes = expectedBooks(targetIds, booksNode);
-        searchCases(terms.termIn(bookNodes, "de", "faust"), terms.termIn(bookNodes, "fr", "monde"))
+        SearchCase.all(terms.termIn(bookNodes, "de", "faust"), terms.termIn(bookNodes, "fr", "monde"))
                 .forEach(searchCase -> expectedSearch(searchesNode, searchCase));
         if (expectedPath.getParent() != null) {
             Files.createDirectories(expectedPath.getParent());
@@ -131,28 +131,6 @@ public class ApiChecker {
             bookNode.set("languages", book.get("languages"));
         }
         bookNode.set("original_year", book.get("original_year"));
-    }
-
-    private record SearchCase(String name, String path) {
-    }
-
-    private static List<SearchCase> searchCases(String deTerm, String frTerm) {
-        return List.of(
-                new SearchCase("single_word", "/search?q=pride"),
-                new SearchCase("multi_word", "/search?q=pride%20prejudice"),
-                new SearchCase("filter_author", "/search?q=pride&author=Austen"),
-                new SearchCase("filter_language", "/search?q=pride&language=en"),
-                new SearchCase("filter_language_de", "/search?q=" + deTerm + "&language=de"),
-                new SearchCase("filter_language_fr", "/search?q=" + frTerm + "&language=fr"),
-                new SearchCase("filter_language_zz", "/search?q=pride&language=zz"),
-                new SearchCase("filter_year", "/search?q=pride&year=1998"),
-                new SearchCase("combined_filter", "/search?q=pride&author=Austen&language=en&year=1998"),
-                new SearchCase("pagination_page0", "/search?q=pride&offset=0&limit=1"),
-                new SearchCase("pagination_page1", "/search?q=pride&offset=1&limit=1"),
-                new SearchCase("pagination_large_offset", "/search?q=pride&offset=1000000000"),
-                new SearchCase("stopwords_only", "/search?q=the%20and"),
-                new SearchCase("empty_results", "/search?q=pyromaniac%20liliput")
-        );
     }
 
     private void expectedSearch(ObjectNode searchesNode, SearchCase searchCase) {
