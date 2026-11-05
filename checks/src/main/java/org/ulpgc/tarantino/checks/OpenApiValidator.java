@@ -157,24 +157,26 @@ public class OpenApiValidator {
             return;
         }
         JsonNode contentNode = responseDef.get("content");
-        List<String> contentTypes = findHeader(headers, "Content-Type");
-        String actualType = (contentTypes == null || contentTypes.isEmpty()) ? "" : contentTypes.getFirst();
-        Iterable<String> contentKeys = contentNode::fieldNames;
-        String matchingContentType = StreamSupport.stream(contentKeys.spliterator(), false)
-                .filter(expectedType -> actualType.toLowerCase().startsWith(expectedType.toLowerCase()))
-                .findFirst()
-                .orElse(null);
-        if (matchingContentType == null) {
-            throw new AssertionError("Content-Type " + actualType + " does not match expected for " + method + " " + template);
-        }
-        JsonNode mediaTypeNode = contentNode.get(matchingContentType);
+        JsonNode mediaTypeNode = contentNode.get(matchingContentType(contentNode, headers, method, template));
         if (!mediaTypeNode.has("schema")) {
             return;
         }
-        JsonNode schemaNode = mediaTypeNode.get("schema");
+        validateJson(responseBody, mediaTypeNode.get("schema"));
+    }
+
+    private static String matchingContentType(JsonNode contentNode, Map<String, List<String>> headers, String method, String template) {
+        List<String> contentTypes = findHeader(headers, "Content-Type");
+        String actualType = (contentTypes == null || contentTypes.isEmpty()) ? "" : contentTypes.getFirst();
+        Iterable<String> contentKeys = contentNode::fieldNames;
+        return StreamSupport.stream(contentKeys.spliterator(), false)
+                .filter(expectedType -> actualType.toLowerCase().startsWith(expectedType.toLowerCase()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Content-Type " + actualType + " does not match expected for " + method + " " + template));
+    }
+
+    private void validateJson(String responseBody, JsonNode schemaNode) {
         try {
-            JsonNode bodyJson = MAPPER.readTree(responseBody);
-            validateWithJsonSchema(bodyJson, schemaNode);
+            validateWithJsonSchema(MAPPER.readTree(responseBody), schemaNode);
         } catch (JsonProcessingException exception) {
             throw new AssertionError("Response body is not valid JSON: " + responseBody, exception);
         }
