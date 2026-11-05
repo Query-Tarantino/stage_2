@@ -26,7 +26,7 @@ public final class ResourceUsage {
     /** The service of the keys that add up every container of the stack. */
     public static final String STACK = "stack";
 
-    private static final double BYTES_PER_MIB = 1 << 20;
+    static final double BYTES_PER_MIB = 1 << 20;
 
     private ResourceUsage() {
     }

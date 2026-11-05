@@ -59,6 +59,26 @@ class ResourceToolTest {
     }
 
     @Test
+    void summarisesTheWholeHostInsideEachPhaseWhenTheRunHasHostSamples() throws IOException {
+        Files.write(runDirectory.resolve("stats.csv"), List.of(
+                "instant,container,cpu_percent,memory_bytes",
+                "2026-10-21T10:00:01Z,stage_2-crawler-1,10.00,104857600"));
+        Files.write(runDirectory.resolve("host.csv"), List.of(
+                "instant,cpu_percent,memory_used_bytes",
+                "2026-10-21T10:00:01Z,150.00,2147483648",
+                "2026-10-21T10:00:05Z,900.00,4294967296"));
+        writeIngestionOfTrial("replicas-1-rep-1", "10");
+
+        ResourceTool.run(List.of(runDirectory.toString()));
+
+        List<String> summary = Files.readAllLines(runDirectory.resolve(SummaryStats.FILE_NAME));
+        assertEquals(List.of(
+                        "host_cpu_total,\"replicas=1,phase=ingestion\",150.00,0.00,0.00,150.00,150.00,150.00,percent",
+                        "host_memory_used,\"replicas=1,phase=ingestion\",2048.00,0.00,0.00,2048.00,2048.00,2048.00,MiB"),
+                summary.subList(summary.size() - 2, summary.size()));
+    }
+
+    @Test
     void failsOnARunWithoutStatsOrTrials() {
         assertEquals(ResourceTool.FAILED, ResourceTool.run(List.of(runDirectory.toString())));
     }
