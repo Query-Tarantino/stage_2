@@ -24,6 +24,7 @@ import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.NOW;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.ifNull;
 import static org.ulpgc.tarantino.common.mongo.UpdatePipelines.set;
 
+/** The {@code book_states} collection (SPEC §4.3) and its common writes, such as “Create the state” (SPEC §5.1). */
 public class BookStates {
 
     private final MongoCollection<Document> collection;

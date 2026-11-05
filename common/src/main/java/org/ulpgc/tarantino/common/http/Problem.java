@@ -3,6 +3,7 @@ package org.ulpgc.tarantino.common.http;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.ulpgc.tarantino.common.model.ProblemCode;
 
+/** The Problem Details body of every error answer (SPEC §6.6). */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 record Problem(String type, String title, int status, ProblemCode code, String parameter, String detail) {
 }
