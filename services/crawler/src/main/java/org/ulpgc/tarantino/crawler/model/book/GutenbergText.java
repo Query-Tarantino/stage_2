@@ -6,6 +6,7 @@ import org.ulpgc.tarantino.crawler.model.failure.DownloadException;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 
+/** Splits a raw Gutenberg text at its start and end markers, or fails with {@code MISSING_MARKERS} (SPEC §4.5). */
 public final class GutenbergText {
 
     private static final Pattern START_MARKER =

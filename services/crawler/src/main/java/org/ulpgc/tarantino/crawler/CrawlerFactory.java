@@ -31,6 +31,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+/** Builds the download workers and the HTTP routes of {@code crawler} over its connections (SPEC §2.2). */
 public final class CrawlerFactory {
 
     private CrawlerFactory() {
