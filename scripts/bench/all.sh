@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")/../.."
+cd "$(dirname "${BASH_SOURCE[0]}")/../.." || exit 1
 
 source scripts/bench/modes.sh
 
@@ -127,7 +127,7 @@ run_step() {
     local step=$1 before after status new_runs
     echo "=== Step $step: $(command_of "$step") ==="
     before=$(list_runs)
-    execute "$step"
+    execute "$step" < /dev/null
     status=$?
     after=$(list_runs)
     new_runs=$(comm -13 <(echo "$before") <(echo "$after") | grep -vx "$(basename "$campaign_dir")" | tr '\n' ' ')
@@ -161,7 +161,7 @@ recovery_delay() {
     done
     if (( ${#runs[@]} == 0 )); then
         echo "No recovery run of rows ${DELAY_ROWS[*]} in $runs_txt; using every one in $RUNS_DIR"
-        mapfile -t runs < <(printf "$RUNS_DIR/%s\n" $(list_runs | grep -E -- "-recovery-($(IFS='|'; echo "${DELAY_ROWS[*]}"))-"))
+        mapfile -t runs < <(list_runs | grep -E -- "-recovery-($(IFS='|'; echo "${DELAY_ROWS[*]}"))-" | sed "s|^|$RUNS_DIR/|")
     fi
     (( ${#runs[@]} > 0 )) || { echo "No recovery run of rows ${DELAY_ROWS[*]} in $RUNS_DIR" >&2; return 1; }
     scripts/bench/recovery-delay.sh "${runs[@]}"
@@ -205,9 +205,11 @@ main() {
     touch "$runs_txt"
     exec > >(tee -a "$campaign_dir/log.txt") 2>&1
     echo "Opened run $run_id"
-    while read -r step; do
+    local campaign_steps=()
+    mapfile -t campaign_steps < <(selected_steps)
+    for step in "${campaign_steps[@]}"; do
         run_step "$step"
-    done < <(selected_steps)
+    done
     java -jar "$BENCH_JAR" manifest finish "$campaign_dir"
     echo "Campaign in $campaign_dir; steps and run folders in $runs_txt"
 }
