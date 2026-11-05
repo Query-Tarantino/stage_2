@@ -15,34 +15,35 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            Path openApiPath = findFile("api/openapi.yaml");
-            Path sampleIdsPath = findFile("workload/sample_ids.txt");
-            List<Integer> sampleIds = Files.readAllLines(sampleIdsPath).stream()
-                    .map(String::trim)
-                    .filter(line -> !line.isEmpty())
-                    .map(Integer::parseInt)
-                    .toList();
-            String frontEndUrl = System.getenv().getOrDefault("TARANTINO_FRONTEND_URL", "http://localhost:8080");
-            String operationalUrl = System.getenv().getOrDefault("TARANTINO_OPERATIONAL_URL", "http://localhost:8081");
-
-            OpenApiValidator validator = OpenApiValidator.load(openApiPath);
-            CheckedClient client = new CheckedClient(validator);
-            ApiChecker checker = new ApiChecker(client, frontEndUrl, operationalUrl);
-
+            ApiChecker checker = checker();
+            List<Integer> sampleIds = sampleIds(findFile("workload/sample_ids.txt"));
             Path expectedPath = resolveExpectedPath();
-            boolean generateExpected = List.of(args).contains("--generate-expected");
-            if (generateExpected) {
+            if (List.of(args).contains("--generate-expected")) {
                 checker.generateExpected(sampleIds, expectedPath);
                 LOGGER.info("Expected answers successfully generated at {}", expectedPath);
                 return;
             }
-
             checker.checkAll(sampleIds, expectedPath);
             LOGGER.info("All checks completed successfully");
         } catch (Exception exception) {
             LOGGER.error("Checks failed: {}", exception.getMessage(), exception);
             System.exit(1);
         }
+    }
+
+    private static ApiChecker checker() throws IOException {
+        String frontEndUrl = System.getenv().getOrDefault("TARANTINO_FRONTEND_URL", "http://localhost:8080");
+        String operationalUrl = System.getenv().getOrDefault("TARANTINO_OPERATIONAL_URL", "http://localhost:8081");
+        OpenApiValidator validator = OpenApiValidator.load(findFile("api/openapi.yaml"));
+        return new ApiChecker(new CheckedClient(validator), frontEndUrl, operationalUrl);
+    }
+
+    private static List<Integer> sampleIds(Path sampleIdsPath) throws IOException {
+        return Files.readAllLines(sampleIdsPath).stream()
+                .map(String::trim)
+                .filter(line -> !line.isEmpty())
+                .map(Integer::parseInt)
+                .toList();
     }
 
     private static Path resolveExpectedPath() {
