@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+/** Opens the database of {@code TARANTINO_MONGO_URI} and tells whether it answers, for {@code /health} (SPEC §4.3, §4.7 and §6.5). */
 public final class MongoDatabases {
 
     private static final String DEFAULT_DATABASE = "tarantino";

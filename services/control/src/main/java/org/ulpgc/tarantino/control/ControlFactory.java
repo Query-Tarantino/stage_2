@@ -56,6 +56,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/** Builds the commands of {@code control}, the seeding, the reconciliation and the datalake cleanup, over its Mongo and Hazelcast connections (SPEC §2.2 and §5.3). */
 public final class ControlFactory {
 
     private static final String QUERY_HOST = "query";

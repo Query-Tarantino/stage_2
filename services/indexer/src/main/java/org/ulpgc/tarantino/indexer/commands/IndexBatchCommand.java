@@ -193,10 +193,17 @@ public class IndexBatchCommand {
         }
         log.write(Transition.batch(batch.batchId(), BatchStatus.WRITING, BatchStatus.PUBLISHED, batch.generation()));
         crashPoints.hit(CrashPoint.AFTER_PUBLISH);
-        batches.markPublished(batch);
-        bookIds.forEach(bookId -> log.write(Transition.book(bookId, BookStatus.INDEXING, BookStatus.PUBLISHED)
-                .inBatch(batch.batchId(), batch.generation())));
+        markPublished(batch, bookIds);
         crashPoints.hit(CrashPoint.AFTER_MARK);
         announcer.announce(new BatchPublished(batch.batchId(), batch.generation(), bookIds.size(), publishedAt.get()));
+    }
+
+    /** Logs the {@code INDEXING}→{@code PUBLISHED} line only of the books whose own write matched (SPEC §4.8). */
+    private void markPublished(Batch batch, List<Integer> bookIds) {
+        for (int bookId : bookIds) {
+            if (batches.markPublished(batch, bookId)) {
+                log.write(Transition.book(bookId, BookStatus.INDEXING, BookStatus.PUBLISHED).inBatch(batch.batchId(), batch.generation()));
+            }
+        }
     }
 }

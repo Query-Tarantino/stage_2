@@ -1,5 +1,6 @@
 package org.ulpgc.tarantino.bench.charts;
 
+import org.apache.commons.math3.distribution.TDistribution;
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.bench.coordination.CoordinationTool;
 import org.ulpgc.tarantino.bench.stats.SummaryStats;
@@ -25,7 +26,7 @@ class CoordinationChartTest {
     }
 
     @Test
-    void drawsOneSeriesPerConfigurationOverTheBooksOfAllItsRepetitions() {
+    void drawsOneSeriesPerConfigurationOverItsRepetitions() {
         Map<String, Map<String, SummaryStats.Metrics>> phases = CoordinationChart.phases(List.of(
                 "trial,book_id,download_queue_wait_ms,download_ms,index_queue_wait_ms,indexing_ms,time_to_publication_ms",
                 "replicas-1-rep-1,84,100,1000,40,3000,4140",
@@ -35,6 +36,21 @@ class CoordinationChartTest {
         assertEquals(List.of("replicas=1", "replicas=2"), List.copyOf(CoordinationChart.of(phases).getSeriesMap().keySet()));
         assertEquals(200.0, phases.get("replicas=1").get("download_queue_wait_ms").mean());
         assertEquals(50.0, phases.get("replicas=2").get("download_queue_wait_ms").mean());
+    }
+
+    @Test
+    void drawsTheErrorBarsWithTheCiOverTheMeanOfEachRepetition() {
+        Map<String, Map<String, SummaryStats.Metrics>> phases = CoordinationChart.phases(List.of(
+                "trial,book_id,download_queue_wait_ms,download_ms,index_queue_wait_ms,indexing_ms,time_to_publication_ms",
+                "replicas-1-rep-1,84,100,1000,40,3000,4140",
+                "replicas-1-rep-1,1342,200,1000,40,3000,4240",
+                "replicas-1-rep-2,84,300,1000,40,3000,4340"));
+
+        SummaryStats.Metrics wait = phases.get("replicas=1").get("download_queue_wait_ms");
+        assertEquals(2, wait.count());
+        assertEquals(225.0, wait.mean(), 0.001);
+        assertEquals(new TDistribution(1).inverseCumulativeProbability(0.975) * Math.sqrt(2 * Math.pow(75, 2)) / Math.sqrt(2), wait.ci95(), 0.01);
+        assertEquals(wait.ci95(), CoordinationChart.of(phases).getSeriesMap().get("replicas=1").getExtraValues().iterator().next().doubleValue(), 0.001);
     }
 
     @Test

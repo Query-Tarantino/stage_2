@@ -22,6 +22,7 @@ import static org.ulpgc.tarantino.common.mongo.MongoFields.BOOK_IDS;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.ID;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.STATUS;
 
+/** Reads {@code index_state} and the {@code PUBLISHED} batches of {@code batches_g<n>} the snapshot is built from (SPEC §4.3 and §7). */
 public class MongoPublishedBatches implements PublishedBatches {
 
     private static final Bson PUBLISHED = Filters.eq(STATUS, BatchStatus.PUBLISHED.name());

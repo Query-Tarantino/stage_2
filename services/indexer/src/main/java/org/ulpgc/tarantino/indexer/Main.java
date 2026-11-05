@@ -9,6 +9,7 @@ import org.ulpgc.tarantino.indexer.adapters.local.LocalIndexQueue;
 
 import java.util.List;
 
+/** Starts {@code indexer} (SPEC §2.2 and §2.4): its HTTP routes and its index worker. */
 public class Main {
 
     public static void main(String[] args) {

@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.control.ports;
 
 import java.util.OptionalInt;
 
+/** The running rebuild, “Switch generation” and “Finish the rebuild” (SPEC §5.1 and §5.4). */
 public interface Rebuilds {
 
     /** The {@code target_generation} of the {@code RUNNING} rebuild, or empty when none runs. */

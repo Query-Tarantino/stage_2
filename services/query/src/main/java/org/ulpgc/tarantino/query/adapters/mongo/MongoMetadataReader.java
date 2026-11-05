@@ -28,6 +28,7 @@ import static org.ulpgc.tarantino.common.mongo.MongoFields.ORIGINAL_YEAR;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.TITLE;
 import static org.ulpgc.tarantino.common.mongo.MongoFields.YEAR;
 
+/** Reads {@code metadata_g<n>}: the results of a page, a book's details and the filters of the snapshot's books (SPEC §4.3 and §7). */
 public class MongoMetadataReader implements MetadataReader {
 
     private final MongoDatabase database;

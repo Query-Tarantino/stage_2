@@ -37,6 +37,7 @@ import org.ulpgc.tarantino.indexer.ports.sources.DatalakeReader;
 import java.time.Clock;
 import java.util.function.Consumer;
 
+/** Builds the index workers and the HTTP routes of {@code indexer} over its connections (SPEC §2.2). */
 public final class IndexerFactory {
 
     private IndexerFactory() {

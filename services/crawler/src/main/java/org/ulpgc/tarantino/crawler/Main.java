@@ -10,6 +10,7 @@ import org.ulpgc.tarantino.crawler.adapters.local.LocalDownloadQueue;
 import java.util.List;
 import java.util.stream.IntStream;
 
+/** Starts {@code crawler} (SPEC §2.2 and §2.4): its HTTP routes and {@code TARANTINO_PARALLEL_DOWNLOADS} download workers. */
 public class Main {
 
     public static void main(String[] args) {

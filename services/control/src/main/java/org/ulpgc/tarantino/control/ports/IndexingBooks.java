@@ -7,6 +7,7 @@ import org.ulpgc.tarantino.control.model.IndexingBook;
 import java.util.List;
 import java.util.Optional;
 
+/** The {@code INDEXING} books, “Release its books” and “Complete a publication” (SPEC §5.1 and §5.3, step 3). */
 public interface IndexingBooks {
 
     /** The {@code INDEXING} books with their batch (SPEC §5.3, step 3). */

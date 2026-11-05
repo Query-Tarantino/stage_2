@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Opens the Hazelcast client of a service on {@code TARANTINO_HAZELCAST} without waiting for the cluster (SPEC §4.2 and §4.7). */
 public final class HazelcastClients {
 
     /**

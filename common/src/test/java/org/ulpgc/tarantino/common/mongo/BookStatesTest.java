@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
@@ -32,6 +33,28 @@ class BookStatesTest {
 
         assertEquals(1, created.stream().filter(Boolean::booleanValue).count());
         assertEquals(1, collection().countDocuments());
+    }
+
+    @Test
+    void onlyOneOfTwoCompletionsAtOnceMarksTheBook() throws Exception {
+        BookStates states = states();
+        String batchId = new ObjectId().toHexString();
+        collection().insertOne(new Document(MongoFields.ID, 1342).append(MongoFields.STATUS, BookStatus.INDEXING.name())
+                .append(MongoFields.BATCH_ID, new ObjectId(batchId)));
+
+        List<Boolean> completed = TwoAtOnce.call(() -> states.completePublication(1342, batchId));
+
+        assertEquals(1, completed.stream().filter(Boolean::booleanValue).count());
+        assertEquals(BookStatus.PUBLISHED.name(), collection().find().first().getString(MongoFields.STATUS));
+    }
+
+    @Test
+    void completesOnlyABookStillIndexingInThatBatch() {
+        BookStates states = states();
+        collection().insertOne(new Document(MongoFields.ID, 1342).append(MongoFields.STATUS, BookStatus.INDEXING.name())
+                .append(MongoFields.BATCH_ID, new ObjectId()));
+
+        assertFalse(states.completePublication(1342, new ObjectId().toHexString()));
     }
 
     @Test

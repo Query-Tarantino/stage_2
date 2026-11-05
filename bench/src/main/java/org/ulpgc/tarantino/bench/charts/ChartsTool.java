@@ -119,7 +119,7 @@ public final class ChartsTool {
     }
 
     private static Stream<Path> phases(Path runDirectory) {
-        Map<ResourceUsage.Key, ResourceUsage.Measures> usage = ResourceTool.usage(runDirectory);
+        Map<ResourceUsage.Key, List<ResourceUsage.Measures>> usage = ResourceTool.usage(runDirectory);
         return PhaseResourceCharts.phases(usage).stream().flatMap(phase -> Stream.of(
                 RunChart.write(PhaseResourceCharts.cpu(usage, phase), runDirectory, PhaseResourceCharts.CPU_PREFIX + phase),
                 RunChart.write(PhaseResourceCharts.memory(usage, phase), runDirectory, PhaseResourceCharts.MEMORY_PREFIX + phase)));

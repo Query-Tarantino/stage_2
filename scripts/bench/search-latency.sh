@@ -113,7 +113,7 @@ measure() {
 }
 
 summarise_run() {
-    :
+    java -jar "$BENCH_JAR" search-latency "$run_dir"
 }
 
 main() {

@@ -4,6 +4,7 @@ import org.ulpgc.tarantino.common.model.BookErrorCode;
 
 import java.io.Serial;
 
+/** A failed download with its {@code error_code} (SPEC §4.5). */
 public class DownloadException extends RuntimeException {
 
     @Serial

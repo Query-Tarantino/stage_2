@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+/** The {@code books-to-index} queue of the broker, from which a batch takes its messages (SPEC §4.2, §11). */
 public class BrokerIndexQueue implements IndexQueue {
 
     private final BookTasks queue;

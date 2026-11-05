@@ -35,6 +35,9 @@ public interface BatchStore {
     /** “Publish a batch”: its {@code published_at}, or empty if its lease was lost. */
     Optional<Instant> publish(Batch batch, List<Integer> bookIds);
 
-    /** Marks the batch's {@code INDEXING} books {@code PUBLISHED}, the second write of “Publish a batch”. */
-    void markPublished(Batch batch);
+    /**
+     * Marks one book of the batch {@code PUBLISHED}, the second write of “Publish a batch”: false if it is no longer
+     * {@code INDEXING} in the batch, because {@code control} completed it first (SPEC §5.3, step 3).
+     */
+    boolean markPublished(Batch batch, int bookId);
 }

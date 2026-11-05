@@ -1,25 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-cd "$(dirname "${BASH_SOURCE[0]}")/../.."
+source "$(dirname "${BASH_SOURCE[0]}")/trials.sh"
 
 readonly EXPERIMENT=ingest-throughput
-readonly BENCH_JAR=bench/target/bench-1.0-SNAPSHOT.jar
-readonly RUNS_DIR=benchmarks/runs
-readonly CACHE_DIR=benchmarks/cache
-readonly MIRROR_DIR=benchmarks/mirror
-readonly CORPUS_SHA=workload/corpus.sha256
-readonly STOPWORDS=workload/stopwords.txt
 readonly NO_CLIENTS=0
 readonly CONFIGURATIONS=("1 8" "2 8" "3 8" "1 4" "1 16")
-readonly REPETITIONS="${TARANTINO_REPETITIONS:-5}"
 readonly DOWNLOAD_TIMEOUT_SECONDS=3600
-readonly LOGGED_SERVICES=(crawler control)
-readonly COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml)
-
-run_dir=""
-current_trial=""
-stats_pid=""
+LOGGED_SERVICES=(crawler control)
 
 main() {
     [[ -f $BENCH_JAR ]] || fail "$BENCH_JAR is missing; build it first with mvn -DskipTests package"
@@ -37,19 +23,10 @@ main() {
     start_stats
     measure_interleaved_repetitions
     stop_stats
-
-    bench ingest-throughput "$run_dir"
 }
 
-close_run() {
-    stop_stats
-    if [[ -n $current_trial ]]; then
-        echo "Trial $current_trial did not finish; saving its logs"
-        save_trial_logs
-    fi
-    java -jar "$BENCH_JAR" manifest finish "$run_dir"
-    java -jar "$BENCH_JAR" charts "$run_dir"
-    echo "Results in $run_dir"
+summarise_run() {
+    bench ingest-throughput "$run_dir"
 }
 
 run_jmh() {
@@ -104,28 +81,6 @@ measure_trial() {
 
 corpus_books() {
     grep -c . "$CORPUS_SHA"
-}
-
-save_trial_logs() {
-    local trial_logs="$run_dir/logs/$current_trial" service
-    mkdir -p "$trial_logs"
-    for service in "${LOGGED_SERVICES[@]}"; do
-        "${COMPOSE[@]}" logs --no-color --timestamps "$service" > "$trial_logs/$service.log"
-    done
-    current_trial=""
-}
-
-start_stats() {
-    java -jar "$BENCH_JAR" stats "$run_dir" &
-    stats_pid=$!
-}
-
-stop_stats() {
-    if [[ -n $stats_pid ]]; then
-        kill "$stats_pid" 2>/dev/null || true
-        wait "$stats_pid" 2>/dev/null || true
-        stats_pid=""
-    fi
 }
 
 bench() {

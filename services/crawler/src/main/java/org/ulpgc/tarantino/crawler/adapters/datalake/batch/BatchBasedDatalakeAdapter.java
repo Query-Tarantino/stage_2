@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
+/** Writes a book's header and body in the {@code batch} layout of the datalake, through a {@code .tmp} and an atomic rename (SPEC §4.6). */
 public class BatchBasedDatalakeAdapter implements DatalakeStorage {
 
     private final DatalakePaths paths;

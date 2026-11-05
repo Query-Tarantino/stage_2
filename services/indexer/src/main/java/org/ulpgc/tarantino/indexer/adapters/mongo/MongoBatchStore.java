@@ -14,6 +14,7 @@ import org.bson.types.ObjectId;
 import org.ulpgc.tarantino.common.model.BatchStatus;
 import org.ulpgc.tarantino.common.model.BookErrorCode;
 import org.ulpgc.tarantino.common.model.BookStatus;
+import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.mongo.IndexState;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.common.mongo.MongoIndexes;
@@ -56,6 +57,7 @@ public class MongoBatchStore implements BatchStore {
 
     private final MongoDatabase database;
     private final MongoCollection<Document> states;
+    private final BookStates bookStates;
     private final IndexState indexState;
     private final Duration lease;
     private final String owner;
@@ -64,6 +66,7 @@ public class MongoBatchStore implements BatchStore {
     public MongoBatchStore(MongoDatabase database, Duration lease, String owner) {
         this.database = database;
         this.states = database.getCollection(MongoCollections.BOOK_STATES);
+        this.bookStates = new BookStates(database);
         this.indexState = new IndexState(database);
         this.lease = lease;
         this.owner = owner;
@@ -153,9 +156,8 @@ public class MongoBatchStore implements BatchStore {
     }
 
     @Override
-    public void markPublished(Batch batch) {
-        Document change = new Document(STATUS, BookStatus.PUBLISHED.name()).append(PUBLISHED_AT, NOW).append(UPDATED_AT, NOW);
-        states.updateMany(indexingIn(batch), set(change));
+    public boolean markPublished(Batch batch, int bookId) {
+        return bookStates.completePublication(bookId, batch.batchId());
     }
 
     private MongoCollection<Document> batches(Batch batch) {

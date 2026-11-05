@@ -5,6 +5,7 @@ import com.hazelcast.core.LifecycleListener;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/** Whether the Hazelcast client is connected, which {@code /health} reports in {@code down} (SPEC §4.2 and §6.5). */
 final class ConnectionState implements LifecycleListener {
 
     private final AtomicBoolean connected = new AtomicBoolean();
