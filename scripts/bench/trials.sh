@@ -15,6 +15,7 @@ readonly PHASE_TIMEOUT_SECONDS="${TARANTINO_PHASE_TIMEOUT_SECONDS:-1800}"
 SERVICES=(mongo hazelcast crawler indexer query control nginx)
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.mirror.yml)
 readonly SERVICES COMPOSE
+LOGGED_SERVICES=("${SERVICES[@]}")
 
 export TARANTINO_CANDIDATES="${TARANTINO_CANDIDATES:-mirror}"
 
@@ -81,7 +82,7 @@ save_trial_logs() {
     local trial_logs="$run_dir/logs/$current_trial"
     mkdir -p "$trial_logs"
     local service
-    for service in "${SERVICES[@]}"; do
+    for service in "${LOGGED_SERVICES[@]}"; do
         "${COMPOSE[@]}" logs --no-color --timestamps "$service" > "$trial_logs/$service.log"
     done
     current_trial=""
