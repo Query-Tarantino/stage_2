@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
 
+/** Validates the status, {@code Content-Type} and body of a response against {@code api/openapi.yaml}, with JSON Schema 2020-12 (SPEC §6). */
 public class OpenApiValidator {
 
     private static final ObjectMapper MAPPER = TarantinoJson.mapper();

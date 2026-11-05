@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+/** Runs the API checks (SPEC §6) against the stack or, with {@code --generate-expected}, writes {@code checks/expected.json}. */
 public class Main {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);

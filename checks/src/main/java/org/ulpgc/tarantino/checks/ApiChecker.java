@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
+/** The executable checks of the HTTP API (SPEC §6) against the running stack, over the 20 books of {@code workload/sample_ids.txt} and {@code checks/expected.json}. */
 public class ApiChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiChecker.class);
