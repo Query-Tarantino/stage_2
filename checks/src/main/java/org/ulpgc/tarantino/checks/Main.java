@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.checks;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.ulpgc.tarantino.common.config.Coordination;
 import org.ulpgc.tarantino.common.terms.FileStopwordsLoader;
 import org.ulpgc.tarantino.common.terms.Tokenizer;
 
@@ -10,7 +11,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/** Runs the API checks (SPEC §6) against the stack or, with {@code --generate-expected}, writes {@code checks/expected.json}. */
+/**
+ * Runs the API checks (SPEC §6) against the stack or, with {@code --generate-expected}, writes {@code checks/expected.json}.
+ * With {@code TARANTINO_COORDINATION=orchestrator} it also checks the internal routes of that mode (SPEC §11.4).
+ */
 public class Main {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
@@ -18,6 +22,7 @@ public class Main {
     private static final String DEFAULT_FRONT_END_URL = "http://localhost:8080";
     private static final String OPERATIONAL_URL = "TARANTINO_OPERATIONAL_URL";
     private static final String DEFAULT_OPERATIONAL_URL = "http://localhost:8081";
+    private static final String COORDINATION = "TARANTINO_COORDINATION";
     private static final String GENERATE_EXPECTED = "--generate-expected";
     private static final String OPENAPI = "api/openapi.yaml";
     private static final String STOPWORDS = "workload/stopwords.txt";
@@ -48,7 +53,8 @@ public class Main {
         String operationalUrl = System.getenv().getOrDefault(OPERATIONAL_URL, DEFAULT_OPERATIONAL_URL);
         OpenApiValidator validator = OpenApiValidator.load(RepositoryFiles.require(OPENAPI));
         Tokenizer tokenizer = new Tokenizer(new FileStopwordsLoader(RepositoryFiles.require(STOPWORDS)).stopwords());
-        return new ApiChecker(new CheckedClient(validator), frontEndUrl, operationalUrl, tokenizer);
+        boolean orchestrator = Coordination.ORCHESTRATOR.variableValue().equals(System.getenv(COORDINATION));
+        return new ApiChecker(new CheckedClient(validator), frontEndUrl, operationalUrl, tokenizer, orchestrator);
     }
 
     private static List<Integer> sampleIds(Path sampleIdsPath) throws IOException {

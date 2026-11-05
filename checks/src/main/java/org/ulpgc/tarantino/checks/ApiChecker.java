@@ -30,8 +30,11 @@ public class ApiChecker {
     private final SearchPageChecks pages;
     private final ExpectedAnswers expectedAnswers;
     private final ExpectedAnswersWriter expectedAnswersWriter;
+    private final InternalRouteChecks internalRoutes;
+    private final boolean orchestrator;
 
-    public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl, Tokenizer tokenizer) {
+    /** {@code orchestrator} adds the checks of the internal routes, which only that mode has (SPEC §11.4). */
+    public ApiChecker(CheckedClient client, String frontEndUrl, String operationalUrl, Tokenizer tokenizer, boolean orchestrator) {
         String frontEndPort = withoutTrailingSlash(frontEndUrl);
         String operationalPort = withoutTrailingSlash(operationalUrl);
         ProblemChecks problems = new ProblemChecks(client);
@@ -48,6 +51,8 @@ public class ApiChecker {
         this.pages = new SearchPageChecks(answers);
         this.expectedAnswers = new ExpectedAnswers(client, frontEndPort);
         this.expectedAnswersWriter = new ExpectedAnswersWriter(client, terms, frontEndPort);
+        this.internalRoutes = new InternalRouteChecks(client);
+        this.orchestrator = orchestrator;
     }
 
     public void checkAll(List<Integer> sampleIds, Path expectedPath) throws IOException, InterruptedException {
@@ -67,6 +72,9 @@ public class ApiChecker {
         searches.check(sampleBooks);
         pages.check();
         expectedAnswers.check(expectedPath);
+        if (orchestrator) {
+            internalRoutes.check(sampleIds.getFirst());
+        }
         LOGGER.info("All API conformance checks passed successfully");
     }
 

@@ -16,11 +16,16 @@ import static org.ulpgc.tarantino.checks.CheckAssertions.assertEquals;
 import static org.ulpgc.tarantino.checks.CheckAssertions.assertStatus;
 import static org.ulpgc.tarantino.checks.CheckAssertions.assertTrue;
 
-/** nginx answers any path outside SPEC §6.1, on both entry ports, with a {@code 404} Problem Details without {@code code}. */
+/**
+ * Any path outside SPEC §6.1, on both entry ports, gets a {@code 404} Problem Details without {@code code}: from nginx for
+ * a path it does not route, and from the service for a path it lacks under a prefix nginx routes to it (SPEC §6.6).
+ */
 final class EntryPortChecks {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntryPortChecks.class);
     private static final String UNKNOWN_PATH = "/unknown-path";
+    private static final String BOOK_WITHOUT_ID = "/books/";
+    private static final String UNKNOWN_INGEST_PATH = "/ingest/unknown-path";
     private static final String PROBLEM_JSON = "application/problem+json";
 
     private final CheckedClient client;
@@ -34,9 +39,11 @@ final class EntryPortChecks {
     }
 
     void check() throws IOException, InterruptedException {
-        LOGGER.info("Checking nginx 404 Problem Details on unknown paths");
+        LOGGER.info("Checking the 404 Problem Details of unknown paths");
         checkUnknownPath(frontEndUrl + UNKNOWN_PATH);
         checkUnknownPath(operationalUrl + UNKNOWN_PATH);
+        checkUnknownPath(frontEndUrl + BOOK_WITHOUT_ID);
+        checkUnknownPath(operationalUrl + UNKNOWN_INGEST_PATH);
     }
 
     private void checkUnknownPath(String url) throws IOException, InterruptedException {
