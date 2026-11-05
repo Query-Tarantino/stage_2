@@ -108,8 +108,7 @@ public class OpenApiValidator {
             return;
         }
         JsonNode declaredHeaders = responseDef.get("headers");
-        Iterable<Map.Entry<String, JsonNode>> headerEntries = declaredHeaders::fields;
-        StreamSupport.stream(headerEntries.spliterator(), false)
+        declaredHeaders.properties()
                 .forEach(headerEntry -> {
                     String headerName = headerEntry.getKey();
                     JsonNode headerDef = resolveRef(headerEntry.getValue());
