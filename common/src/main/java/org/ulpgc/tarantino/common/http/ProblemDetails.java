@@ -17,7 +17,8 @@ import java.time.Duration;
 
 /**
  * Answers every error as Problem Details (RFC 9457, SPEC §6.6): {@code parameter} only in {@code 400} responses,
- * {@code Retry-After} on every {@code 503} and {@code 500} without {@code code} for anything unexpected. Mongo or
+ * {@code Retry-After} on every {@code 503}, {@code 500} without {@code code} for anything unexpected and {@code 404} without
+ * {@code code} for a path or method the service does not have, as nginx answers an unknown path (SPEC §6.6). Mongo or
  * the broker of the mode not answering is {@code 503} with {@code DEPENDENCY_UNAVAILABLE} (SPEC §4.5 and §11).
  */
 public final class ProblemDetails {
@@ -43,12 +44,21 @@ public final class ProblemDetails {
             LOGGER.error("Unexpected error answering {} {}", context.method(), context.path(), error);
             answer(context, HttpStatus.INTERNAL_SERVER_ERROR, null, null, null);
         });
+        app.error(HttpStatus.NOT_FOUND, ProblemDetails::answerUnknownRoute);
     }
 
     /** A {@code 503} that asks to retry after {@code retryAfter} instead of the usual 5 s (SPEC §11.4). */
     public static void unavailable(Context context, String detail, Duration retryAfter) {
         unavailable(context, detail);
         context.header(Header.RETRY_AFTER, String.valueOf(retryAfter.toSeconds()));
+    }
+
+    /** Javalin's own 404, for a route the service lacks; a {@code 404} the handlers already answered stays as it is. */
+    private static void answerUnknownRoute(Context context) {
+        String contentType = context.res().getContentType();
+        if (contentType == null || !contentType.startsWith(CONTENT_TYPE)) {
+            answer(context, HttpStatus.NOT_FOUND, null, null, "No route for " + context.method() + " " + context.path());
+        }
     }
 
     private static void unavailable(Context context, String detail) {

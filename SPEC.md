@@ -494,7 +494,7 @@ A generation pointer is used, not `renameCollection`: renaming three collections
 
 nginx has two entry ports. 8080 is only for the front-end and routes `/search`, `/search/filters` and `/books/` to the `query` replicas; any other path gives `404`. 8081 is for operations and routes `/ingest/` to `crawler`, `/index/` to `indexer` and `/control/` to `control`, without rewriting paths. nginx must spread requests across all replicas even when their number changes: with `resolver 127.0.0.11 valid=5s` and the address in a variable, or by restarting it after each `--scale`. When a replica does not answer, nginx tries another one, with `proxy_next_upstream error timeout` and `proxy_connect_timeout 1s`.
 
-In mode `hazelcast` there are no internal endpoints between services: that coordination goes through Hazelcast (§4.2), which is documented separately. The fourth inventory, “Internal”, only exists in mode `orchestrator` (§11.4), behind nginx's internal port 8082, which is not published to the host; in every other mode those routes do not exist and nginx answers `404`.
+In mode `hazelcast` there are no internal endpoints between services: that coordination goes through Hazelcast (§4.2), which is documented separately. The fourth inventory, “Internal”, only exists in mode `orchestrator` (§11.4), behind nginx's internal port 8082, which is not published to the host; in every other mode those routes do not exist and the service behind nginx answers `404` without `code` (§6.6).
 
 | Inventory | Service (port) | nginx port | Method and path | Consumer | Responses |
 | --- | --- | --- | --- | --- | --- |
@@ -613,7 +613,7 @@ In `GET /health`, `down` can hold `mongo`, the broker of the mode, `hazelcast` o
 
 Problem Details (RFC 9457), with `Content-Type: application/problem+json`, in all four services and through the `common` handler. `code` is one of those in §4.5; `parameter` only appears in `400` responses, and every `503` carries `Retry-After: 5`. An unexpected exception gives `500` in the same format, without `code`.
 
-nginx's own errors use the same format. An unknown path on 8080 or 8081 gives `404` without `code`. When no replica of the service answers (`502` or `504` from the upstream), nginx answers `503` with `code: "DEPENDENCY_UNAVAILABLE"` and `Retry-After: 5`.
+nginx's own errors use the same format. An unknown path on 8080 or 8081 gives `404` without `code`, and so does a path or method a service lacks under a prefix nginx routes to it, such as `GET /books/` or `DELETE /ingest/1342`, which the service answers itself. When no replica of the service answers (`502` or `504` from the upstream), nginx answers `503` with `code: "DEPENDENCY_UNAVAILABLE"` and `Retry-After: 5`.
 
 ```json
 {"type": "about:blank", "title": "Bad Request", "status": 400, "code": "INVALID_PARAMETER", "parameter": "limit", "detail": "limit must be between 1 and 100"}

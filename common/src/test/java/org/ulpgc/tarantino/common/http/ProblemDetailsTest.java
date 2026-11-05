@@ -51,6 +51,16 @@ class ProblemDetailsTest {
     }
 
     @Test
+    void answersARouteTheServiceLacksWithoutCode() throws IOException, InterruptedException {
+        HttpResponse<String> response = server.get("/books/");
+
+        assertEquals(404, response.statusCode());
+        assertEquals(Optional.of(ProblemDetails.CONTENT_TYPE), response.headers().firstValue("Content-Type"));
+        assertEquals("{\"type\":\"about:blank\",\"title\":\"Not Found\",\"status\":404,\"detail\":\"No route for GET /books/\"}",
+                response.body());
+    }
+
+    @Test
     void asksToRetryWhenADependencyIsUnavailable() throws IOException, InterruptedException {
         HttpResponse<String> response = server.get("/mongo");
 
