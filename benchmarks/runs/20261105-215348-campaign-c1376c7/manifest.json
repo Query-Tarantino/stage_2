@@ -1,0 +1,28 @@
+{
+  "run_id" : "20261105-215348-campaign-c1376c7",
+  "git" : {
+    "commit" : "c1376c7",
+    "clean" : true,
+    "branch" : "dev"
+  },
+  "command" : [ "scripts/bench/all.sh" ],
+  "start" : "2026-11-05T21:53:48.484136Z",
+  "end" : "2026-11-06T07:39:15.136262100Z",
+  "host" : {
+    "cpu" : "Intel(R) Core(TM) Ultra 9 275HX",
+    "cores" : 24,
+    "memory_bytes" : 33690722304,
+    "disk_bytes" : 1023035830272,
+    "free_disk_bytes" : 644943802368,
+    "operating_system" : "Windows 11 10.0 amd64"
+  },
+  "docker" : {
+    "version" : "29.9.2",
+    "operating_system" : "Docker Desktop",
+    "cpus" : 24,
+    "memory_bytes" : 16435425280
+  },
+  "services" : { },
+  "client_concurrency" : 0,
+  "trials" : [ ]
+}
