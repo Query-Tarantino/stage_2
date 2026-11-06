@@ -1,0 +1,110 @@
+query-1  | 2026-11-06T00:03:12.896527017Z Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+query-1  | 2026-11-06T00:03:13.123788164Z [main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@5606c0b, com.mongodb.Jep395RecordCodecProvider@80ec1f8, com.mongodb.KotlinCodecProvider@1445d7f, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+query-1  | 2026-11-06T00:03:13.470891248Z [main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+query-1  | 2026-11-06T00:03:13.525304547Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+query-1  | 2026-11-06T00:03:13.525704597Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+query-1  | 2026-11-06T00:03:13.582942776Z [main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+query-1  | 2026-11-06T00:03:13.583138699Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+query-1  | 2026-11-06T00:03:13.701485759Z [main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+query-1  | 2026-11-06T00:03:13.988626921Z [main] INFO io.javalin.Javalin - Starting Javalin ...
+query-1  | 2026-11-06T00:03:13.990243649Z [main] INFO org.eclipse.jetty.server.Server - jetty-11.0.25; built: 2025-03-13T00:15:57.301Z; git: a2e9fae3ad8320f2a713d4fa29bba356a99d1295; jvm 25.0.4.1+1-LTS
+query-1  | 2026-11-06T00:03:14.027033686Z [main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+query-1  | 2026-11-06T00:03:14.033786462Z [main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@b887730{/,null,AVAILABLE}
+query-1  | 2026-11-06T00:03:14.046245701Z [main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@1bc49bc5{HTTP/1.1, (http/1.1)}{0.0.0.0:7003}
+query-1  | 2026-11-06T00:03:14.048022125Z [main] INFO org.eclipse.jetty.server.Server - Started Server@20cece0b{STARTING}[11.0.25,sto=0] @1151ms
+query-1  | 2026-11-06T00:03:14.048208794Z [main] INFO io.javalin.Javalin - Javalin started in 132ms \o/
+query-1  | 2026-11-06T00:03:14.055609418Z [main] INFO io.javalin.Javalin - Listening on http://localhost:7003/
+query-1  | 2026-11-06T00:03:14.072279749Z [main] INFO io.javalin.Javalin - You are running Javalin 6.7.0 (released June 22, 2025. Your Javalin version is 501 days old. Consider checking for a newer version.).
+query-1  | 2026-11-06T00:03:14.097725650Z [main] INFO org.mongodb.driver.cluster - Waiting for server to become available for operation update with ID 3. Remaining time: 29994 ms. Selector: WritableServerSelector, topology description: {type=UNKNOWN, servers=[{address=mongo:27017, type=UNKNOWN, state=CONNECTING}].
+query-1  | 2026-11-06T00:03:17.082998453Z [cluster-6aed1941c7a10b750579630e-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+query-1  | 2026-11-06T00:03:17.083037196Z com.mongodb.MongoSocketException: mongo: Name or service not known
+query-1  | 2026-11-06T00:03:17.083120145Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+query-1  | 2026-11-06T00:03:17.083123450Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+query-1  | 2026-11-06T00:03:17.083124936Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+query-1  | 2026-11-06T00:03:17.083125827Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+query-1  | 2026-11-06T00:03:17.083126780Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+query-1  | 2026-11-06T00:03:17.083128076Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+query-1  | 2026-11-06T00:03:17.083129290Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+query-1  | 2026-11-06T00:03:17.083321480Z Caused by: java.net.UnknownHostException: mongo: Name or service not known
+query-1  | 2026-11-06T00:03:17.083328186Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+query-1  | 2026-11-06T00:03:17.083329116Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Unknown Source)
+query-1  | 2026-11-06T00:03:17.083329931Z 	at java.base/java.net.InetAddress$PlatformResolver.lookupByName(Unknown Source)
+query-1  | 2026-11-06T00:03:17.083330676Z 	at java.base/java.net.InetAddress.getAddressesFromNameService(Unknown Source)
+query-1  | 2026-11-06T00:03:17.083360108Z 	at java.base/java.net.InetAddress$NameServiceAddresses.get(Unknown Source)
+query-1  | 2026-11-06T00:03:17.083363464Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+query-1  | 2026-11-06T00:03:17.083364926Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+query-1  | 2026-11-06T00:03:17.083367474Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+query-1  | 2026-11-06T00:03:17.083368486Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+query-1  | 2026-11-06T00:03:17.083414982Z 	... 6 more
+query-1  | 2026-11-06T00:03:17.538408515Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1000 ms, attempt: 1, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:17.584947158Z [cluster-6aed1941c7a10b750579630e-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+query-1  | 2026-11-06T00:03:17.584956294Z com.mongodb.MongoSocketException: mongo
+query-1  | 2026-11-06T00:03:17.584961671Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+query-1  | 2026-11-06T00:03:17.584974016Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+query-1  | 2026-11-06T00:03:17.584975199Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+query-1  | 2026-11-06T00:03:17.584976270Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+query-1  | 2026-11-06T00:03:17.584976733Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+query-1  | 2026-11-06T00:03:17.584977835Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+query-1  | 2026-11-06T00:03:17.584978654Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+query-1  | 2026-11-06T00:03:17.585077764Z Caused by: java.net.UnknownHostException: mongo
+query-1  | 2026-11-06T00:03:17.585086996Z 	at java.base/java.net.InetAddress$CachedLookup.get(Unknown Source)
+query-1  | 2026-11-06T00:03:17.585088778Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+query-1  | 2026-11-06T00:03:17.585090502Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+query-1  | 2026-11-06T00:03:17.585091715Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+query-1  | 2026-11-06T00:03:17.585093006Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+query-1  | 2026-11-06T00:03:17.585097248Z 	... 6 more
+query-1  | 2026-11-06T00:03:18.538760687Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1050 ms, attempt: 2, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:19.589548592Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1102 ms, attempt: 3, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:20.691634796Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1157 ms, attempt: 4, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:21.849435118Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1214 ms, attempt: 5, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:23.063888864Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1274 ms, attempt: 6, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:24.338488059Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1337 ms, attempt: 7, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:25.676195849Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1403 ms, attempt: 8, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:27.079693148Z [hz.client_1.internal-1] WARN com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Unable to get live cluster connection, retry in 1473 ms, attempt: 9, cluster connect timeout: 315360000000 ms, max backoff: 30000 ms
+query-1  | 2026-11-06T00:03:27.099962412Z [cluster-6aed1941c7a10b750579630e-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=8337570, minRoundTripTimeNanos=0}
+query-1  | 2026-11-06T00:03:27.113183967Z [main] INFO org.ulpgc.tarantino.common.startup.Startup - Waiting for hazelcast
+query-1  | 2026-11-06T00:03:28.554050657Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+query-1  | 2026-11-06T00:03:28.563107269Z WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+query-1  | 2026-11-06T00:03:28.563121101Z WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/service.jar)
+query-1  | 2026-11-06T00:03:28.563122359Z WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+query-1  | 2026-11-06T00:03:28.563122947Z WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+query-1  | 2026-11-06T00:03:28.576586508Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+query-1  | 2026-11-06T00:03:28.576602301Z 	Member [172.18.0.7]:5701 - b694ae0e-8313-4fe2-873e-e3fe7cdd7134
+query-1  | 2026-11-06T00:03:28.576603553Z }
+query-1  | 2026-11-06T00:03:28.576604562Z 
+query-1  | 2026-11-06T00:03:28.577749609Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.7]:5701:b694ae0e-8313-4fe2-873e-e3fe7cdd7134, server version: 5.7.0, local address: /172.18.0.2:39201
+query-1  | 2026-11-06T00:03:28.578098611Z [hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+query-1  | 2026-11-06T00:03:38.578820436Z [hz.client_1.internal-3] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+query-1  | 2026-11-06T00:03:38.578842438Z 
+query-1  | 2026-11-06T00:03:38.578844957Z Client Connectivity [1] {
+query-1  | 2026-11-06T00:03:38.578847931Z 	Member [172.18.0.7]:5701 - b694ae0e-8313-4fe2-873e-e3fe7cdd7134 - connected
+query-1  | 2026-11-06T00:03:38.578850713Z }
+query-1  | 2026-11-06T00:03:38.578852784Z 
+query-1  | 2026-11-06T00:03:44.941190668Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed195c6e4d60410f3dcf7b generation=1 at=2026-11-06T00:03:44.940943775Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:03:48.941867679Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19606e4d60410f3dcf7c generation=1 at=2026-11-06T00:03:48.941597973Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:03:53.904541739Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19646e4d60410f3dcf7d generation=1 at=2026-11-06T00:03:53.904313212Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:03:56.716351397Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19696e4d60410f3dcf7e generation=1 at=2026-11-06T00:03:56.716171709Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:03:59.694522480Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed196c6e4d60410f3dcf7f generation=1 at=2026-11-06T00:03:59.694284979Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:03.284587184Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed196f6e4d60410f3dcf80 generation=1 at=2026-11-06T00:04:03.284322030Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:09.878073068Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19736e4d60410f3dcf81 generation=1 at=2026-11-06T00:04:09.877810053Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:14.158920792Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19796e4d60410f3dcf82 generation=1 at=2026-11-06T00:04:14.158728334Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:16.786007304Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed197e6e4d60410f3dcf83 generation=1 at=2026-11-06T00:04:16.785788338Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:19.915500511Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19806e4d60410f3dcf84 generation=1 at=2026-11-06T00:04:19.915257303Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:22.685607754Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19836e4d60410f3dcf85 generation=1 at=2026-11-06T00:04:22.685093948Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:26.070336145Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19866e4d60410f3dcf86 generation=1 at=2026-11-06T00:04:26.069979131Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:29.603848051Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed198a6e4d60410f3dcf87 generation=1 at=2026-11-06T00:04:29.603523729Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:32.235804870Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed198d6e4d60410f3dcf88 generation=1 at=2026-11-06T00:04:32.235616093Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:35.455894567Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19906e4d60410f3dcf89 generation=1 at=2026-11-06T00:04:35.455714504Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:38.408442958Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19936e4d60410f3dcf8a generation=1 at=2026-11-06T00:04:38.408237816Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:40.446970864Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19966e4d60410f3dcf8b generation=1 at=2026-11-06T00:04:40.446731987Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:43.350712376Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19986e4d60410f3dcf8c generation=1 at=2026-11-06T00:04:43.350478373Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:46.586648242Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed199b6e4d60410f3dcf8d generation=1 at=2026-11-06T00:04:46.586438881Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:50.403218052Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed199e6e4d60410f3dcf8e generation=1 at=2026-11-06T00:04:50.403008302Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:55.027077734Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19a26e4d60410f3dcf8f generation=1 at=2026-11-06T00:04:55.026884542Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:04:58.679240890Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19a76e4d60410f3dcf90 generation=1 at=2026-11-06T00:04:58.679052167Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:05:02.920346864Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19aa6e4d60410f3dcf91 generation=1 at=2026-11-06T00:05:02.920156306Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:05:05.946735057Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19ae6e4d60410f3dcf92 generation=1 at=2026-11-06T00:05:05.946526904Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:05:09.566780432Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19b16e4d60410f3dcf93 generation=1 at=2026-11-06T00:05:09.566523302Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:05:12.901601892Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19b56e4d60410f3dcf94 generation=1 at=2026-11-06T00:05:12.901295321Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:05:16.385568689Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19b86e4d60410f3dcf95 generation=1 at=2026-11-06T00:05:16.385350613Z replica=ece6e50a4ebe
+query-1  | 2026-11-06T00:05:19.089781623Z [snapshot] INFO org.ulpgc.tarantino.common.operations.SnapshotLog - snapshot batch_id=6aed19bc6e4d60410f3dcf96 generation=1 at=2026-11-06T00:05:19.089529083Z replica=ece6e50a4ebe

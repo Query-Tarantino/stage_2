@@ -1,0 +1,13 @@
+nginx-1  | 2026-11-06T06:57:36.908362944Z /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | 2026-11-06T06:57:36.908382129Z /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | 2026-11-06T06:57:36.908860589Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 2026-11-06T06:57:36.912639634Z 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T06:57:36.920864862Z 10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T06:57:36.920945425Z /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | 2026-11-06T06:57:36.921112562Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | 2026-11-06T06:57:36.922537504Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | 2026-11-06T06:57:36.923443099Z /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 2026-11-06T06:58:01.350568634Z 2026/11/06 06:58:01 [error] 32#32: *4 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.12, server: , request: "GET /search?q=time%20phytography&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.9:7003/search?q=time%20phytography&offset=0&limit=20", host: "nginx:8080"
+nginx-1  | 2026-11-06T06:58:02.666136301Z 2026/11/06 06:58:02 [error] 32#32: *4 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.12, server: , request: "GET /search?q=king%20queen%20ancient%20castle&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.9:7003/search?q=king%20queen%20ancient%20castle&offset=0&limit=20", host: "nginx:8080"
+nginx-1  | 2026-11-06T06:58:03.771852823Z 2026/11/06 06:58:03 [error] 32#32: *4 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.12, server: , request: "GET /search?q=dark%20night%20murder%20mystery&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.9:7003/search?q=dark%20night%20murder%20mystery&offset=0&limit=20", host: "nginx:8080"
+nginx-1  | 2026-11-06T06:58:05.300571079Z 2026/11/06 06:58:05 [error] 32#32: *4 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.12, server: , request: "GET /search?q=bepowdered%20pyromaniac&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.9:7003/search?q=bepowdered%20pyromaniac&offset=0&limit=20", host: "nginx:8080"

@@ -1,0 +1,1778 @@
+{
+  "run_id" : "20261105-215351-ingest-throughput-c1376c7",
+  "git" : {
+    "commit" : "c1376c7",
+    "clean" : true,
+    "branch" : "dev"
+  },
+  "command" : [ "scripts/bench/ingest-throughput.sh" ],
+  "start" : "2026-11-05T21:53:51.690328600Z",
+  "end" : "2026-11-05T22:09:11.744848100Z",
+  "host" : {
+    "cpu" : "Intel(R) Core(TM) Ultra 9 275HX",
+    "cores" : 24,
+    "memory_bytes" : 33690722304,
+    "disk_bytes" : 1023035830272,
+    "free_disk_bytes" : 644943716352,
+    "operating_system" : "Windows 11 10.0 amd64"
+  },
+  "docker" : {
+    "version" : "29.9.2",
+    "operating_system" : "Docker Desktop",
+    "cpus" : 24,
+    "memory_bytes" : 16435425280
+  },
+  "services" : { },
+  "client_concurrency" : 0,
+  "trials" : [ {
+    "name" : "replicas-1-workers-8-rep-1",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-2-workers-8-rep-1",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 2,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-3-workers-8-rep-1",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 3,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-4-rep-1",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "4",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-16-rep-1",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "16",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-8-rep-2",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-2-workers-8-rep-2",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 2,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-3-workers-8-rep-2",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 3,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-4-rep-2",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "4",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-16-rep-2",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "16",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-8-rep-3",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-2-workers-8-rep-3",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 2,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-3-workers-8-rep-3",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 3,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-4-rep-3",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "4",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-16-rep-3",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "16",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-8-rep-4",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-2-workers-8-rep-4",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 2,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-3-workers-8-rep-4",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 3,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-4-rep-4",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "4",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-16-rep-4",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "16",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-8-rep-5",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-2-workers-8-rep-5",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 2,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-3-workers-8-rep-5",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 3,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "8",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-4-rep-5",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "4",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  }, {
+    "name" : "replicas-1-workers-16-rep-5",
+    "services" : {
+      "control" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CANDIDATES" : "mirror",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600",
+          "TARANTINO_WORKLOAD" : "/app/workload"
+        }
+      },
+      "crawler" : {
+        "replicas" : 1,
+        "java_version" : "jdk-25.0.4.1+1",
+        "java_tool_options" : "-Xmx512m -XX:+ExitOnOutOfMemoryError",
+        "tarantino_variables" : {
+          "TARANTINO_BATCH_TIMEOUT_SECONDS" : "30",
+          "TARANTINO_CLEANUP_SECONDS" : "3600",
+          "TARANTINO_CRASH_AT" : "",
+          "TARANTINO_DATALAKE" : "/data/datalake",
+          "TARANTINO_GC_SECONDS" : "600",
+          "TARANTINO_HAZELCAST" : "hazelcast:5701",
+          "TARANTINO_HEARTBEAT_SECONDS" : "20",
+          "TARANTINO_HTTP_THREADS" : "",
+          "TARANTINO_LEASE_SECONDS" : "60",
+          "TARANTINO_MAX_ATTEMPTS" : "3",
+          "TARANTINO_MIRROR" : "/data/mirror",
+          "TARANTINO_MONGO_URI" : "mongodb://mongo:27017/tarantino",
+          "TARANTINO_PARALLEL_DOWNLOADS" : "16",
+          "TARANTINO_RECONCILE_SECONDS" : "30",
+          "TARANTINO_REQUEUE_SECONDS" : "120",
+          "TARANTINO_SNAPSHOT_SECONDS" : "5",
+          "TARANTINO_TMP_MAX_AGE_SECONDS" : "600"
+        }
+      },
+      "hazelcast" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "mongo" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      },
+      "nginx" : {
+        "replicas" : 1,
+        "java_version" : null,
+        "java_tool_options" : null,
+        "tarantino_variables" : { }
+      }
+    }
+  } ]
+}

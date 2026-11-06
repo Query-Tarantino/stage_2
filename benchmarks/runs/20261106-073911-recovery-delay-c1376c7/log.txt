@@ -1,0 +1,10 @@
+Opened run 20261106-073911-recovery-delay-c1376c7 over 29 recovery runs
+Machine: the official one, 24 hardware threads, 8 P cores and 16 E cores
+Input: recovery runs of rows 04, 05 and 12, with recovery.env: TARANTINO_REQUEUE_SECONDS=10, TARANTINO_RECONCILE_SECONDS=3
+H1: in hazelcast and activemq, requeue_delay falls between 7 and 13 s
+H2: reclaim_delay minus requeue_delay has a median under 1.5 s
+H3: in activemq-persistent there is no requeue and reclaim_delay stays under 10 s
+H4: in orchestrator, requeue_delay (dispatching again) falls between 10 and 10.4 s, REQUEUE plus up to two ticks
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryDelayTool - Wrote the recovery delays of 29 runs to benchmarks\runs\20261106-073911-recovery-delay-c1376c7\recovery-delay.csv
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Finished run 20261106-073911-recovery-delay-c1376c7 in benchmarks\runs\20261106-073911-recovery-delay-c1376c7\manifest.json
+Results in benchmarks/runs/20261106-073911-recovery-delay-c1376c7

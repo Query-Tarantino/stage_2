@@ -63,7 +63,7 @@ seed_mirror() {
 }
 
 start_stack() {
-    "${COMPOSE[@]}" down -v
+    down_every_mode "${COMPOSE[@]}"
     "${COMPOSE[@]}" up -d --build --scale "crawler=$replicas" --scale "indexer=$replicas" --scale "query=$replicas"
 }
 

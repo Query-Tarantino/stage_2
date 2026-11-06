@@ -1,0 +1,10 @@
+nginx-1  | 2026-11-06T04:48:17.381016692Z /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | 2026-11-06T04:48:17.381099576Z /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | 2026-11-06T04:48:17.381579540Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 2026-11-06T04:48:17.386494597Z 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T04:48:17.392457441Z 10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T04:48:17.392563469Z /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | 2026-11-06T04:48:17.392612278Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | 2026-11-06T04:48:17.394132132Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | 2026-11-06T04:48:17.394892923Z /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 2026-11-06T04:48:42.921980834Z 2026/11/06 04:48:42 [error] 30#30: *6 connect() failed (111: Connection refused) while connecting to upstream, client: 172.18.0.15, server: , request: "GET /search?q=old%20man%20sea%20fish&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.9:7003/search?q=old%20man%20sea%20fish&offset=0&limit=20", host: "nginx:8080"

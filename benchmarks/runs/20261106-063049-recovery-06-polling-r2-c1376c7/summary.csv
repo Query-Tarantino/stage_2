@@ -1,0 +1,2 @@
+metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit
+recovery_seconds,"recovery-06-polling-r2",11.22,0.00,0.00,11.22,11.22,11.22,s

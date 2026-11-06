@@ -1,0 +1,15 @@
+nginx-1  | 2026-11-06T07:09:18.636039743Z /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | 2026-11-06T07:09:18.636076988Z /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | 2026-11-06T07:09:18.636466263Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 2026-11-06T07:09:18.639785814Z 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T07:09:18.645772956Z 10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T07:09:18.645784860Z /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | 2026-11-06T07:09:18.645851748Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | 2026-11-06T07:09:18.647383798Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | 2026-11-06T07:09:18.648193490Z /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 2026-11-06T07:09:19.358938183Z 2026/11/06 07:09:19 [error] 30#30: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.18.0.2, server: , request: "POST /internal/index HTTP/1.1", upstream: "http://172.18.0.7:7002/internal/index", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:09:19.999813343Z 2026/11/06 07:09:19 [error] 30#30: *1 recv() failed (104: Connection reset by peer) while reading response header from upstream, client: 172.18.0.2, server: , request: "POST /internal/index HTTP/1.1", upstream: "http://172.18.0.7:7002/internal/index", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:09:21.212526947Z 2026/11/06 07:09:21 [error] 30#30: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.2, server: , request: "POST /internal/index HTTP/1.1", upstream: "http://172.18.0.7:7002/internal/index", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:09:22.424136109Z 2026/11/06 07:09:22 [error] 30#30: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.2, server: , request: "POST /internal/index HTTP/1.1", upstream: "http://172.18.0.7:7002/internal/index", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:09:23.634453400Z 2026/11/06 07:09:23 [error] 30#30: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.2, server: , request: "POST /internal/index HTTP/1.1", upstream: "http://172.18.0.7:7002/internal/index", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:09:24.843546706Z 2026/11/06 07:09:24 [error] 30#30: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.2, server: , request: "POST /internal/index HTTP/1.1", upstream: "http://172.18.0.7:7002/internal/index", host: "nginx:8082"

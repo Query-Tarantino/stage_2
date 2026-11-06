@@ -1,0 +1,13 @@
+metric,configuration,mean,std_dev,ci_95,p50,p95,p99,unit
+publication_visibility,"listener=off",2605.09,202.33,251.23,2672.00,4880.00,4965.00,ms
+publication_visibility,"listener=on",43.56,5.86,7.27,37.00,54.00,145.00,ms
+download_queue_wait,"listener=off",3401.16,3435.24,4265.42,2366.00,10308.00,10879.00,ms
+download,"listener=off",14.25,1.94,2.41,11.00,32.00,63.00,ms
+index_queue_wait,"listener=off",48147.33,2223.61,2760.97,48351.00,88722.00,92168.00,ms
+indexing,"listener=off",3476.55,43.05,53.46,3235.00,6088.00,6664.00,ms
+time_to_publication,"listener=off",55040.88,3680.03,4569.36,55583.00,96257.00,102832.00,ms
+download_queue_wait,"listener=on",3575.36,4026.30,4999.31,2215.00,11769.00,12637.00,ms
+download,"listener=on",15.16,2.06,2.56,12.00,34.00,69.00,ms
+index_queue_wait,"listener=on",47020.35,536.41,666.04,47302.00,87074.00,91192.00,ms
+indexing,"listener=on",3498.63,32.57,40.45,3238.00,6082.00,6557.00,ms
+time_to_publication,"listener=on",54111.13,3807.04,4727.07,53843.00,95883.00,102798.00,ms

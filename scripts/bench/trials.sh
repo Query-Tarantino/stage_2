@@ -41,7 +41,7 @@ stats_pid=""
 open_run() {
     local experiment=$1
     shift
-    "${COMPOSE[@]}" down -v
+    down_every_mode "${COMPOSE[@]}"
     local run_id
     run_id=$(java -jar "$BENCH_JAR" manifest start "$RUNS_DIR" "$experiment" 0 -- "$@")
     run_dir="$RUNS_DIR/$run_id"

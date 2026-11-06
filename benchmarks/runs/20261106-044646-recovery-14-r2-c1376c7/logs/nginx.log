@@ -1,0 +1,12 @@
+nginx-1  | 2026-11-06T04:46:43.973886035Z /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | 2026-11-06T04:46:43.973903527Z /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | 2026-11-06T04:46:43.974499561Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 2026-11-06T04:46:43.979616422Z 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T04:46:43.986047273Z 10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T04:46:43.986136481Z /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | 2026-11-06T04:46:43.986268658Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | 2026-11-06T04:46:43.988104942Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | 2026-11-06T04:46:43.989076948Z /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 2026-11-06T04:47:09.841128457Z 2026/11/06 04:47:09 [error] 30#30: *6 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.12, server: , request: "GET /search?q=pyromaniac%20liliput&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.10:7003/search?q=pyromaniac%20liliput&offset=0&limit=20", host: "nginx:8080"
+nginx-1  | 2026-11-06T04:47:11.470947844Z 2026/11/06 04:47:11 [error] 30#30: *6 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.12, server: , request: "GET /search?q=t%C3%AAte&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.10:7003/search?q=t%C3%AAte&offset=0&limit=20", host: "nginx:8080"
+nginx-1  | 2026-11-06T04:47:12.579164438Z 2026/11/06 04:47:12 [error] 30#30: *6 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.12, server: , request: "GET /search?q=p%C3%A8re&offset=0&limit=20 HTTP/1.1", upstream: "http://172.18.0.10:7003/search?q=p%C3%A8re&offset=0&limit=20", host: "nginx:8080"

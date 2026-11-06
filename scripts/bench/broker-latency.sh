@@ -22,7 +22,7 @@ measure() {
         for broker in $BROKERS; do
             for consumers in $CONSUMERS_LIST; do
                 echo "=== Trial broker-$broker-consumers-$consumers-rep-$repetition ==="
-                "${COMPOSE[@]}" run --rm -T bench broker "/app/$run_dir" "broker-$broker-consumers-$consumers-rep-$repetition" "$broker" "$consumers"
+                "${COMPOSE[@]}" run --rm -T bench broker "$run_dir" "broker-$broker-consumers-$consumers-rep-$repetition" "$broker" "$consumers"
             done
         done
     done

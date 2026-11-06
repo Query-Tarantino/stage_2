@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 readonly MODES=(hazelcast activemq activemq-persistent polling orchestrator)
+readonly EVERY_PROFILE="*"
 
 compose_files() {
     local mode=$1 override
@@ -24,6 +25,10 @@ broker_of_mode() {
         activemq | activemq-persistent) echo activemq ;;
         *) echo "" ;;
     esac
+}
+
+down_every_mode() {
+    "$@" --profile "$EVERY_PROFILE" down -v
 }
 
 export_profiles_of_mode() {

@@ -1,0 +1,53 @@
+crawler-1  | 2026-11-06T04:55:38.791798027Z Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+crawler-1  | 2026-11-06T04:55:38.962385509Z [main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@6a396c1e, com.mongodb.Jep395RecordCodecProvider@6c3f5566, com.mongodb.KotlinCodecProvider@12405818, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+crawler-1  | 2026-11-06T04:55:39.206505699Z [main] INFO io.javalin.Javalin - Starting Javalin ...
+crawler-1  | 2026-11-06T04:55:39.207568321Z [main] INFO org.eclipse.jetty.server.Server - jetty-11.0.25; built: 2025-03-13T00:15:57.301Z; git: a2e9fae3ad8320f2a713d4fa29bba356a99d1295; jvm 25.0.4.1+1-LTS
+crawler-1  | 2026-11-06T04:55:39.232581325Z [main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+crawler-1  | 2026-11-06T04:55:39.243540930Z [main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@33aeca0b{/,null,AVAILABLE}
+crawler-1  | 2026-11-06T04:55:39.252635275Z [main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@77258e59{HTTP/1.1, (http/1.1)}{0.0.0.0:7001}
+crawler-1  | 2026-11-06T04:55:39.260935587Z [main] INFO org.eclipse.jetty.server.Server - Started Server@76012793{STARTING}[11.0.25,sto=0] @469ms
+crawler-1  | 2026-11-06T04:55:39.261390821Z [main] INFO io.javalin.Javalin - Javalin started in 103ms \o/
+crawler-1  | 2026-11-06T04:55:39.262725022Z [main] INFO io.javalin.Javalin - Listening on http://localhost:7001/
+crawler-1  | 2026-11-06T04:55:39.275350829Z [main] INFO io.javalin.Javalin - You are running Javalin 6.7.0 (released June 22, 2025. Your Javalin version is 501 days old. Consider checking for a newer version.).
+crawler-1  | 2026-11-06T04:55:39.315097479Z [main] INFO org.mongodb.driver.cluster - Waiting for server to become available for operation update with ID 3. Remaining time: 29984 ms. Selector: WritableServerSelector, topology description: {type=UNKNOWN, servers=[{address=mongo:27017, type=UNKNOWN, state=CONNECTING}].
+crawler-1  | 2026-11-06T04:55:42.933013085Z [cluster-6aed5dca2da40b1af12b7b3e-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+crawler-1  | 2026-11-06T04:55:42.933049997Z com.mongodb.MongoSocketException: mongo: Name or service not known
+crawler-1  | 2026-11-06T04:55:42.933168798Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+crawler-1  | 2026-11-06T04:55:42.933192591Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+crawler-1  | 2026-11-06T04:55:42.933348813Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+crawler-1  | 2026-11-06T04:55:42.933352764Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+crawler-1  | 2026-11-06T04:55:42.933354642Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+crawler-1  | 2026-11-06T04:55:42.933356533Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+crawler-1  | 2026-11-06T04:55:42.933358053Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+crawler-1  | 2026-11-06T04:55:42.933614228Z Caused by: java.net.UnknownHostException: mongo: Name or service not known
+crawler-1  | 2026-11-06T04:55:42.933618395Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+crawler-1  | 2026-11-06T04:55:42.933619285Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Unknown Source)
+crawler-1  | 2026-11-06T04:55:42.933619772Z 	at java.base/java.net.InetAddress$PlatformResolver.lookupByName(Unknown Source)
+crawler-1  | 2026-11-06T04:55:42.933620193Z 	at java.base/java.net.InetAddress.getAddressesFromNameService(Unknown Source)
+crawler-1  | 2026-11-06T04:55:42.933620632Z 	at java.base/java.net.InetAddress$NameServiceAddresses.get(Unknown Source)
+crawler-1  | 2026-11-06T04:55:42.933621041Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+crawler-1  | 2026-11-06T04:55:42.933622247Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+crawler-1  | 2026-11-06T04:55:42.933622665Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+crawler-1  | 2026-11-06T04:55:42.933623235Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+crawler-1  | 2026-11-06T04:55:42.933625464Z 	... 6 more
+crawler-1  | 2026-11-06T04:55:43.088877567Z [ActiveMQ Task-1] WARN org.apache.activemq.transport.failover.FailoverTransport - Failed to connect to [tcp://activemq:61616] after: 1 attempt(s) with activemq, continuing to retry.
+crawler-1  | 2026-11-06T04:55:43.434739758Z [cluster-6aed5dca2da40b1af12b7b3e-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+crawler-1  | 2026-11-06T04:55:43.434767671Z com.mongodb.MongoSocketException: mongo
+crawler-1  | 2026-11-06T04:55:43.434770089Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+crawler-1  | 2026-11-06T04:55:43.434772080Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+crawler-1  | 2026-11-06T04:55:43.434773841Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+crawler-1  | 2026-11-06T04:55:43.434775614Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+crawler-1  | 2026-11-06T04:55:43.434776814Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+crawler-1  | 2026-11-06T04:55:43.434778790Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+crawler-1  | 2026-11-06T04:55:43.434787062Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+crawler-1  | 2026-11-06T04:55:43.434904126Z Caused by: java.net.UnknownHostException: mongo
+crawler-1  | 2026-11-06T04:55:43.434907244Z 	at java.base/java.net.InetAddress$CachedLookup.get(Unknown Source)
+crawler-1  | 2026-11-06T04:55:43.434908958Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+crawler-1  | 2026-11-06T04:55:43.434910947Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+crawler-1  | 2026-11-06T04:55:43.434926640Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+crawler-1  | 2026-11-06T04:55:43.435013056Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+crawler-1  | 2026-11-06T04:55:43.435026040Z 	... 6 more
+crawler-1  | 2026-11-06T04:55:48.210185786Z [ActiveMQ Task-1] WARN org.apache.activemq.transport.failover.FailoverTransport - Failed to connect to [tcp://activemq:61616] after: 10 attempt(s) with activemq, continuing to retry.
+crawler-1  | 2026-11-06T04:55:52.950434137Z [cluster-6aed5dca2da40b1af12b7b3e-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=7349099, minRoundTripTimeNanos=0}
+crawler-1  | 2026-11-06T04:55:52.963293486Z [main] INFO org.ulpgc.tarantino.common.startup.Startup - Waiting for activemq
+crawler-1  | 2026-11-06T04:55:53.336733625Z [ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
