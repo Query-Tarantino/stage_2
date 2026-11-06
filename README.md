@@ -16,11 +16,10 @@ through Hazelcast by default or in one of three other modes, and everything runs
 
 The system runs end to end in its five coordination modes: `control` seeds the candidates and reconciles, `crawler`
 downloads them, `indexer` publishes them in batches and `query` answers the search API behind nginx, and the functional
-checks pass in every mode. Every row of the failure matrix recovers in mode `hazelcast` with 1, 2 and 3 replicas, and
-the five original experiments have their November runs in `benchmarks/runs/`. The report cites the campaign of
-`scripts/bench/all.sh`, which runs the experiments and the recovery matrix again in every mode, from one commit of
-`dev` on the official machine, and the two November runs it reuses because their code did not change
-(`SPEC.md` §9 and [benchmarks/README.md](benchmarks/README.md)).
+checks pass in every mode. The official campaign of `scripts/bench/all.sh`, `20261105-215348-campaign-c1376c7`, ran
+every experiment and the recovery matrix in every mode on the official machine, and every row of the matrix recovers
+with the same answers in every mode where it applies. Its runs are in `benchmarks/runs/` with the two November runs
+it reuses because their code did not change, and [benchmarks/README.md](benchmarks/README.md) reads them (`SPEC.md` §9).
 
 ## Requirements
 
@@ -127,13 +126,13 @@ java -jar checks/target/checks-1.0-SNAPSHOT.jar --generate-expected
 Each experiment of `SPEC.md` §9 is one script, run from a clean commit with `mvn -DskipTests package` done; each
 writes its own `benchmarks/runs/<run_id>/`:
 
-| Experiment | Command | November run |
+| Experiment | Command | Official run |
 | --- | --- | --- |
-| Ingestion throughput by crawler replicas and workers | `./scripts/bench/ingest-throughput.sh` | `20261102-204917-ingest-throughput-77ed00a` |
-| Indexing throughput by batch size and indexer replicas, rebuilding the index once per trial | `./scripts/bench/index-throughput.sh` | `20261103-204454-index-throughput-6925d4e` |
-| Search latency by clients, HTTP threads and `query` replicas | `./scripts/bench/search-latency.sh` | `20261104-140900-search-latency-8e1c1e8` |
-| Coordination cost by replicas | `./scripts/bench/coordination-cost.sh` | `20261102-212416-coordination-cost-77ed00a` |
-| CPU and memory per service and of the whole stack, and of the host from SPEC 1.9.2 on | `./scripts/bench/resource-usage.sh` | `20261102-215134-resource-usage-77ed00a` |
+| Ingestion throughput by crawler replicas and workers | `./scripts/bench/ingest-throughput.sh` | `20261105-215351-ingest-throughput-c1376c7` |
+| Indexing throughput by batch size and indexer replicas, rebuilding the index once per trial | `./scripts/bench/index-throughput.sh` | `20261105-220915-index-throughput-c1376c7`, with the indexer's JMH of `20261103-204454-index-throughput-6925d4e` |
+| Search latency by clients, HTTP threads and `query` replicas | `./scripts/bench/search-latency.sh` | `20261104-140900-search-latency-8e1c1e8`, reused |
+| Coordination cost by replicas | `./scripts/bench/coordination-cost.sh` | The `hazelcast` trials of `20261106-012054-coordination-variants-c1376c7` |
+| CPU and memory per service, of the whole stack and of the host | `./scripts/bench/resource-usage.sh` | `20261105-235758-resource-usage-c1376c7` |
 
 [benchmarks/README.md](benchmarks/README.md) reads the results of these runs and of the recovery runs: the figures of each
 configuration, the hypotheses they confirm or refute, and the bottlenecks they show.
@@ -174,13 +173,15 @@ java -jar bench/target/bench-1.0-SNAPSHOT.jar charts benchmarks/runs/<run_id>
 The benchmark and recovery scripts take the mode from `TARANTINO_VARIANT`, `hazelcast` by default, and add its files
 themselves: `TARANTINO_VARIANT=polling scripts/recovery/01-crawler-after-claim.sh 2`.
 
-| Experiment | Command |
-| --- | --- |
-| `publication-visibility`: listener against periodic refresh | `scripts/bench/publication-visibility.sh` |
-| `broker-latency`: Hazelcast against ActiveMQ, in isolation | `scripts/bench/broker-latency.sh` |
-| `recovery-delay`: how lost work comes back, over recovery runs | `scripts/bench/recovery-delay.sh benchmarks/runs/<recovery run>...` |
-| `coordination-variants`: every mode with 1, 2 and 3 replicas | `scripts/bench/coordination-variants.sh` |
-| `campaign`: the experiments and the recovery matrix in every mode, in about 11 hours | `scripts/bench/all.sh --dry-run`, then `scripts/bench/all.sh` |
+| Experiment | Command | Official run |
+| --- | --- | --- |
+| `publication-visibility`: listener against periodic refresh | `scripts/bench/publication-visibility.sh` | `20261106-002208-publication-visibility-c1376c7` |
+| `broker-latency`: Hazelcast against ActiveMQ, in isolation | `scripts/bench/broker-latency.sh` | `20261106-123534-broker-latency-b4667d8` |
+| `recovery-delay`: how lost work comes back, over recovery runs | `scripts/bench/recovery-delay.sh benchmarks/runs/<recovery run>...` | `20261106-073911-recovery-delay-c1376c7` |
+| `coordination-variants`: every mode with 1, 2 and 3 replicas | `scripts/bench/coordination-variants.sh` | `20261106-012054-coordination-variants-c1376c7` |
+| `campaign`: the experiments and the recovery matrix in every mode, in about 10 hours | `scripts/bench/all.sh --dry-run`, then `scripts/bench/all.sh` | `20261105-215348-campaign-c1376c7`, and `20261106-123526-campaign-b4667d8` for `broker-latency` |
+
+The 165 recovery runs of the campaign end in `-c1376c7`, and `20261106-073908-recovery-summary-c1376c7` lists them.
 
 ## Corpus
 
