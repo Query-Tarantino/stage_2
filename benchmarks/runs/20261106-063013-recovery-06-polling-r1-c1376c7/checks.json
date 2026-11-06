@@ -1,0 +1,1151 @@
+{
+  "control_status" : {
+    "generation" : 1,
+    "books" : {
+      "QUEUED" : 0,
+      "DOWNLOADING" : 0,
+      "DOWNLOADED" : 0,
+      "INDEXING" : 0,
+      "PUBLISHED" : 20,
+      "FAILED" : 0
+    },
+    "queues" : {
+      "books-to-download" : 0,
+      "books-to-index" : 0
+    },
+    "last_reconciliation" : "2026-11-06T06:30:21.474018395Z"
+  },
+  "search" : {
+    "love" : {
+      "query" : "love",
+      "filters" : { },
+      "total" : 17,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 844,
+        "title" : "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 417,
+        "title" : "Dr. Martin Luther's Deutsche Geistliche Lieder",
+        "author" : "Martin Luther",
+        "language" : "de",
+        "year" : 1996
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 2542,
+        "title" : "A Doll's House : a play",
+        "author" : "Henrik Ibsen",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1232,
+        "title" : "The Prince",
+        "author" : "Niccolò Machiavelli",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 43,
+        "title" : "The strange case of Dr. Jekyll and Mr. Hyde",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1080,
+        "title" : "A Modest Proposal",
+        "author" : "Jonathan Swift",
+        "language" : "en",
+        "year" : 1997
+      } ]
+    },
+    "night" : {
+      "query" : "night",
+      "filters" : { },
+      "total" : 17,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 43,
+        "title" : "The strange case of Dr. Jekyll and Mr. Hyde",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1952,
+        "title" : "The Yellow Wallpaper",
+        "author" : "Charlotte Perkins Gilman",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 417,
+        "title" : "Dr. Martin Luther's Deutsche Geistliche Lieder",
+        "author" : "Martin Luther",
+        "language" : "de",
+        "year" : 1996
+      }, {
+        "book_id" : 1232,
+        "title" : "The Prince",
+        "author" : "Niccolò Machiavelli",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 844,
+        "title" : "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 2542,
+        "title" : "A Doll's House : a play",
+        "author" : "Henrik Ibsen",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      } ]
+    },
+    "old" : {
+      "query" : "old",
+      "filters" : { },
+      "total" : 18,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 43,
+        "title" : "The strange case of Dr. Jekyll and Mr. Hyde",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1232,
+        "title" : "The Prince",
+        "author" : "Niccolò Machiavelli",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 844,
+        "title" : "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 417,
+        "title" : "Dr. Martin Luther's Deutsche Geistliche Lieder",
+        "author" : "Martin Luther",
+        "language" : "de",
+        "year" : 1996
+      }, {
+        "book_id" : 2542,
+        "title" : "A Doll's House : a play",
+        "author" : "Henrik Ibsen",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1080,
+        "title" : "A Modest Proposal",
+        "author" : "Jonathan Swift",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1952,
+        "title" : "The Yellow Wallpaper",
+        "author" : "Charlotte Perkins Gilman",
+        "language" : "en",
+        "year" : 1999
+      } ]
+    },
+    "time" : {
+      "query" : "time",
+      "filters" : { },
+      "total" : 18,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 1232,
+        "title" : "The Prince",
+        "author" : "Niccolò Machiavelli",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 2542,
+        "title" : "A Doll's House : a play",
+        "author" : "Henrik Ibsen",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 844,
+        "title" : "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 43,
+        "title" : "The strange case of Dr. Jekyll and Mr. Hyde",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 417,
+        "title" : "Dr. Martin Luther's Deutsche Geistliche Lieder",
+        "author" : "Martin Luther",
+        "language" : "de",
+        "year" : 1996
+      }, {
+        "book_id" : 1952,
+        "title" : "The Yellow Wallpaper",
+        "author" : "Charlotte Perkins Gilman",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 1080,
+        "title" : "A Modest Proposal",
+        "author" : "Jonathan Swift",
+        "language" : "en",
+        "year" : 1997
+      } ]
+    },
+    "man" : {
+      "query" : "man",
+      "filters" : { },
+      "total" : 19,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 2229,
+        "title" : "Faust: Der Tragödie erster Teil",
+        "author" : "Johann Wolfgang von Goethe",
+        "language" : "de",
+        "year" : 2000
+      }, {
+        "book_id" : 43,
+        "title" : "The strange case of Dr. Jekyll and Mr. Hyde",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1232,
+        "title" : "The Prince",
+        "author" : "Niccolò Machiavelli",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 417,
+        "title" : "Dr. Martin Luther's Deutsche Geistliche Lieder",
+        "author" : "Martin Luther",
+        "language" : "de",
+        "year" : 1996
+      }, {
+        "book_id" : 2542,
+        "title" : "A Doll's House : a play",
+        "author" : "Henrik Ibsen",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 844,
+        "title" : "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1080,
+        "title" : "A Modest Proposal",
+        "author" : "Jonathan Swift",
+        "language" : "en",
+        "year" : 1997
+      }, {
+        "book_id" : 1952,
+        "title" : "The Yellow Wallpaper",
+        "author" : "Charlotte Perkins Gilman",
+        "language" : "en",
+        "year" : 1999
+      } ]
+    },
+    "pyromaniac" : {
+      "query" : "pyromaniac",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "liliput" : {
+      "query" : "liliput",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "boardinghouses" : {
+      "query" : "boardinghouses",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "phytography" : {
+      "query" : "phytography",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "bepowdered" : {
+      "query" : "bepowdered",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "love pyromaniac" : {
+      "query" : "love pyromaniac",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "old liliput" : {
+      "query" : "old liliput",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "night boardinghouses" : {
+      "query" : "night boardinghouses",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "time phytography" : {
+      "query" : "time phytography",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "man bepowdered" : {
+      "query" : "man bepowdered",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "ship captain sea voyage" : {
+      "query" : "ship captain sea voyage",
+      "filters" : { },
+      "total" : 6,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      } ]
+    },
+    "king queen ancient castle" : {
+      "query" : "king queen ancient castle",
+      "filters" : { },
+      "total" : 5,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1232,
+        "title" : "The Prince",
+        "author" : "Niccolò Machiavelli",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      } ]
+    },
+    "dark night murder mystery" : {
+      "query" : "dark night murder mystery",
+      "filters" : { },
+      "total" : 12,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 43,
+        "title" : "The strange case of Dr. Jekyll and Mr. Hyde",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 417,
+        "title" : "Dr. Martin Luther's Deutsche Geistliche Lieder",
+        "author" : "Martin Luther",
+        "language" : "de",
+        "year" : 1996
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      } ]
+    },
+    "young woman love letter" : {
+      "query" : "young woman love letter",
+      "filters" : { },
+      "total" : 14,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2542,
+        "title" : "A Doll's House : a play",
+        "author" : "Henrik Ibsen",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 43,
+        "title" : "The strange case of Dr. Jekyll and Mr. Hyde",
+        "author" : "Robert Louis Stevenson",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 1232,
+        "title" : "The Prince",
+        "author" : "Niccolò Machiavelli",
+        "language" : "en",
+        "year" : 2006
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      } ]
+    },
+    "old man sea fish" : {
+      "query" : "old man sea fish",
+      "filters" : { },
+      "total" : 10,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 76,
+        "title" : "Adventures of Huckleberry Finn",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 98,
+        "title" : "A Tale of Two Cities",
+        "author" : "Charles Dickens",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 345,
+        "title" : "Dracula",
+        "author" : "Bram Stoker",
+        "language" : "en",
+        "year" : 1995
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      }, {
+        "book_id" : 11,
+        "title" : "Alice's Adventures in Wonderland",
+        "author" : "Lewis Carroll",
+        "language" : "en",
+        "year" : 2008
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      }, {
+        "book_id" : 1661,
+        "title" : "The Adventures of Sherlock Holmes",
+        "author" : "Arthur Conan Doyle",
+        "language" : "en",
+        "year" : 1999
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      } ]
+    },
+    "pyromaniac liliput" : {
+      "query" : "pyromaniac liliput",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "phytography boardinghouses" : {
+      "query" : "phytography boardinghouses",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "bepowdered pyromaniac" : {
+      "query" : "bepowdered pyromaniac",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "liliput phytography" : {
+      "query" : "liliput phytography",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "boardinghouses bepowdered" : {
+      "query" : "boardinghouses bepowdered",
+      "filters" : { },
+      "total" : 0,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ ]
+    },
+    "cæsar" : {
+      "query" : "cæsar",
+      "filters" : { },
+      "total" : 2,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 84,
+        "title" : "Frankenstein; or, The modern Prometheus",
+        "author" : "Mary Wollstonecraft Shelley",
+        "language" : "en",
+        "year" : 1993
+      } ]
+    },
+    "tête" : {
+      "query" : "tête",
+      "filters" : { },
+      "total" : 4,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 800,
+        "title" : "Le tour du monde en quatre-vingts jours",
+        "author" : "Jules Verne",
+        "language" : "fr",
+        "year" : 1997
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 74,
+        "title" : "The Adventures of Tom Sawyer, Complete",
+        "author" : "Mark Twain",
+        "language" : "en",
+        "year" : 2004
+      } ]
+    },
+    "père" : {
+      "query" : "père",
+      "filters" : { },
+      "total" : 2,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      }, {
+        "book_id" : 800,
+        "title" : "Le tour du monde en quatre-vingts jours",
+        "author" : "Jules Verne",
+        "language" : "fr",
+        "year" : 1997
+      } ]
+    },
+    "façade" : {
+      "query" : "façade",
+      "filters" : { },
+      "total" : 2,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 174,
+        "title" : "The Picture of Dorian Gray",
+        "author" : "Oscar Wilde",
+        "language" : "en",
+        "year" : 1994
+      }, {
+        "book_id" : 2600,
+        "title" : "War and Peace",
+        "author" : "graf Leo Tolstoy",
+        "language" : "en",
+        "year" : 2001
+      } ]
+    },
+    "manœuvre" : {
+      "query" : "manœuvre",
+      "filters" : { },
+      "total" : 2,
+      "offset" : 0,
+      "limit" : 20,
+      "results" : [ {
+        "book_id" : 1342,
+        "title" : "Pride and Prejudice",
+        "author" : "Jane Austen",
+        "language" : "en",
+        "year" : 1998
+      }, {
+        "book_id" : 2701,
+        "title" : "Moby Dick; Or, The Whale",
+        "author" : "Herman Melville",
+        "language" : "en",
+        "year" : 2001
+      } ]
+    }
+  },
+  "failed_at" : "2026-11-06T06:30:13.258566472Z",
+  "recovered_at" : "2026-11-06T06:30:24.070836907Z",
+  "recovery_seconds" : 10.812
+}

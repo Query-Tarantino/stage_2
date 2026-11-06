@@ -1,0 +1,49 @@
+crawler-1  | 2026-11-06T07:06:19.244470358Z Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+crawler-1  | 2026-11-06T07:06:19.515459020Z [main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@6a396c1e, com.mongodb.Jep395RecordCodecProvider@6c3f5566, com.mongodb.KotlinCodecProvider@12405818, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+crawler-1  | 2026-11-06T07:06:19.802594758Z [main] INFO io.javalin.Javalin - Starting Javalin ...
+crawler-1  | 2026-11-06T07:06:19.804698160Z [main] INFO org.eclipse.jetty.server.Server - jetty-11.0.25; built: 2025-03-13T00:15:57.301Z; git: a2e9fae3ad8320f2a713d4fa29bba356a99d1295; jvm 25.0.4.1+1-LTS
+crawler-1  | 2026-11-06T07:06:19.847939236Z [main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+crawler-1  | 2026-11-06T07:06:19.860761807Z [main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@54e22bdd{/,null,AVAILABLE}
+crawler-1  | 2026-11-06T07:06:19.867616883Z [main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@740d2e78{HTTP/1.1, (http/1.1)}{0.0.0.0:7001}
+crawler-1  | 2026-11-06T07:06:19.875402998Z [main] INFO org.eclipse.jetty.server.Server - Started Server@74f5ce22{STARTING}[11.0.25,sto=0] @630ms
+crawler-1  | 2026-11-06T07:06:19.876222726Z [main] INFO io.javalin.Javalin - Javalin started in 167ms \o/
+crawler-1  | 2026-11-06T07:06:19.879390320Z [main] INFO io.javalin.Javalin - Listening on http://localhost:7001/
+crawler-1  | 2026-11-06T07:06:19.889491393Z [main] INFO io.javalin.Javalin - You are running Javalin 6.7.0 (released June 22, 2025. Your Javalin version is 501 days old. Consider checking for a newer version.).
+crawler-1  | 2026-11-06T07:06:19.924259617Z [main] INFO org.mongodb.driver.cluster - Waiting for server to become available for operation update with ID 3. Remaining time: 29990 ms. Selector: WritableServerSelector, topology description: {type=UNKNOWN, servers=[{address=mongo:27017, type=UNKNOWN, state=CONNECTING}].
+crawler-1  | 2026-11-06T07:06:23.473003165Z [cluster-6aed7c6b86691f41c04d8142-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+crawler-1  | 2026-11-06T07:06:23.473281573Z com.mongodb.MongoSocketException: mongo: Name or service not known
+crawler-1  | 2026-11-06T07:06:23.473286661Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+crawler-1  | 2026-11-06T07:06:23.473290403Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+crawler-1  | 2026-11-06T07:06:23.473291500Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+crawler-1  | 2026-11-06T07:06:23.473292013Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+crawler-1  | 2026-11-06T07:06:23.473292505Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+crawler-1  | 2026-11-06T07:06:23.473293361Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+crawler-1  | 2026-11-06T07:06:23.473294381Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+crawler-1  | 2026-11-06T07:06:23.473775651Z Caused by: java.net.UnknownHostException: mongo: Name or service not known
+crawler-1  | 2026-11-06T07:06:23.473779760Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+crawler-1  | 2026-11-06T07:06:23.473780438Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.473780949Z 	at java.base/java.net.InetAddress$PlatformResolver.lookupByName(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.473781399Z 	at java.base/java.net.InetAddress.getAddressesFromNameService(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.473781840Z 	at java.base/java.net.InetAddress$NameServiceAddresses.get(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.473782246Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.473783374Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.473783847Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+crawler-1  | 2026-11-06T07:06:23.473784464Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+crawler-1  | 2026-11-06T07:06:23.473784888Z 	... 6 more
+crawler-1  | 2026-11-06T07:06:23.975063470Z [cluster-6aed7c6b86691f41c04d8142-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+crawler-1  | 2026-11-06T07:06:23.975091544Z com.mongodb.MongoSocketException: mongo
+crawler-1  | 2026-11-06T07:06:23.975093084Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+crawler-1  | 2026-11-06T07:06:23.975094699Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+crawler-1  | 2026-11-06T07:06:23.975096277Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+crawler-1  | 2026-11-06T07:06:23.975098010Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+crawler-1  | 2026-11-06T07:06:23.975098749Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+crawler-1  | 2026-11-06T07:06:23.975100345Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+crawler-1  | 2026-11-06T07:06:23.975101591Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+crawler-1  | 2026-11-06T07:06:23.975102347Z Caused by: java.net.UnknownHostException: mongo
+crawler-1  | 2026-11-06T07:06:23.975103146Z 	at java.base/java.net.InetAddress$CachedLookup.get(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.975103899Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.975105402Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+crawler-1  | 2026-11-06T07:06:23.975106059Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+crawler-1  | 2026-11-06T07:06:23.975122383Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+crawler-1  | 2026-11-06T07:06:23.975123305Z 	... 6 more
+crawler-1  | 2026-11-06T07:06:33.490745916Z [cluster-6aed7c6b86691f41c04d8142-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=9119555, minRoundTripTimeNanos=0}
