@@ -206,7 +206,7 @@ selected_steps() {
 }
 
 check_only_step() {
-    [[ -z $only_step ]] || steps | grep -qx "$only_step" || fail "$only_step is not a step; see $0 --dry-run"
+    [[ -z $only_step ]] || steps | grep -x -- "$only_step" > /dev/null || fail "$only_step is not a step; see $0 --dry-run"
 }
 
 main() {
