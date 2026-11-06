@@ -18,16 +18,20 @@ class AnnouncePublishedBatchesCommandTest {
     private int generation = 1;
 
     @Test
-    void announcesEachNewBatchOnceAndStartsOverWhenTheGenerationChanges() {
+    void refreshesOncePerTickWithNewBatchesAndStartsOverWhenTheGenerationChanges() {
         AnnouncePublishedBatchesCommand announce = new AnnouncePublishedBatchesCommand(new InMemoryBatches(), refreshes::incrementAndGet);
         publish(1, "a");
-        announce.execute();
         publish(1, "b");
+        announce.execute();
+        assertEquals(1, refreshes.get());
+
+        publish(1, "c");
         announce.execute();
         announce.execute();
         assertEquals(2, refreshes.get());
 
         publish(2, "a");
+        publish(2, "b");
         generation = 2;
         announce.execute();
 
