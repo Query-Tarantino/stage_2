@@ -167,6 +167,85 @@ The `hazelcast` trials of `20261106-012054-coordination-variants-c1376c7`, from
   the stack still starting, which is why the stack CPU mean during ingestion is below its median (505 % against
   531 % with one replica).
 
+## Publication visibility: listener against periodic refresh
+
+`20261106-002208-publication-visibility-c1376c7`, from `./scripts/bench/publication-visibility.sh`, with 2 `query`
+replicas; raw data in `visibility.csv`, one row per batch and replica, `coordination.csv` and `stats.csv`. Visibility
+is the time from a batch's `WRITING`→`PUBLISHED` line to the `snapshot` line of each replica.
+
+| `published-batches` listener | Mean (ms) | p50 (ms) | p95 (ms) | p99 (ms) |
+| --- | --- | --- | --- | --- |
+| On | 43.6 ± 7.3 | 37 | 54 | 145 |
+| Off | 2,605 ± 251 | 2,672 | 4,880 | 4,965 |
+
+- With the listener a batch is searchable in about 40 ms, under the 100 ms of H1.
+- Without it the delays spread between 0 and the 5 s period, with a median of 2.7 s and a maximum of 4.97 s, as
+  H2 expected.
+- The listener costs no CPU that the run can see, as H3 expected: in `stats.csv` each `query` replica uses about 3 % of
+  a core in both configurations, within their CIs. The time to publication is the same, 54–55 s, because what the
+  listener saves is seconds against a pipeline of almost a minute.
+
+## Broker latency: Hazelcast against ActiveMQ, in isolation
+
+`20261106-123534-broker-latency-b4667d8`, from `./scripts/bench/broker-latency.sh`, rerun by the campaign as said
+above; raw data in `broker.csv`, one row per trial of 30,000 messages, and `load/`. Latency is the mean of each
+repetition's p50.
+
+| Broker | Consumers | p50 latency (µs) | Throughput (messages/s) |
+| --- | --- | --- | --- |
+| Hazelcast | 1 | 102 ± 3 | 8,872 ± 583 |
+| Hazelcast | 3 | 104 ± 2 | 8,513 ± 860 |
+| Hazelcast | 8 | 105 ± 4 | 8,866 ± 385 |
+| ActiveMQ, non-persistent | 1 | 139 ± 3 | 9,350 ± 45 |
+| ActiveMQ, non-persistent | 3 | 137 ± 2 | 18,338 ± 2,440 |
+| ActiveMQ, non-persistent | 8 | 138 ± 5 | 25,904 ± 3,830 |
+| ActiveMQ, persistent | 1 | 180 ± 4 | 1,475 ± 35 |
+| ActiveMQ, persistent | 3 | 184 ± 2 | 1,457 ± 11 |
+| ActiveMQ, persistent | 8 | 185 ± 5 | 1,454 ± 18 |
+
+- Every p50 is between 0.1 and 0.2 ms, as H1 expected.
+- Persistence costs 1.3 times the non-persistent latency, not the 3 times of H2, but it caps the throughput at about
+  1,460 messages/s whatever the consumers, because each send waits for its disk write.
+- Non-persistent ActiveMQ scales with consumers, ×2.8 from 1 to 8, while Hazelcast stays at about 8,700 messages/s.
+- A message is never what a book waits for, as H3 expected: the slowest p50, 185 µs, is about 7,700 times smaller than
+  the 1,431 ms median wait in `books-to-download` with one replica in `coordination-variants`.
+
+## Coordination modes: the same pipeline in each mode
+
+`20261106-012054-coordination-variants-c1376c7`, from `./scripts/bench/coordination-variants.sh`: the whole corpus in
+each of the five modes with 1, 2 and 3 replicas of `crawler` and `indexer` together, 5 interleaved repetitions each;
+raw data in `coordination.csv`, `visibility.csv` and `stats.csv`, these figures in `variants.csv`, and in `pairs.csv`
+the difference of every pair of modes with its 95 % CI and whether it differs. Coordination CPU is the broker's, or
+`control`'s in `polling` and `orchestrator`.
+
+| Mode | Books/s, N = 1 / 2 / 3 | Time to publication (s) | Visibility p50 (ms) | Coordination CPU | Mongo's CPU |
+| --- | --- | --- | --- | --- | --- |
+| `hazelcast` | 28.5 / 46.7 / 58.6 | 51.4 / 31.9 / 25.6 | 38 / 41 / 46 | 3.6 / 6.0 / 8.3 % | 80 / 152 / 224 % |
+| `activemq` | 28.4 / 45.5 / 57.5 | 52.2 / 33.5 / 26.8 | 39 / 43 / 48 | 5.4 / 9.0 / 12.8 % | 80 / 153 / 219 % |
+| `activemq-persistent` | 28.1 / 43.3 / 55.0 | 50.3 / 32.4 / 24.2 | 38 / 45 / 47 | 7.8 / 12.4 / 16.6 % | 79 / 152 / 219 % |
+| `polling` | 27.5 / 47.9 / 55.5 | 54.5 / 32.1 / 28.2 | 2,321 / 2,472 / 2,656 | 3.6 / 5.8 / 7.0 % | 89 / 169 / 247 % |
+| `orchestrator` | 27.7 / 44.7 / 34.6 | 55.9 / 36.2 / 31.9 | 176 / 208 / 173 | 10.8 / 15.9 / 12.7 % | 80 / 147 / 140 % |
+
+- H0 holds for indexing: `indexing_ms` differs in no pair of modes without `polling`. It does not hold for
+  downloads: `download_ms` differs in 22 of the 30 pairs, because in `activemq-persistent` and `orchestrator` the
+  downloads take 8–15 ms at p50 with 2 and 3 replicas, against 21–45 ms in the other modes. In those two modes books
+  reach the crawlers more slowly than the crawlers take them, through persistent sends or one `POST` at a time, so
+  fewer downloads overlap: in `activemq-persistent` a book waits under 4 ms in `books-to-download` on average. Downloads
+  take milliseconds against a time to publication of tens of seconds, so the comparison of the pipeline still holds.
+- `activemq`, H1: throughput and time to publication within the CI of `hazelcast` at every N, as expected.
+- `activemq-persistent`, H2: throughput within the CI of `activemq` at every N, with 1.3–1.4 times its broker CPU, as
+  expected.
+- `polling`, H1 to H3: throughput within the CI of `hazelcast` at every N; Mongo's CPU 10–12 % higher at every N,
+  from the sorted claims and the idle polls; and visibility at p50 between 2.3 and 2.7 s, half the 5 s period, as
+  expected.
+- `orchestrator`, H1: throughput within the CI of `hazelcast` with 1 and 2 replicas, and 41 % lower with 3, which H1
+  allowed because one thread sends one `POST` at a time; Mongo's CPU falls with it.
+- `orchestrator`, H2 does not hold: the time to publication is 4.3–6.3 s above `hazelcast`, not two ticks. Books wait
+  in Mongo until `control` dispatches them, inside its window: 4.2–5.6 s in `books-to-download` against 0.7–1.4 s
+  in `hazelcast`.
+- `orchestrator`, H3: visibility under 300 ms, 173–208 ms at p50, as expected.
+- Coordination is cheap in every mode: the broker or `control` uses at most 17 % of one core, against Mongo's 80–247 %.
+
 ## Recovery: time back to correct answers after each failure
 
 The 165 runs `2026110[56]-…-recovery-<nn>[-<mode>]-r<N>-c1376c7`, one per row of the failure matrix (`SPEC.md` §8),
@@ -195,6 +274,31 @@ the short leases of `scripts/recovery/recovery.env` (6 s) and run once per row, 
 - Killing one of two or three `query` replicas costs at most 1.2 s of `/search` answers, because nginx sends the
   requests to the others.
 
+## Recovery delay: how lost work comes back in each mode
+
+`20261106-073911-recovery-delay-c1376c7`, from `./scripts/bench/recovery-delay.sh` over the 29 recovery runs of rows
+04, 05 and 12, where a crash or a broker restart loses work after its message was taken; raw data in
+`recovery-delay.csv`, one row per book. For each book, `requeue_delay` goes from the failure to its requeue or
+dispatch again, and `reclaim_delay` to its next claim. Rows 04, 05 and 12 do not apply in `polling`.
+
+| Mode | Rows 04 and 05: requeue p50 (s) | Rows 04 and 05: reclaim p50 (s) | Row 12: requeue p50 (s) | Row 12: reclaim p50 (s) |
+| --- | --- | --- | --- | --- |
+| `hazelcast` | 11.8 and 11.7 | 11.5 and 5.6 | 82.4 | 12.3 |
+| `activemq` | 11.8 and 11.7 | 10.8 and 8.5 | 11.7 | 13.5 |
+| `activemq-persistent` | No requeue | 3.8 and 5.0 | No requeue | 6.1 |
+| `orchestrator` | 9.7 and 9.7 | 5.0 and 9.8 | – | – |
+
+- H1 holds in rows 04 and 05, where `control` requeues 10.8–11.8 s after the failure in `hazelcast` and `activemq`,
+  and in row 12 of `activemq`. It does not hold in row 12 of `hazelcast` with 2 and 3 replicas, whose median requeue
+  is 97 and 82 s, against 12 s with one; these runs do not tell why.
+- H2 holds in rows 04 and 05, where a requeued book is claimed again within 0.6 s at p50, and not in row 12, where it
+  takes 1.8 s in `activemq` and 11.6 s in `hazelcast`.
+- In `activemq-persistent` nothing is requeued: the broker redelivers what a dead consumer did not acknowledge, and
+  the book is claimed again in 3.8–6.1 s at p50, as H3 expected, though the slowest books of rows 05 and 12 take 11 and
+  19 s, above its 10 s.
+- H4 does not hold by a little: the orchestrator dispatches again 9.50–10.05 s after the failure, not 10–10.4 s, because
+  its 10 s count from the book's last dispatch, which comes before the crash.
+
 ## Where the bottlenecks are
 
 1. Indexing limits the pipeline: one indexer publishes 28.5 books/s while one crawler downloads 504, so books wait
@@ -202,6 +306,9 @@ the short leases of `scripts/recovery/recovery.env` (6 s) and run once per row, 
 2. Ingestion stops growing at 500–670 books/s with 8 or more workers, whatever the replicas, with at most 53 % of the
    host's CPU in use: the shared queue, Mongo and datalake volume limit it.
 3. Search saturates one `query` replica at about 4,400 requests/s; a second replica adds 29 % and a third nothing.
+4. Coordination is not a bottleneck in any mode: a message takes 0.1–0.2 ms and the broker or `control` under 17 % of
+   a core. The mode changes how soon a book is searchable, about 40 ms with a listener, 170–210 ms with the
+   orchestrator and 2.3–2.7 s with polling, and the orchestrator alone loses throughput, 41 % with 3 replicas.
 
 ## What belongs to the single machine, and what Stage 3 changes
 
@@ -215,6 +322,7 @@ single-host assumptions of `SPEC.md` §1:
 | Ingestion: 500–670 books/s whatever the replicas, with the CPU far from full | One `books-to-download` queue on one Hazelcast member, one MongoDB and one datalake volume | A Hazelcast cluster with one queue per partition of `book_id`, and a datalake on storage every node mounts, or one per node with the book's node in `book_states` |
 | Search: one `query` replica saturates at about 4,400 requests/s, and a third replica adds nothing to two | Replicas share nginx, the one MongoDB and the host's CPUs with the load generator | `query` replicas on several nodes behind a load balancer, reading a MongoDB replica set; the snapshot already lets each replica answer on its own |
 | Recovery: a lost message waits `TARANTINO_REQUEUE_SECONDS` for `control` | `control` is one process, which a single host makes acceptable | `control` elected among several nodes, or the persistent ActiveMQ mode, whose broker redelivers without `control` in 3.8–6.1 s at p50 |
+| Mode `orchestrator`: 41 % less throughput with 3 replicas | One `control` thread dispatches every book, one `POST` at a time | Several dispatchers, each with its own partition of the books, or a choreography mode |
 
 The conditional writes of `SPEC.md` §5.1 already work across machines: claims, leases and expirations compare with
 MongoDB's clock (`$$NOW`), never a host's, and no process keeps a lock another one needs. What a cluster replaces is
