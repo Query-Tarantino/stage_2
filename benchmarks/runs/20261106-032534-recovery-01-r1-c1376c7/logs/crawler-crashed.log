@@ -1,0 +1,67 @@
+crawler-1  | 2026-11-06T03:25:18.972979802Z Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+crawler-1  | 2026-11-06T03:25:19.287148413Z [main] INFO org.mongodb.driver.client - MongoClient with metadata {"driver": {"name": "mongo-java-driver|sync", "version": "5.13.0"}, "os": {"type": "Linux", "name": "Linux", "architecture": "amd64", "version": "6.6.114.1-microsoft-standard-WSL2"}, "platform": "Java/Eclipse Adoptium/25.0.4.1+1-LTS", "env": {"container": {"runtime": "docker"}}} created with settings MongoClientSettings{readPreference=primary, writeConcern=WriteConcern{w=null, wTimeout=null ms, journal=null}, retryWrites=true, retryReads=true, maxAdaptiveRetries=null, enableOverloadRetargeting=false, readConcern=ReadConcern{level=null}, credential=null, transportSettings=null, commandListeners=[], codecRegistry=ProvidersCodecRegistry{codecProviders=[ValueCodecProvider{}, BsonValueCodecProvider{}, DBRefCodecProvider{}, DBObjectCodecProvider{}, DocumentCodecProvider{}, CollectionCodecProvider{}, IterableCodecProvider{}, MapCodecProvider{}, GeoJsonCodecProvider{}, GridFSFileCodecProvider{}, Jsr310CodecProvider{}, JsonObjectCodecProvider{}, BsonCodecProvider{}, com.mongodb.client.model.mql.ExpressionCodecProvider@6a396c1e, com.mongodb.Jep395RecordCodecProvider@6c3f5566, com.mongodb.KotlinCodecProvider@12405818, EnumCodecProvider{}]}, loggerSettings=LoggerSettings{maxDocumentLength=1000}, clusterSettings={hosts=[mongo:27017], srvServiceName=mongodb, mode=SINGLE, requiredClusterType=UNKNOWN, requiredReplicaSetName='null', serverSelector='null', clusterListeners='[]', serverSelectionTimeout='30000 ms', localThreshold='15 ms'}, socketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=0, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, heartbeatSocketSettings=SocketSettings{connectTimeoutMS=10000, readTimeoutMS=10000, receiveBufferSize=0, proxySettings=ProxySettings{host=null, port=null, username=<hidden>, password=<hidden>}}, connectionPoolSettings=ConnectionPoolSettings{maxSize=100, minSize=0, maxWaitTimeMS=120000, maxConnectionLifeTimeMS=0, maxConnectionIdleTimeMS=0, maintenanceInitialDelayMS=0, maintenanceFrequencyMS=60000, connectionPoolListeners=[], maxConnecting=2}, serverSettings=ServerSettings{heartbeatFrequencyMS=10000, minHeartbeatFrequencyMS=500, serverMonitoringMode=AUTO, serverListeners='[]', serverMonitorListeners='[]'}, sslSettings=SslSettings{enabled=false, invalidHostNameAllowed=false, context=null}, applicationName='null', compressorList=[], uuidRepresentation=UNSPECIFIED, serverApi=null, autoEncryptionSettings=null, dnsClient=null, inetAddressResolver=null, contextProvider=null, timeoutMS=null}
+crawler-1  | 2026-11-06T03:25:19.736387483Z [main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+crawler-1  | 2026-11-06T03:25:19.796085799Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+crawler-1  | 2026-11-06T03:25:19.796946969Z [main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+crawler-1  | 2026-11-06T03:25:19.834256740Z [main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+crawler-1  | 2026-11-06T03:25:19.835403299Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+crawler-1  | 2026-11-06T03:25:19.837536243Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+crawler-1  | 2026-11-06T03:25:19.856962772Z WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+crawler-1  | 2026-11-06T03:25:19.856994034Z WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/service.jar)
+crawler-1  | 2026-11-06T03:25:19.856995946Z WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+crawler-1  | 2026-11-06T03:25:19.857015753Z WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+crawler-1  | 2026-11-06T03:25:19.949706864Z [main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+crawler-1  | 2026-11-06T03:25:20.210133886Z [main] INFO io.javalin.Javalin - Starting Javalin ...
+crawler-1  | 2026-11-06T03:25:20.211503428Z [main] INFO org.eclipse.jetty.server.Server - jetty-11.0.25; built: 2025-03-13T00:15:57.301Z; git: a2e9fae3ad8320f2a713d4fa29bba356a99d1295; jvm 25.0.4.1+1-LTS
+crawler-1  | 2026-11-06T03:25:20.242274989Z [main] INFO org.eclipse.jetty.server.session.DefaultSessionIdManager - Session workerName=node0
+crawler-1  | 2026-11-06T03:25:20.250208126Z [main] INFO org.eclipse.jetty.server.handler.ContextHandler - Started o.e.j.s.ServletContextHandler@50fb33a{/,null,AVAILABLE}
+crawler-1  | 2026-11-06T03:25:20.261714861Z [main] INFO org.eclipse.jetty.server.AbstractConnector - Started ServerConnector@2a331b46{HTTP/1.1, (http/1.1)}{0.0.0.0:7001}
+crawler-1  | 2026-11-06T03:25:20.262408677Z [main] INFO org.eclipse.jetty.server.Server - Started Server@36417a54{STARTING}[11.0.25,sto=0] @1289ms
+crawler-1  | 2026-11-06T03:25:20.262589222Z [main] INFO io.javalin.Javalin - Javalin started in 108ms \o/
+crawler-1  | 2026-11-06T03:25:20.264069352Z [main] INFO io.javalin.Javalin - Listening on http://localhost:7001/
+crawler-1  | 2026-11-06T03:25:20.271077863Z [main] INFO io.javalin.Javalin - You are running Javalin 6.7.0 (released June 22, 2025. Your Javalin version is 501 days old. Consider checking for a newer version.).
+crawler-1  | 2026-11-06T03:25:20.290505258Z [main] INFO org.mongodb.driver.cluster - Waiting for server to become available for operation update with ID 3. Remaining time: 29995 ms. Selector: WritableServerSelector, topology description: {type=UNKNOWN, servers=[{address=mongo:27017, type=UNKNOWN, state=CONNECTING}].
+crawler-1  | 2026-11-06T03:25:23.245394284Z [cluster-6aed489f04d1d1d81579f690-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+crawler-1  | 2026-11-06T03:25:23.245426754Z com.mongodb.MongoSocketException: mongo: Name or service not known
+crawler-1  | 2026-11-06T03:25:23.245486279Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+crawler-1  | 2026-11-06T03:25:23.245491863Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+crawler-1  | 2026-11-06T03:25:23.245493086Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+crawler-1  | 2026-11-06T03:25:23.245494191Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+crawler-1  | 2026-11-06T03:25:23.245494693Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+crawler-1  | 2026-11-06T03:25:23.245498159Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+crawler-1  | 2026-11-06T03:25:23.245499417Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+crawler-1  | 2026-11-06T03:25:23.245653548Z Caused by: java.net.UnknownHostException: mongo: Name or service not known
+crawler-1  | 2026-11-06T03:25:23.245657662Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+crawler-1  | 2026-11-06T03:25:23.245658329Z 	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.245658831Z 	at java.base/java.net.InetAddress$PlatformResolver.lookupByName(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.245659301Z 	at java.base/java.net.InetAddress.getAddressesFromNameService(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.245659784Z 	at java.base/java.net.InetAddress$NameServiceAddresses.get(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.245662734Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.245663734Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.245664196Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+crawler-1  | 2026-11-06T03:25:23.245713267Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+crawler-1  | 2026-11-06T03:25:23.245723415Z 	... 6 more
+crawler-1  | 2026-11-06T03:25:23.734708000Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+crawler-1  | 2026-11-06T03:25:23.734713600Z 	Member [172.18.0.3]:5701 - f7405aa5-1630-47bb-bd4a-04e404bf314f
+crawler-1  | 2026-11-06T03:25:23.734714138Z }
+crawler-1  | 2026-11-06T03:25:23.734714610Z 
+crawler-1  | 2026-11-06T03:25:23.736127212Z [hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:f7405aa5-1630-47bb-bd4a-04e404bf314f, server version: 5.7.0, local address: /172.18.0.6:38529
+crawler-1  | 2026-11-06T03:25:23.736992811Z [hz.client_1.internal-4] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+crawler-1  | 2026-11-06T03:25:23.747119945Z [cluster-6aed489f04d1d1d81579f690-mongo:27017] INFO org.mongodb.driver.cluster - Exception in monitor thread while connecting to server mongo:27017
+crawler-1  | 2026-11-06T03:25:23.747142550Z com.mongodb.MongoSocketException: mongo
+crawler-1  | 2026-11-06T03:25:23.747144079Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:75)
+crawler-1  | 2026-11-06T03:25:23.747145249Z 	at com.mongodb.internal.connection.SocketStream.initializeSocket(SocketStream.java:118)
+crawler-1  | 2026-11-06T03:25:23.747146540Z 	at com.mongodb.internal.connection.SocketStream.open(SocketStream.java:84)
+crawler-1  | 2026-11-06T03:25:23.747147746Z 	at com.mongodb.internal.connection.InternalStreamConnection.open(InternalStreamConnection.java:236)
+crawler-1  | 2026-11-06T03:25:23.747148192Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.setupNewConnectionAndGetInitialDescription(DefaultServerMonitor.java:282)
+crawler-1  | 2026-11-06T03:25:23.747152356Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.lookupServerDescription(DefaultServerMonitor.java:253)
+crawler-1  | 2026-11-06T03:25:23.747155993Z 	at com.mongodb.internal.connection.DefaultServerMonitor$ServerMonitor.run(DefaultServerMonitor.java:203)
+crawler-1  | 2026-11-06T03:25:23.747156513Z Caused by: java.net.UnknownHostException: mongo
+crawler-1  | 2026-11-06T03:25:23.747156956Z 	at java.base/java.net.InetAddress$CachedLookup.get(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.747157420Z 	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.747158228Z 	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+crawler-1  | 2026-11-06T03:25:23.747210827Z 	at com.mongodb.internal.connection.DefaultInetAddressResolver.lookupByName(DefaultInetAddressResolver.java:34)
+crawler-1  | 2026-11-06T03:25:23.747217983Z 	at com.mongodb.internal.connection.ServerAddressHelper.getSocketAddresses(ServerAddressHelper.java:71)
+crawler-1  | 2026-11-06T03:25:23.747218887Z 	... 6 more
+crawler-1  | 2026-11-06T03:25:33.257644181Z [cluster-6aed489f04d1d1d81579f690-mongo:27017] INFO org.mongodb.driver.cluster - Monitor thread successfully connected to server with description ServerDescription{address=mongo:27017, type=STANDALONE, cryptd=false, state=CONNECTED, ok=true, minWireVersion=0, maxWireVersion=21, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=7232387, minRoundTripTimeNanos=0}
+crawler-1  | 2026-11-06T03:25:33.297625437Z [download-0] INFO org.ulpgc.tarantino.common.operations.TransitionLog - transition entity=book id=84 from=QUEUED to=DOWNLOADING batch_id=- generation=- enqueued_at=2026-11-06T03:25:32.760243549Z at=2026-11-06T03:25:33.297442908Z replica=50c706226b26

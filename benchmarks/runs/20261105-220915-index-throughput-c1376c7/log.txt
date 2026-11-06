@@ -1,0 +1,775 @@
+Opened run 20261105-220915-index-throughput-c1376c7: candidates mirror, replicas 1 2 3, 5 repetitions, phases up to 1800 s
+Machine: the official one, 24 hardware threads, 8 P cores and 16 E cores; each indexer replica indexes one batch at a time on its index-batches thread, so at most 3 indexing threads run and they fit in the P cores
+Factors: books per batch and indexer replicas, 5 repetitions each, interleaved: repetition 1 of every configuration, then repetition 2, so drift over the run spreads across every configuration
+Trial: the corpus is ingested once; each trial recreates the indexers with its configuration and rebuilds the index into a new generation
+Window: the whole one only, from the first index claim to the last batch published in the trial's generation; it leaves out the up to 30 s control takes to reindex the books and to switch generation
+Batch timeout: 2 s, so the last partial batch of each replica does not wait 30 s inside the window
+Series batch: 1, 10, 100 and 250 books per batch with 1 indexer replica
+H1: books per second rise from 1 to 100 books per batch and flatten from 100 to 250, because each batch pays a fixed cost (its lease, the postings bulkWrites, publishing and marking) that more books share, while tokenizing and writing postings cost the same per book
+Series replicas: 1, 2 and 3 indexer replicas with batches of 100
+H2: books per second grow with replicas but less than linearly: three indexing threads do not run out of CPU, and every replica writes its postings to the same Mongo, which becomes the bottleneck
+H3: batches of 250 fit in -Xmx512m without OutOfMemoryError, but the indexer's memory in stats.csv peaks higher than with batches of 100, because a batch keeps the term frequencies and postings of all its books until it writes them
+[main] INFO org.ulpgc.tarantino.bench.corpus.CorpusTool - The corpus matches workload\corpus.sha256: 2800 books and 755974 distinct terms in benchmarks\runs\20261105-220915-index-throughput-c1376c7\corpus.json
+JMH: not run; the report cites jmh/ of 20261103-204454-index-throughput-6925d4e, because the tokenizer, the header parser and the batch writer it measures did not change
+ Image stage_2-indexer Building 
+ Image stage_2-crawler Building 
+ Image stage_2-query Building 
+ Image stage_2-control Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.33kB done
+#1 DONE 0.0s
+
+#2 [indexer internal] load build definition from Dockerfile
+#2 transferring dockerfile: 344B done
+#2 DONE 0.0s
+
+#3 [control internal] load metadata for docker.io/library/eclipse-temurin:25-jre
+#3 DONE 0.1s
+
+#4 [crawler internal] load .dockerignore
+#4 transferring context: 180B done
+#4 DONE 0.0s
+
+#5 [control internal] load build context
+#5 transferring context: 179B done
+#5 DONE 0.0s
+
+#6 [crawler internal] load build context
+#6 transferring context: 179B done
+#6 DONE 0.0s
+
+#7 [control 1/4] FROM docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5
+#7 resolve docker.io/library/eclipse-temurin:25-jre@sha256:78f1f183913482ef390c2722f46c3f0ce76ada341d69590e7c482ec943ee72d5 0.0s done
+#7 DONE 0.0s
+
+#8 [control 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [control 3/4] WORKDIR /app
+#9 CACHED
+
+#10 [control 4/4] COPY services/control/target/control-1.0-SNAPSHOT.jar /app/service.jar
+#10 CACHED
+
+#11 [crawler 4/4] COPY services/crawler/target/crawler-1.0-SNAPSHOT.jar /app/service.jar
+#11 CACHED
+
+#12 [crawler] exporting to image
+#12 exporting layers done
+#12 exporting manifest sha256:ac3565bf53d504adc4091f9230e00fbd35963c8d6d304b57791b67dc157fc132 done
+#12 exporting config sha256:9c68aba7a363da84b0c0463794900ce8c1d28aa7159f50393b7121054e3b6d15
+#12 exporting config sha256:9c68aba7a363da84b0c0463794900ce8c1d28aa7159f50393b7121054e3b6d15 done
+#12 exporting attestation manifest sha256:d690635b7c62a6c84678941e70df99fa04321390e129433ace61a72a85ff728b 0.0s done
+#12 exporting manifest list sha256:51bbf0434ab0a187c1795045549f3292ac014d90eee95653373ea4f2369a7937 0.0s done
+#12 naming to docker.io/library/stage_2-crawler:latest done
+#12 unpacking to docker.io/library/stage_2-crawler:latest done
+#12 DONE 0.1s
+
+#13 [control] exporting to image
+#13 exporting layers done
+#13 exporting manifest sha256:0eb32f210b02fb8c2c42bf97a74e62c85a377cf693f35d856d979022ad7c2568 done
+#13 exporting config sha256:33b142a20ce00a2f50bff9f49dff861d23af8b214f2a049eb70e8627bfdf7067 done
+#13 exporting attestation manifest sha256:593e270f8faf09626d6e5dc95727c36a27d4adb815f721d48bfe789ffa3e2aac 0.0s done
+#13 exporting manifest list sha256:6199c61b3ae0cdf41371af26b266ffe9893798fd83ac3e8bded8784fc1a5cfc6 0.0s done
+#13 naming to docker.io/library/stage_2-control:latest done
+#13 unpacking to docker.io/library/stage_2-control:latest done
+#13 DONE 0.1s
+
+#14 [indexer internal] load build context
+#14 ...
+
+#15 [control] resolving provenance for metadata file
+#15 DONE 0.1s
+
+#16 [crawler] resolving provenance for metadata file
+#16 DONE 0.1s
+
+#14 [indexer internal] load build context
+#14 transferring context: 34.42MB 4.7s done
+#14 DONE 4.8s
+
+#17 [query internal] load build context
+#17 transferring context: 34.41MB 4.7s done
+#17 DONE 4.8s
+
+#8 [indexer 2/4] RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [indexer 3/4] WORKDIR /app
+#9 CACHED
+
+#18 [indexer 4/4] COPY services/indexer/target/indexer-1.0-SNAPSHOT.jar /app/service.jar
+#18 DONE 0.2s
+
+#19 [query 4/4] COPY services/query/target/query-1.0-SNAPSHOT.jar /app/service.jar
+#19 DONE 0.2s
+
+#20 [query] exporting to image
+#20 exporting layers 0.6s done
+#20 exporting manifest sha256:e8645e8a8443bb0db5139ad70f640c240819b6b80d7bec60e969f1e9f24d6c2f 0.0s done
+#20 exporting config sha256:49e7cb298c492969c845eeeb0feb34c95cdd02647e41fdd27abae1995dfe5a67 0.0s done
+#20 exporting attestation manifest sha256:f49cdab6be6098c1ef5acf9e5595159baecfa521c4b60db4a4676ff4b530f61b 0.0s done
+#20 exporting manifest list sha256:c04057b7ab89b16434009ef7377e044568f313a2c8917466d8f46291855acf77 0.0s done
+#20 naming to docker.io/library/stage_2-query:latest done
+#20 unpacking to docker.io/library/stage_2-query:latest
+#20 unpacking to docker.io/library/stage_2-query:latest 0.2s done
+#20 DONE 0.9s
+
+#21 [indexer] exporting to image
+#21 exporting layers 0.6s done
+#21 exporting manifest sha256:a89fc50b73cb0f0b16250c12a1e361e6d84e3f8782d8604600b78deb83e6acd3 0.0s done
+#21 exporting config sha256:4501d9df90ae2430eb495d72e0447ee513713c36ffeb3ab17ded059e04a3f0c4 0.0s done
+#21 exporting attestation manifest sha256:027e02247f8c7b4aaf2789c0a412151af611da539ade4676de9dfef58e142e5c 0.0s done
+#21 exporting manifest list sha256:97613fd2e6d06fd58233b607b92bbdcf030ee7bb168bb47f21c7318c5c0aa423 0.0s done
+#21 naming to docker.io/library/stage_2-indexer:latest done
+#21 unpacking to docker.io/library/stage_2-indexer:latest 0.1s done
+#21 DONE 0.8s
+
+#22 [indexer] resolving provenance for metadata file
+#22 DONE 0.0s
+
+#23 [query] resolving provenance for metadata file
+#23 DONE 0.0s
+ Image stage_2-control Built 
+ Image stage_2-crawler Built 
+ Image stage_2-indexer Built 
+ Image stage_2-query Built 
+ Volume stage_2_datalake Creating 
+ Volume stage_2_datalake Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Creating 
+ Volume stage_2_mongo-data Creating 
+ Network stage_2_default Creating 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_mongo-data Created 
+ Volume stage_2_datalake Created 
+ Volume stage_2_datalake Created 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-query-1 Creating 
+ Container stage_2-mongo-1 Creating 
+ Container stage_2-crawler-1 Creating 
+ Container stage_2-nginx-1 Creating 
+ Container stage_2-control-1 Creating 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-indexer-1 Creating 
+ Container stage_2-query-1 Created 
+ Container stage_2-mongo-1 Created 
+ Container stage_2-crawler-1 Created 
+ Container stage_2-control-1 Created 
+ Container stage_2-nginx-1 Created 
+ Container stage_2-indexer-1 Created 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-control-1 Starting 
+ Container stage_2-crawler-1 Starting 
+ Container stage_2-mongo-1 Starting 
+ Container stage_2-query-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-nginx-1 Starting 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-control-1 Started 
+ Container stage_2-crawler-1 Started 
+ Container stage_2-mongo-1 Started 
+ Container stage_2-query-1 Started 
+ Container stage_2-hazelcast-1 Started 
+ Container stage_2-nginx-1 Started 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-nginx-1 Waiting 
+ Container stage_2-hazelcast-1 Waiting 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-control-1 Waiting 
+ Container stage_2-crawler-1 Waiting 
+ Container stage_2-mongo-1 Waiting 
+ Container stage_2-query-1 Waiting 
+ Container stage_2-nginx-1 Healthy 
+ Container stage_2-mongo-1 Healthy 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-crawler-1 Healthy 
+ Container stage_2-query-1 Healthy 
+ Container stage_2-control-1 Healthy 
+ Container stage_2-hazelcast-1 Healthy 
+ Container stage_2-bench-run-97a4d8a44921 Creating 
+ Container stage_2-bench-run-97a4d8a44921 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - PUBLISHED reached 2800
+ Container stage_2-bench-run-3953afaa141e Creating 
+ Container stage_2-bench-run-3953afaa141e Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-1-replicas-1-rep-1: batches of 1 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-1-replicas-1-rep-1 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-e2f4f8964567 Creating 
+ Container stage_2-bench-run-e2f4f8964567 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 2
+ Container stage_2-bench-run-cbdd74f507c2 Creating 
+ Container stage_2-bench-run-cbdd74f507c2 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-10-replicas-1-rep-1: batches of 10 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-10-replicas-1-rep-1 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-9079e83654ee Creating 
+ Container stage_2-bench-run-9079e83654ee Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 3
+ Container stage_2-bench-run-be16d605ea0f Creating 
+ Container stage_2-bench-run-be16d605ea0f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-1-rep-1: batches of 100 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-1-rep-1 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-e9a2e04999c7 Creating 
+ Container stage_2-bench-run-e9a2e04999c7 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 4
+ Container stage_2-bench-run-b7e8c195eef6 Creating 
+ Container stage_2-bench-run-b7e8c195eef6 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-250-replicas-1-rep-1: batches of 250 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-250-replicas-1-rep-1 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-571cf6b98eec Creating 
+ Container stage_2-bench-run-571cf6b98eec Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 5
+ Container stage_2-bench-run-bdd6402483ad Creating 
+ Container stage_2-bench-run-bdd6402483ad Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-2-rep-1: batches of 100 books, 2 indexer replicas ===
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-2-rep-1 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-fe0f6db134f9 Creating 
+ Container stage_2-bench-run-fe0f6db134f9 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 6
+ Container stage_2-bench-run-5b863d176a8f Creating 
+ Container stage_2-bench-run-5b863d176a8f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-3-rep-1: batches of 100 books, 3 indexer replicas ===
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Recreate 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-2 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-3 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+ Container stage_2-indexer-3 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-3-rep-1 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-e3faff45e40e Creating 
+ Container stage_2-bench-run-e3faff45e40e Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 7
+ Container stage_2-bench-run-88b396f6a903 Creating 
+ Container stage_2-bench-run-88b396f6a903 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-1-replicas-1-rep-2: batches of 1 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-1-replicas-1-rep-2 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-5a187881ce73 Creating 
+ Container stage_2-bench-run-5a187881ce73 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 8
+ Container stage_2-bench-run-f3a7562a73fd Creating 
+ Container stage_2-bench-run-f3a7562a73fd Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-10-replicas-1-rep-2: batches of 10 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-10-replicas-1-rep-2 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-2d72f1b73635 Creating 
+ Container stage_2-bench-run-2d72f1b73635 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 9
+ Container stage_2-bench-run-4332725cf668 Creating 
+ Container stage_2-bench-run-4332725cf668 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-1-rep-2: batches of 100 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-1-rep-2 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-5ac3393596d9 Creating 
+ Container stage_2-bench-run-5ac3393596d9 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 10
+ Container stage_2-bench-run-3972122a572f Creating 
+ Container stage_2-bench-run-3972122a572f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-250-replicas-1-rep-2: batches of 250 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-250-replicas-1-rep-2 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-2ac5b5c61f25 Creating 
+ Container stage_2-bench-run-2ac5b5c61f25 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 11
+ Container stage_2-bench-run-9542c232353d Creating 
+ Container stage_2-bench-run-9542c232353d Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-2-rep-2: batches of 100 books, 2 indexer replicas ===
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-2-rep-2 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-b0856e23d162 Creating 
+ Container stage_2-bench-run-b0856e23d162 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 12
+ Container stage_2-bench-run-bf883f62e891 Creating 
+ Container stage_2-bench-run-bf883f62e891 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-3-rep-2: batches of 100 books, 3 indexer replicas ===
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Recreate 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-2 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-3 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+ Container stage_2-indexer-3 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-3-rep-2 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-86051ff470ad Creating 
+ Container stage_2-bench-run-86051ff470ad Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 13
+ Container stage_2-bench-run-1b60950d5bf0 Creating 
+ Container stage_2-bench-run-1b60950d5bf0 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-1-replicas-1-rep-3: batches of 1 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-1-replicas-1-rep-3 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-4f2b9c08de68 Creating 
+ Container stage_2-bench-run-4f2b9c08de68 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 14
+ Container stage_2-bench-run-85d5dd3acc7f Creating 
+ Container stage_2-bench-run-85d5dd3acc7f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-10-replicas-1-rep-3: batches of 10 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-10-replicas-1-rep-3 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-c1ca130b581b Creating 
+ Container stage_2-bench-run-c1ca130b581b Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 15
+ Container stage_2-bench-run-951ba0907b91 Creating 
+ Container stage_2-bench-run-951ba0907b91 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-1-rep-3: batches of 100 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-1-rep-3 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-e10ace0d99af Creating 
+ Container stage_2-bench-run-e10ace0d99af Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 16
+ Container stage_2-bench-run-a1ea9a05ab66 Creating 
+ Container stage_2-bench-run-a1ea9a05ab66 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-250-replicas-1-rep-3: batches of 250 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-250-replicas-1-rep-3 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-5e33898ab22c Creating 
+ Container stage_2-bench-run-5e33898ab22c Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 17
+ Container stage_2-bench-run-068c3971f5ff Creating 
+ Container stage_2-bench-run-068c3971f5ff Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-2-rep-3: batches of 100 books, 2 indexer replicas ===
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-2-rep-3 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-5c5c0fb78b81 Creating 
+ Container stage_2-bench-run-5c5c0fb78b81 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 18
+ Container stage_2-bench-run-a9dfdf655655 Creating 
+ Container stage_2-bench-run-a9dfdf655655 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-3-rep-3: batches of 100 books, 3 indexer replicas ===
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Recreate 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-2 Recreated 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-3 Waiting 
+ Container stage_2-indexer-2 Healthy 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-3 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-3-rep-3 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-0bfaaa3764b0 Creating 
+ Container stage_2-bench-run-0bfaaa3764b0 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 19
+ Container stage_2-bench-run-0934980503a1 Creating 
+ Container stage_2-bench-run-0934980503a1 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-1-replicas-1-rep-4: batches of 1 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-1-replicas-1-rep-4 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-4718d49de8ff Creating 
+ Container stage_2-bench-run-4718d49de8ff Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 20
+ Container stage_2-bench-run-e990cd891ac6 Creating 
+ Container stage_2-bench-run-e990cd891ac6 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-10-replicas-1-rep-4: batches of 10 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-10-replicas-1-rep-4 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-3d37fa41e4ab Creating 
+ Container stage_2-bench-run-3d37fa41e4ab Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 21
+ Container stage_2-bench-run-9deb7b95827d Creating 
+ Container stage_2-bench-run-9deb7b95827d Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-1-rep-4: batches of 100 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-1-rep-4 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-b944b5e3f67f Creating 
+ Container stage_2-bench-run-b944b5e3f67f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 22
+ Container stage_2-bench-run-e1c6df5f587b Creating 
+ Container stage_2-bench-run-e1c6df5f587b Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-250-replicas-1-rep-4: batches of 250 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-250-replicas-1-rep-4 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-d0b95b417309 Creating 
+ Container stage_2-bench-run-d0b95b417309 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 23
+ Container stage_2-bench-run-60455c7528a5 Creating 
+ Container stage_2-bench-run-60455c7528a5 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-2-rep-4: batches of 100 books, 2 indexer replicas ===
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-2-rep-4 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-ef978a147719 Creating 
+ Container stage_2-bench-run-ef978a147719 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 24
+ Container stage_2-bench-run-94421496abc3 Creating 
+ Container stage_2-bench-run-94421496abc3 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-3-rep-4: batches of 100 books, 3 indexer replicas ===
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Recreate 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-2 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-3 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+ Container stage_2-indexer-3 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-3-rep-4 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-2161832ac234 Creating 
+ Container stage_2-bench-run-2161832ac234 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 25
+ Container stage_2-bench-run-86560ec4fae2 Creating 
+ Container stage_2-bench-run-86560ec4fae2 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-1-replicas-1-rep-5: batches of 1 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Stopping 
+ Container stage_2-indexer-3 Stopping 
+ Container stage_2-indexer-3 Stopped 
+ Container stage_2-indexer-3 Removing 
+ Container stage_2-indexer-3 Removed 
+ Container stage_2-indexer-2 Stopped 
+ Container stage_2-indexer-2 Removing 
+ Container stage_2-indexer-2 Removed 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-1-replicas-1-rep-5 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-8fb49c55d456 Creating 
+ Container stage_2-bench-run-8fb49c55d456 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 26
+ Container stage_2-bench-run-726fc1941097 Creating 
+ Container stage_2-bench-run-726fc1941097 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-10-replicas-1-rep-5: batches of 10 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-10-replicas-1-rep-5 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-fdf5105dd0f4 Creating 
+ Container stage_2-bench-run-fdf5105dd0f4 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 27
+ Container stage_2-bench-run-b1b795fc38c7 Creating 
+ Container stage_2-bench-run-b1b795fc38c7 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-1-rep-5: batches of 100 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-1-rep-5 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-41047d9d2bcc Creating 
+ Container stage_2-bench-run-41047d9d2bcc Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 28
+ Container stage_2-bench-run-7d23e854035d Creating 
+ Container stage_2-bench-run-7d23e854035d Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-250-replicas-1-rep-5: batches of 250 books, 1 indexer replicas ===
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-1 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-250-replicas-1-rep-5 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-c4308005da2a Creating 
+ Container stage_2-bench-run-c4308005da2a Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 29
+ Container stage_2-bench-run-b793b2e41aed Creating 
+ Container stage_2-bench-run-b793b2e41aed Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-2-rep-5: batches of 100 books, 2 indexer replicas ===
+ Container stage_2-indexer-2 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-2 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-2-rep-5 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-53de8db78bfa Creating 
+ Container stage_2-bench-run-53de8db78bfa Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 30
+ Container stage_2-bench-run-500fab3cacf0 Creating 
+ Container stage_2-bench-run-500fab3cacf0 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+=== Trial batch-100-replicas-3-rep-5: batches of 100 books, 3 indexer replicas ===
+ Container stage_2-indexer-3 Creating 
+ Container stage_2-indexer-1 Recreate 
+ Container stage_2-indexer-2 Recreate 
+ Container stage_2-indexer-3 Created 
+ Container stage_2-indexer-1 Recreated 
+ Container stage_2-indexer-2 Recreated 
+ Container stage_2-indexer-2 Starting 
+ Container stage_2-indexer-2 Started 
+ Container stage_2-indexer-1 Starting 
+ Container stage_2-indexer-1 Started 
+ Container stage_2-indexer-3 Starting 
+ Container stage_2-indexer-3 Started 
+ Container stage_2-indexer-2 Waiting 
+ Container stage_2-indexer-1 Waiting 
+ Container stage_2-indexer-3 Waiting 
+ Container stage_2-indexer-2 Healthy 
+ Container stage_2-indexer-1 Healthy 
+ Container stage_2-indexer-3 Healthy 
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Recorded trial batch-100-replicas-3-rep-5 of run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+ Container stage_2-bench-run-adedbdf11048 Creating 
+ Container stage_2-bench-run-adedbdf11048 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO org.ulpgc.tarantino.bench.recovery.RecoveryTool - generation reached 31
+[main] INFO org.ulpgc.tarantino.bench.containers.StatsTool - Recorded 103975 container samples in benchmarks\runs\20261105-220915-index-throughput-c1376c7\stats.csv
+[main] INFO org.ulpgc.tarantino.bench.throughput.ThroughputReport - Wrote the throughput of 30 trials to benchmarks\runs\20261105-220915-index-throughput-c1376c7\index.csv
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Finished run 20261105-220915-index-throughput-c1376c7 in benchmarks\runs\20261105-220915-index-throughput-c1376c7\manifest.json
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261105-220915-index-throughput-c1376c7\charts\index-throughput.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261105-220915-index-throughput-c1376c7\charts\cpu.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261105-220915-index-throughput-c1376c7\charts\memory.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261105-220915-index-throughput-c1376c7\charts\cpu-indexing.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261105-220915-index-throughput-c1376c7\charts\memory-indexing.png
+Results in benchmarks/runs/20261105-220915-index-throughput-c1376c7

@@ -1,0 +1,42 @@
+activemq-1  | 2026-11-06T01:56:07.450583233Z INFO: Loading '/opt/apache-activemq/bin/setenv'
+activemq-1  | 2026-11-06T01:56:07.451160926Z INFO: Using java '/opt/java/openjdk/bin/java'
+activemq-1  | 2026-11-06T01:56:07.453126540Z INFO: Starting in foreground, this is just for debugging purposes (stop process by pressing CTRL+C)
+activemq-1  | 2026-11-06T01:56:07.453134993Z INFO: Creating pidfile /opt/apache-activemq/data/activemq.pid
+activemq-1  | 2026-11-06T01:56:07.691850419Z Java Runtime: Eclipse Adoptium 17.0.16 /opt/java/openjdk
+activemq-1  | 2026-11-06T01:56:07.691867611Z   Heap sizes: current=67584k  free=60645k  max=1048576k
+activemq-1  | 2026-11-06T01:56:07.692867234Z     JVM args: -Xms64M -Xmx1G -Djava.util.logging.config.file=logging.properties -Djava.security.auth.login.config=/opt/apache-activemq/conf/login.config -Djetty.host=0.0.0.0 -Dcom.sun.management.jmxremote -Djava.awt.headless=true -Djava.io.tmpdir=/opt/apache-activemq/tmp --add-reads=java.xml=java.logging --add-opens=java.base/java.security=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.naming/javax.naming.spi=ALL-UNNAMED --add-opens=java.rmi/sun.rmi.transport.tcp=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.jar=ALL-UNNAMED --add-exports=jdk.xml.dom/org.w3c.dom.html=ALL-UNNAMED --add-exports=jdk.naming.rmi/com.sun.jndi.url.rmi=ALL-UNNAMED -Dactivemq.classpath=/opt/apache-activemq/conf: -Dactivemq.home=/opt/apache-activemq -Dactivemq.base=/opt/apache-activemq -Dactivemq.conf=/opt/apache-activemq/conf -Dactivemq.data=/opt/apache-activemq/data -Djolokia.conf=file:/opt/apache-activemq/conf/jolokia-access.xml
+activemq-1  | 2026-11-06T01:56:07.692874487Z Extensions classpath:
+activemq-1  | 2026-11-06T01:56:07.692875821Z   [/opt/apache-activemq/lib,/opt/apache-activemq/lib/camel,/opt/apache-activemq/lib/optional,/opt/apache-activemq/lib/web,/opt/apache-activemq/lib/extra]
+activemq-1  | 2026-11-06T01:56:07.692876914Z ACTIVEMQ_HOME: /opt/apache-activemq
+activemq-1  | 2026-11-06T01:56:07.692942549Z ACTIVEMQ_BASE: /opt/apache-activemq
+activemq-1  | 2026-11-06T01:56:07.692946816Z ACTIVEMQ_CONF: /opt/apache-activemq/conf
+activemq-1  | 2026-11-06T01:56:07.692947383Z ACTIVEMQ_DATA: /opt/apache-activemq/data
+activemq-1  | 2026-11-06T01:56:08.128284842Z Loading message broker from: xbean:activemq.xml
+activemq-1  | 2026-11-06T01:56:08.578170709Z  INFO | Using Persistence Adapter: KahaDBPersistenceAdapter[/opt/apache-activemq/data/kahadb]
+activemq-1  | 2026-11-06T01:56:08.579484250Z  INFO | Starting Persistence Adapter: KahaDBPersistenceAdapter[/opt/apache-activemq/data/kahadb]
+activemq-1  | 2026-11-06T01:56:08.586478859Z  INFO | Starting KahaDBStore
+activemq-1  | 2026-11-06T01:56:08.586610728Z  INFO | Opening MessageDatabase
+activemq-1  | 2026-11-06T01:56:08.648648610Z  INFO | Starting Temp Data Store
+activemq-1  | 2026-11-06T01:56:08.649063814Z  INFO | PListStore:[/opt/apache-activemq/data/localhost/tmp_storage] started
+activemq-1  | 2026-11-06T01:56:08.649074393Z  INFO | Starting Job Scheduler Store
+activemq-1  | 2026-11-06T01:56:08.649242556Z  INFO | Persistence Adapter successfully started
+activemq-1  | 2026-11-06T01:56:08.765598090Z  INFO | Installing StaticsBroker
+activemq-1  | 2026-11-06T01:56:08.768014312Z  INFO | Apache ActiveMQ 6.1.8 (localhost, ID:354457186d9e-43733-1793930168653-0:1) is starting
+activemq-1  | 2026-11-06T01:56:08.769024913Z  INFO | Starting StatisticsBroker
+activemq-1  | 2026-11-06T01:56:08.774545876Z  INFO | Listening for connections at: tcp://354457186d9e:61616?maximumConnections=1000&wireFormat.maxFrameSize=104857600
+activemq-1  | 2026-11-06T01:56:08.774814189Z  INFO | Connector openwire started
+activemq-1  | 2026-11-06T01:56:08.776008796Z  INFO | Listening for connections at: amqp://354457186d9e:5672?maximumConnections=1000&wireFormat.maxFrameSize=104857600
+activemq-1  | 2026-11-06T01:56:08.776247023Z  INFO | Connector amqp started
+activemq-1  | 2026-11-06T01:56:08.777621597Z  INFO | Listening for connections at: stomp://354457186d9e:61613?maximumConnections=1000&wireFormat.maxFrameSize=104857600
+activemq-1  | 2026-11-06T01:56:08.777863623Z  INFO | Connector stomp started
+activemq-1  | 2026-11-06T01:56:08.779036034Z  INFO | Listening for connections at: mqtt://354457186d9e:1883?maximumConnections=1000&wireFormat.maxFrameSize=104857600
+activemq-1  | 2026-11-06T01:56:08.779258325Z  INFO | Connector mqtt started
+activemq-1  | 2026-11-06T01:56:08.780663639Z  INFO | Starting Jetty server
+activemq-1  | 2026-11-06T01:56:08.800284469Z  INFO | Creating Jetty connector
+activemq-1  | 2026-11-06T01:56:08.853200708Z  WARN | ServletContext@o.e.j.s.ServletContextHandler@5d43409a{/,null,STARTING} has uncovered HTTP methods for the following paths: [/]
+activemq-1  | 2026-11-06T01:56:08.864998718Z  INFO | Listening for connections at ws://354457186d9e:61614?maximumConnections=1000&wireFormat.maxFrameSize=104857600
+activemq-1  | 2026-11-06T01:56:08.865044963Z  INFO | Connector ws started
+activemq-1  | 2026-11-06T01:56:08.865134895Z  INFO | Apache ActiveMQ 6.1.8 (localhost, ID:354457186d9e-43733-1793930168653-0:1) started
+activemq-1  | 2026-11-06T01:56:08.865244283Z  INFO | For help or more information please see: http://activemq.apache.org
+activemq-1  | 2026-11-06T01:56:09.140099466Z  INFO | ActiveMQ WebConsole available at http://0.0.0.0:8161/
+activemq-1  | 2026-11-06T01:56:09.140115766Z  INFO | ActiveMQ Jolokia REST API available at http://0.0.0.0:8161/api/jolokia/

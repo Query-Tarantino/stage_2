@@ -1,0 +1,14 @@
+nginx-1  | 2026-11-06T07:03:40.190377095Z /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx-1  | 2026-11-06T07:03:40.190740711Z /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx-1  | 2026-11-06T07:03:40.191540718Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx-1  | 2026-11-06T07:03:40.194505796Z 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T07:03:40.201541359Z 10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx-1  | 2026-11-06T07:03:40.201606976Z /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+nginx-1  | 2026-11-06T07:03:40.201879208Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx-1  | 2026-11-06T07:03:40.203722379Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+nginx-1  | 2026-11-06T07:03:40.204930253Z /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx-1  | 2026-11-06T07:03:41.893931746Z 2026/11/06 07:03:41 [error] 31#31: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.18.0.8, server: , request: "POST /internal/download HTTP/1.1", upstream: "http://172.18.0.11:7001/internal/download", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:03:41.906826872Z 2026/11/06 07:03:41 [error] 31#31: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 172.18.0.8, server: , request: "POST /internal/download HTTP/1.1", upstream: "http://172.18.0.11:7001/internal/download", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:03:42.227816714Z 2026/11/06 07:03:42 [error] 31#31: *1 upstream prematurely closed connection while reading response header from upstream, client: 172.18.0.8, server: , request: "POST /internal/download HTTP/1.1", upstream: "http://172.18.0.6:7001/internal/download", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:03:43.449614589Z 2026/11/06 07:03:43 [error] 31#31: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.8, server: , request: "POST /internal/download HTTP/1.1", upstream: "http://172.18.0.6:7001/internal/download", host: "nginx:8082"
+nginx-1  | 2026-11-06T07:03:44.500007864Z 2026/11/06 07:03:44 [error] 31#31: *1 upstream timed out (110: Operation timed out) while connecting to upstream, client: 172.18.0.8, server: , request: "POST /internal/download HTTP/1.1", upstream: "http://172.18.0.6:7001/internal/download", host: "nginx:8082"

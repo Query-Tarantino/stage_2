@@ -1,0 +1,4 @@
+"Benchmark","Mode","Score","Score Error (99.9%)","Unit","Forks","Warmup Iterations","Measurement Iterations","JVM Args","Param: bookId"
+"org.ulpgc.tarantino.crawler.benchmarks.GutenbergTextBenchmark.splitHeaderAndBody","avgt",101.6212,9.6154,"us/op",3,5,10,"-Xmx512m","1080"
+"org.ulpgc.tarantino.crawler.benchmarks.GutenbergTextBenchmark.splitHeaderAndBody","avgt",1617.2085,10.0651,"us/op",3,5,10,"-Xmx512m","84"
+"org.ulpgc.tarantino.crawler.benchmarks.GutenbergTextBenchmark.splitHeaderAndBody","avgt",12336.7343,359.9912,"us/op",3,5,10,"-Xmx512m","2600"
