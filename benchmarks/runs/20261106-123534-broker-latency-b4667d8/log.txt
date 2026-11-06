@@ -1,0 +1,684 @@
+Opened run 20261106-123534-broker-latency-b4667d8: candidates mirror, replicas 1 2 3, 5 repetitions, phases up to 1800 s
+Machine: the official one, 24 hardware threads, 8 P cores and 16 E cores
+Factors: broker (hazelcast activemq-nonpersistent activemq-persistent) and consumers (1 3 8), 5 repetitions each, interleaved: the 9 configurations of repetition 1, then repetition 2
+Each trial: 1,000 messages/s for 35 s, the first 5 s discarded, then 50,000 messages as fast as possible, each round on its own queue bench-broker-<trial>-<round>
+H1: every p50 is under 1 ms
+H2: the activemq-persistent p50 is at least 3 times the activemq-nonpersistent one, because of the synchronous disk write
+H3: even the slowest p50 is at least 100 times smaller than the median queue wait of coordination-cost with 1 replica in this campaign
+ Network stage_2_default Creating 
+ Network stage_2_default Creating 
+ Network stage_2_default Created 
+ Network stage_2_default Created 
+ Container stage_2-hazelcast-1 Creating 
+ Container stage_2-activemq-1 Creating 
+ Container stage_2-hazelcast-1 Created 
+ Container stage_2-activemq-1 Created 
+ Container stage_2-activemq-1 Starting 
+ Container stage_2-hazelcast-1 Starting 
+ Container stage_2-activemq-1 Started 
+ Container stage_2-hazelcast-1 Started 
+=== Trial broker-hazelcast-consumers-1-rep-1 ===
+ Container stage_2-bench-run-a5ff0a6143a4 Creating 
+ Container stage_2-bench-run-a5ff0a6143a4 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:38221
+[hz.client_1.internal-4] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[hz.client_1.internal-3] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-1-rep-1: 30000 messages kept, p50 105.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:38221->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:36:23.556, lastWriteTime=2026-11-06 12:36:23.503, closedTime=2026-11-06 12:36:23.740}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-3-rep-1 ===
+ Container stage_2-bench-run-b900e642a35e Creating 
+ Container stage_2-bench-run-b900e642a35e Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:43763
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-1] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-3-rep-1: 30000 messages kept, p50 105.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:43763->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:37:05.968, lastWriteTime=2026-11-06 12:37:05.868, closedTime=2026-11-06 12:37:06.144}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-8-rep-1 ===
+ Container stage_2-bench-run-2d50040a462a Creating 
+ Container stage_2-bench-run-2d50040a462a Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:60719
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-8-rep-1: 30000 messages kept, p50 109.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:60719->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:37:48.530, lastWriteTime=2026-11-06 12:37:48.430, closedTime=2026-11-06 12:37:48.717}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-activemq-nonpersistent-consumers-1-rep-1 ===
+ Container stage_2-bench-run-9dca04f0a566 Creating 
+ Container stage_2-bench-run-9dca04f0a566 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-1-rep-1: 30000 messages kept, p50 137.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-3-rep-1 ===
+ Container stage_2-bench-run-72057f3ff838 Creating 
+ Container stage_2-bench-run-72057f3ff838 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-3-rep-1: 30000 messages kept, p50 136.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-8-rep-1 ===
+ Container stage_2-bench-run-7712a54d6e64 Creating 
+ Container stage_2-bench-run-7712a54d6e64 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-8-rep-1: 30000 messages kept, p50 135.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-1-rep-1 ===
+ Container stage_2-bench-run-87818643dc0f Creating 
+ Container stage_2-bench-run-87818643dc0f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-1-rep-1: 30000 messages kept, p50 183.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-3-rep-1 ===
+ Container stage_2-bench-run-556ef4f97319 Creating 
+ Container stage_2-bench-run-556ef4f97319 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-3-rep-1: 30000 messages kept, p50 183.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-8-rep-1 ===
+ Container stage_2-bench-run-9f0d3688d5eb Creating 
+ Container stage_2-bench-run-9f0d3688d5eb Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-8-rep-1: 30000 messages kept, p50 183.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-hazelcast-consumers-1-rep-2 ===
+ Container stage_2-bench-run-1b9091414132 Creating 
+ Container stage_2-bench-run-1b9091414132 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:42597
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-3] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-1-rep-2: 30000 messages kept, p50 101.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:42597->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:44:03.032, lastWriteTime=2026-11-06 12:44:02.931, closedTime=2026-11-06 12:44:03.211}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-3-rep-2 ===
+ Container stage_2-bench-run-54c90f39c3de Creating 
+ Container stage_2-bench-run-54c90f39c3de Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:49443
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-1] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-3-rep-2: 30000 messages kept, p50 105.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:49443->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:44:45.935, lastWriteTime=2026-11-06 12:44:45.835, closedTime=2026-11-06 12:44:46.122}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-8-rep-2 ===
+ Container stage_2-bench-run-fb1ebc57be34 Creating 
+ Container stage_2-bench-run-fb1ebc57be34 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:45907
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-8-rep-2: 30000 messages kept, p50 107.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:45907->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:45:28.527, lastWriteTime=2026-11-06 12:45:28.427, closedTime=2026-11-06 12:45:28.710}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-activemq-nonpersistent-consumers-1-rep-2 ===
+ Container stage_2-bench-run-e1d802f6d53f Creating 
+ Container stage_2-bench-run-e1d802f6d53f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-1-rep-2: 30000 messages kept, p50 142.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-3-rep-2 ===
+ Container stage_2-bench-run-b28ee54aeb6f Creating 
+ Container stage_2-bench-run-b28ee54aeb6f Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-3-rep-2: 30000 messages kept, p50 135.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-8-rep-2 ===
+ Container stage_2-bench-run-e4dbfbfa9132 Creating 
+ Container stage_2-bench-run-e4dbfbfa9132 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-8-rep-2: 30000 messages kept, p50 145.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-1-rep-2 ===
+ Container stage_2-bench-run-34275c5ce087 Creating 
+ Container stage_2-bench-run-34275c5ce087 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-1-rep-2: 30003 messages kept, p50 180.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-3-rep-2 ===
+ Container stage_2-bench-run-a88651636fd2 Creating 
+ Container stage_2-bench-run-a88651636fd2 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-3-rep-2: 30000 messages kept, p50 185.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-8-rep-2 ===
+ Container stage_2-bench-run-28855408da3c Creating 
+ Container stage_2-bench-run-28855408da3c Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-8-rep-2: 30000 messages kept, p50 192.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-hazelcast-consumers-1-rep-3 ===
+ Container stage_2-bench-run-fde2ed81255b Creating 
+ Container stage_2-bench-run-fde2ed81255b Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:50809
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-3] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-1-rep-3: 30000 messages kept, p50 99.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:50809->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:51:43.165, lastWriteTime=2026-11-06 12:51:43.064, closedTime=2026-11-06 12:51:43.343}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-3-rep-3 ===
+ Container stage_2-bench-run-a00c6101185c Creating 
+ Container stage_2-bench-run-a00c6101185c Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:34939
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-3-rep-3: 30000 messages kept, p50 105.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:34939->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:52:25.310, lastWriteTime=2026-11-06 12:52:25.210, closedTime=2026-11-06 12:52:25.484}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-8-rep-3 ===
+ Container stage_2-bench-run-d6b3133e6c26 Creating 
+ Container stage_2-bench-run-d6b3133e6c26 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:46543
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-8-rep-3: 30000 messages kept, p50 102.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:46543->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:53:07.778, lastWriteTime=2026-11-06 12:53:07.677, closedTime=2026-11-06 12:53:07.950}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-activemq-nonpersistent-consumers-1-rep-3 ===
+ Container stage_2-bench-run-097ef6926cc2 Creating 
+ Container stage_2-bench-run-097ef6926cc2 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-1-rep-3: 30000 messages kept, p50 138.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-3-rep-3 ===
+ Container stage_2-bench-run-783041a9fd22 Creating 
+ Container stage_2-bench-run-783041a9fd22 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-3-rep-3: 30000 messages kept, p50 136.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-8-rep-3 ===
+ Container stage_2-bench-run-e1d701bd2e44 Creating 
+ Container stage_2-bench-run-e1d701bd2e44 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-8-rep-3: 30000 messages kept, p50 137.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-1-rep-3 ===
+ Container stage_2-bench-run-e03cb379481a Creating 
+ Container stage_2-bench-run-e03cb379481a Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-1-rep-3: 30000 messages kept, p50 183.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-3-rep-3 ===
+ Container stage_2-bench-run-db9004d814fc Creating 
+ Container stage_2-bench-run-db9004d814fc Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-3-rep-3: 30000 messages kept, p50 185.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-8-rep-3 ===
+ Container stage_2-bench-run-a187e25ded16 Creating 
+ Container stage_2-bench-run-a187e25ded16 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-8-rep-3: 30000 messages kept, p50 182.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-hazelcast-consumers-1-rep-4 ===
+ Container stage_2-bench-run-57968b51f7c9 Creating 
+ Container stage_2-bench-run-57968b51f7c9 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:54547
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-1-rep-4: 30000 messages kept, p50 104.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:54547->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 12:59:23.259, lastWriteTime=2026-11-06 12:59:23.159, closedTime=2026-11-06 12:59:23.444}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-3-rep-4 ===
+ Container stage_2-bench-run-e6c67d52f94b Creating 
+ Container stage_2-bench-run-e6c67d52f94b Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:35589
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-3-rep-4: 30000 messages kept, p50 101.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:35589->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 13:00:06.003, lastWriteTime=2026-11-06 13:00:05.903, closedTime=2026-11-06 13:00:06.194}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-8-rep-4 ===
+ Container stage_2-bench-run-7a9044da85af Creating 
+ Container stage_2-bench-run-7a9044da85af Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:54357
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-1] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-8-rep-4: 30000 messages kept, p50 105.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:54357->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 13:00:48.174, lastWriteTime=2026-11-06 13:00:48.074, closedTime=2026-11-06 13:00:48.362}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-activemq-nonpersistent-consumers-1-rep-4 ===
+ Container stage_2-bench-run-9f4038caf80c Creating 
+ Container stage_2-bench-run-9f4038caf80c Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-1-rep-4: 30000 messages kept, p50 142.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-3-rep-4 ===
+ Container stage_2-bench-run-cb20891eeda0 Creating 
+ Container stage_2-bench-run-cb20891eeda0 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-3-rep-4: 30000 messages kept, p50 138.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-8-rep-4 ===
+ Container stage_2-bench-run-05b1d1d8dea5 Creating 
+ Container stage_2-bench-run-05b1d1d8dea5 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-8-rep-4: 30000 messages kept, p50 136.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-1-rep-4 ===
+ Container stage_2-bench-run-2619855097df Creating 
+ Container stage_2-bench-run-2619855097df Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-1-rep-4: 30000 messages kept, p50 175.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-3-rep-4 ===
+ Container stage_2-bench-run-e49618e83c8d Creating 
+ Container stage_2-bench-run-e49618e83c8d Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-3-rep-4: 30000 messages kept, p50 183.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-8-rep-4 ===
+ Container stage_2-bench-run-6db7adb0c265 Creating 
+ Container stage_2-bench-run-6db7adb0c265 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-8-rep-4: 30000 messages kept, p50 185.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-hazelcast-consumers-1-rep-5 ===
+ Container stage_2-bench-run-bc256e2eacf7 Creating 
+ Container stage_2-bench-run-bc256e2eacf7 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:54627
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-1-rep-5: 30000 messages kept, p50 103.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:54627->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 13:07:01.385, lastWriteTime=2026-11-06 13:07:01.285, closedTime=2026-11-06 13:07:01.563}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-3-rep-5 ===
+ Container stage_2-bench-run-e75fa18b3738 Creating 
+ Container stage_2-bench-run-e75fa18b3738 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:55613
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-2] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-3-rep-5: 30000 messages kept, p50 105.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:55613->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 13:07:44.860, lastWriteTime=2026-11-06 13:07:44.759, closedTime=2026-11-06 13:07:45.040}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-hazelcast-consumers-8-rep-5 ===
+ Container stage_2-bench-run-a8ba0bfc8127 Creating 
+ Container stage_2-bench-run-a8ba0bfc8127 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[main] INFO com.hazelcast.client.impl.spi.ClientInvocationService - hz.client_1 [tarantino] [5.7.0] Running with 2 response threads, dynamic=true
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTING
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is STARTED
+[main] INFO com.hazelcast.internal.diagnostics.Diagnostics - hz.client_1 [tarantino] [5.7.0] Diagnostics service is disabled. You can enable it over Management Center or Operator dynamically.
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to cluster: tarantino
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Trying to connect to [hazelcast]:5701
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.hazelcast.internal.memory.impl.UnsafeUtil (file:/app/bench/bench-1.0-SNAPSHOT.jar)
+WARNING: Please consider reporting this to the maintainers of class com.hazelcast.internal.memory.impl.UnsafeUtil
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.spi.ClientClusterService - hz.client_1 [tarantino] [5.7.0] Members [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef
+}
+
+[hz.client_1.internal-1] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Authenticated with server [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, server version: 5.7.0, local address: /172.18.0.4:41021
+[hz.client_1.internal-2] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_CONNECTED
+[main] INFO com.hazelcast.client.impl.statistics.ClientStatisticsService - Client statistics is enabled with period 5 seconds.
+[hz.client_1.internal-1] INFO com.hazelcast.client.util.ClientConnectivityLogger - hz.client_1 [tarantino] [5.7.0] 
+
+Client Connectivity [1] {
+	Member [172.18.0.3]:5701 - 4e239591-1f5e-431f-a059-14d8f16837ef - connected
+}
+
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-hazelcast-consumers-8-rep-5: 30000 messages kept, p50 103.0 µs, 50000 of 50000 throughput messages received
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTTING_DOWN
+[main] INFO com.hazelcast.client.impl.connection.ClientConnectionManager - hz.client_1 [tarantino] [5.7.0] Removed connection to endpoint: [172.18.0.3]:5701:4e239591-1f5e-431f-a059-14d8f16837ef, connection: ClientConnection{alive=false, connectionId=1, channel=NioChannel{/172.18.0.4:41021->hazelcast/172.18.0.3:5701}, remoteAddress=[172.18.0.3]:5701, remoteUuid=4e239591-1f5e-431f-a059-14d8f16837ef, clusterUuid=51cd9c6d-832a-4677-99d9-c77fefc1ea84, lastReadTime=2026-11-06 13:08:27.191, lastWriteTime=2026-11-06 13:08:27.091, closedTime=2026-11-06 13:08:27.363}
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is CLIENT_DISCONNECTED
+[main] INFO com.hazelcast.core.LifecycleService - hz.client_1 [tarantino] [5.7.0] HazelcastClient 5.7.0 (20260512 - b9df48a) is SHUTDOWN
+=== Trial broker-activemq-nonpersistent-consumers-1-rep-5 ===
+ Container stage_2-bench-run-c4257ab634c8 Creating 
+ Container stage_2-bench-run-c4257ab634c8 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-1-rep-5: 30000 messages kept, p50 138.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-3-rep-5 ===
+ Container stage_2-bench-run-e22ab972b5d7 Creating 
+ Container stage_2-bench-run-e22ab972b5d7 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-3-rep-5: 30000 messages kept, p50 140.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-nonpersistent-consumers-8-rep-5 ===
+ Container stage_2-bench-run-9c042776fc66 Creating 
+ Container stage_2-bench-run-9c042776fc66 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-nonpersistent-consumers-8-rep-5: 30000 messages kept, p50 135.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-1-rep-5 ===
+ Container stage_2-bench-run-0fcf8b0b9fe4 Creating 
+ Container stage_2-bench-run-0fcf8b0b9fe4 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-1-rep-5: 30000 messages kept, p50 179.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-3-rep-5 ===
+ Container stage_2-bench-run-735a875b068d Creating 
+ Container stage_2-bench-run-735a875b068d Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-3-rep-5: 30000 messages kept, p50 182.0 µs, 50000 of 50000 throughput messages received
+=== Trial broker-activemq-persistent-consumers-8-rep-5 ===
+ Container stage_2-bench-run-8b39194321f5 Creating 
+ Container stage_2-bench-run-8b39194321f5 Created 
+Picked up JAVA_TOOL_OPTIONS: -Xmx512m -XX:+ExitOnOutOfMemoryError
+[ActiveMQ Task-1] INFO org.apache.activemq.transport.failover.FailoverTransport - Successfully connected to tcp://activemq:61616
+[main] INFO org.ulpgc.tarantino.bench.broker.BrokerTool - Trial broker-activemq-persistent-consumers-8-rep-5: 30000 messages kept, p50 185.0 µs, 50000 of 50000 throughput messages received
+[main] INFO org.ulpgc.tarantino.bench.containers.StatsTool - Recorded 13729 container samples in benchmarks\runs\20261106-123534-broker-latency-b4667d8\stats.csv
+[main] INFO org.ulpgc.tarantino.bench.manifest.ManifestTool - Finished run 20261106-123534-broker-latency-b4667d8 in benchmarks\runs\20261106-123534-broker-latency-b4667d8\manifest.json
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261106-123534-broker-latency-b4667d8\charts\cpu.png
+[main] INFO org.ulpgc.tarantino.bench.charts.ChartsTool - Wrote benchmarks\runs\20261106-123534-broker-latency-b4667d8\charts\memory.png
+Results in benchmarks/runs/20261106-123534-broker-latency-b4667d8
