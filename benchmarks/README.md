@@ -1,66 +1,95 @@
 # Benchmark results
 
-What the official runs of `SPEC.md` §9 show. Every figure comes from the `summary.csv` of the run named next to it:
-the mean ± the half-width of its 95 % CI over the 5 interleaved repetitions of each configuration, and p50 or p95
-where the tail matters. Each section gives the command that made the run and where its raw data is, and checks the
-hypotheses that the script printed before measuring.
+What the official runs of `SPEC.md` §9 show. Every figure comes from the `summary.csv` of the run named next to it,
+unless the text names another file of that run: the mean ± the half-width of its 95 % CI over the 5 interleaved
+repetitions of each configuration, and p50 or p95 where the tail matters. Each section gives the command that made the
+run and where its raw data is, and checks the hypotheses that the script printed before measuring.
 
 All runs used the same machine and corpus, as their `manifest.json` and `corpus.json` record: an Intel Core Ultra 9
-275HX with 24 hardware threads and 31.4 GiB, Windows 11 with Docker Desktop 29.9.2 given 24 CPUs and 15.3 GiB, and the
-2,800 books of the benchmark corpus (755,974 terms) from the local mirror. Each run is from a clean `dev` commit, the
-one at the end of its `run_id`.
+275HX with 24 hardware threads (8 P cores and 16 E cores) and 31.4 GiB, Windows 11 with Docker Desktop 29.9.2 given
+24 CPUs and 15.3 GiB, and the 2,800 books of the benchmark corpus (755,974 terms) from the local mirror. Each run is
+from a clean `dev` commit, the one at the end of its `run_id`.
+
+## The campaign
+
+`20261105-215348-campaign-c1376c7`, from `scripts/bench/all.sh` on `c1376c7`, ran the experiments and the recovery
+matrix in the five coordination modes (`SPEC.md` §11) in 9 h 45 min; its `runs.txt` lists each of the 187 steps, its
+exit code and its run folders. 186 steps ended with 0. `broker-latency` failed because Git Bash rewrote the run folder
+it passed to the container; once the script passed it as a relative path, `20261106-123526-campaign-b4667d8` ran that
+step alone with `scripts/bench/all.sh --only broker-latency`, on a commit that only changed scripts in `scripts/bench/`.
+
+The report cites only these runs and the two older runs that the campaign reuses, on the same machine, because the
+code they measure did not change, which `git diff` shows:
+
+| Measured with | Reused, or measured instead | Why |
+| --- | --- | --- |
+| `search-latency` | `20261104-140900-search-latency-8e1c1e8` | Its request path only had refactors since `8e1c1e8`, no dependency changed, and its JMH already met the protocol |
+| The indexer's JMH | `jmh/` of `20261103-204454-index-throughput-6925d4e` | The tokenizer, the header parser and the batch writer did not change since `6925d4e`; the rebuild trials ran again |
+| `coordination-cost` | The `hazelcast` trials of `coordination-variants` | They run the same procedure with the same N and repetitions |
+| Rows 09–12 of the failure matrix | N = 1 only in the four modes other than `hazelcast` | Their recovery time is mostly processing the whole corpus, which `coordination-variants` measures for every N and mode |
+
+Without those cuts the campaign took about 18 hours, more than one night on the one official machine. The other runs
+of 2 to 4 November stay in `benchmarks/runs/` and are no longer cited.
+
+One known flaw: the campaign brought the stack down without the `activemq` profile when it moved from mode
+`activemq-persistent` to `polling`, so an idle ActiveMQ container stayed up during the recovery runs of `polling` and
+`orchestrator`. No service of those modes connects to it; the scripts bring every mode down since `b4667d8`.
 
 ## Ingestion: books per second by `crawler` replicas and workers
 
-`20261102-204917-ingest-throughput-77ed00a`, from `./scripts/bench/ingest-throughput.sh`; raw data in `ingest.csv`,
-`stats.csv` and `logs/<trial>/`.
+`20261105-215351-ingest-throughput-c1376c7`, from `./scripts/bench/ingest-throughput.sh`; raw data in `ingest.csv`,
+`stats.csv`, `host.csv` and `logs/<trial>/`.
 
 | Replicas | Workers per replica | Whole window (books/s) | Steady 10–90 % (books/s) |
 | --- | --- | --- | --- |
-| 1 | 4 | 403 ± 15 | 431 ± 17 |
-| 1 | 8 | 554 ± 73 | 600 ± 88 |
-| 1 | 16 | 610 ± 59 | 651 ± 69 |
-| 2 | 8 | 557 ± 39 | 609 ± 44 |
-| 3 | 8 | 526 ± 34 | 581 ± 40 |
+| 1 | 4 | 370 ± 51 | 393 ± 51 |
+| 1 | 8 | 504 ± 135 | 561 ± 132 |
+| 1 | 16 | 623 ± 27 | 671 ± 44 |
+| 2 | 8 | 548 ± 73 | 603 ± 84 |
+| 3 | 8 | 521 ± 17 | 572 ± 17 |
 
-- Workers help up to 8 and flatten after: +37 % from 4 to 8, +10 % from 8 to 16, as H2 expected.
+- Workers help with a shrinking gain: +36 % from 4 to 8 and +24 % from 8 to 16. H2 expected the curve to flatten
+  towards 16; it bends but does not flatten, and 8 workers is the noisiest configuration, ±135 books/s.
 - Replicas do not help, against H1: 2 and 3 replicas of 8 workers give the same books per second as 1, within their CIs.
-- CPU is not what limits ingestion. In the resource-usage run the whole stack uses 480–750 % of the 2,400 %
-  available, and adding crawlers raises their total CPU from 358 % to 563 % without raising the books per second. The
-  limit is in the parts every crawler shares: the `books-to-download` queue in the single Hazelcast member, the one
-  Mongo and the datalake volume. These runs do not tell which of the three.
-- JMH, in the run's `jmh/crawler.csv`: splitting header and body takes 88 µs for book 1080 (40 KB), 1.6 ms for book 84
-  (450 KB) and 12.5 ms for book 2600 (3.4 MB). At 554 books/s each of the 8 workers has 14 ms per book, so the text
+- CPU is not what limits ingestion. In the resource-usage run the whole host uses 956–1,281 % of the 2,400 % available
+  during ingestion, and adding crawlers raises their total CPU from 378 % to 537 % without raising the books per
+  second. The limit is in the parts every crawler shares: the `books-to-download` queue in the single Hazelcast member,
+  the one Mongo and the datalake volume. These runs do not tell which of the three.
+- JMH, in the run's `jmh/crawler.csv`: splitting header and body takes 102 µs for book 1080 (40 KB), 1.6 ms for book 84
+  (450 KB) and 12.3 ms for book 2600 (3.4 MB). At 504 books/s each of the 8 workers has 16 ms per book, so the text
   processing of a crawler is not the limit either.
 
 ## Indexing: books per second by batch size and `indexer` replicas
 
-`20261103-204454-index-throughput-6925d4e`, from `./scripts/bench/index-throughput.sh`; raw data in `index.csv`,
-`stats.csv` and `logs/<trial>/`. Each trial rebuilds the index of the whole corpus.
+`20261105-220915-index-throughput-c1376c7`, from `./scripts/bench/index-throughput.sh --without-jmh`; raw data in
+`index.csv`, `stats.csv`, `host.csv` and `logs/<trial>/`. Each trial rebuilds the index of the whole corpus.
 
 | Books per batch | Replicas | Books/s |
 | --- | --- | --- |
-| 1 | 1 | 5.46 ± 0.10 |
-| 10 | 1 | 12.4 ± 0.4 |
-| 100 | 1 | 28.7 ± 1.2 |
-| 250 | 1 | 33.0 ± 1.1 |
-| 100 | 2 | 47.4 ± 4.2 |
-| 100 | 3 | 60.5 ± 3.7 |
+| 1 | 1 | 5.52 ± 0.05 |
+| 10 | 1 | 12.5 ± 0.2 |
+| 100 | 1 | 28.5 ± 0.9 |
+| 250 | 1 | 33.3 ± 1.8 |
+| 100 | 2 | 48.4 ± 3.6 |
+| 100 | 3 | 59.8 ± 2.2 |
 
-- Bigger batches pay off, then flatten, as H1 expected: ×2.3 from 1 to 10 books, ×2.3 from 10 to 100, but only +15 %
+- Bigger batches pay off, then flatten, as H1 expected: ×2.3 from 1 to 10 books, ×2.3 from 10 to 100, but only +17 %
   from 100 to 250. A batch pays a fixed cost (its lease, publishing and marking) that more books share.
-- Replicas help less than linearly, as H2 expected: ×1.65 with 2 and ×2.11 with 3.
-- Mongo is where the time goes. JMH in `jmh/indexer.csv` writes a batch of 100 books in 2.81 s, which alone caps one
-  indexer at 36 books/s, close to the 28.7 measured end to end, while counting the terms of the largest book takes
-  37 ms and parsing a header 7 µs. Writing 1,000 books takes 12.5 s, 80 books/s, so the cost per book of a batch keeps
-  falling with its size. In the resource-usage run Mongo's CPU during indexing grows with the indexers, from 78 % with
-  one to 221 % with three, more than the indexers' own 63 % to 178 %.
+- Replicas help less than linearly, as H2 expected: ×1.70 with 2 and ×2.10 with 3.
+- Batches of 250 fit in `-Xmx512m`, as H3 expected: no indexer stopped with `OutOfMemoryError`, and in `stats.csv` the
+  indexer container peaks at 745–808 MiB per trial with batches of 250 against 587–778 MiB with batches of 100.
+- Mongo is where the time goes. The indexer's JMH, reused from `jmh/indexer.csv` of
+  `20261103-204454-index-throughput-6925d4e`, writes a batch of 100 books in 2.81 s, which alone caps one indexer at
+  36 books/s, close to the 28.5 measured end to end, while counting the terms of the largest book takes 37 ms and
+  parsing a header 7 µs. Writing 1,000 books takes 12.5 s, 80 books/s, so the cost per book of a batch keeps falling
+  with its size. In the resource-usage run Mongo's CPU during indexing grows with the indexers, from 78 % with one to
+  220 % with three, more than the indexers' own 64 % to 176 %.
 
 ## Search: latency of `/search` by clients, HTTP threads and `query` replicas
 
-`20261104-140900-search-latency-8e1c1e8`, from `./scripts/bench/search-latency.sh`; raw data in `load/<trial>.csv.gz`,
-one row per request, 18,496,487 in all. Each trial warms up for 30 s and measures for 120 s, with the closed-loop
-clients cycling through `workload/queries.txt`. The p95 is the mean of each repetition's p95.
+`20261104-140900-search-latency-8e1c1e8`, reused by the campaign, from `./scripts/bench/search-latency.sh`; raw data in
+`load/<trial>.csv.gz`, one row per request, 18,496,487 in all. Each trial warms up for 30 s and measures for 120 s,
+with the closed-loop clients cycling through `workload/queries.txt`. The p95 is the mean of each repetition's p95.
 
 | Clients | HTTP threads | Replicas | Mean latency (ms) | p95 (ms) | Requests/s |
 | --- | --- | --- | --- | --- | --- |
@@ -89,120 +118,106 @@ clients cycling through `workload/queries.txt`. The p95 is the mean of each repe
 
 ## Coordination cost: time a book spends in each queue
 
-`20261102-212416-coordination-cost-77ed00a`, from `./scripts/bench/coordination-cost.sh` with 1, 2 and 3 replicas of
-`crawler` and `indexer` together; raw data in `coordination.csv`, one row per book and trial, and `logs/<trial>/`.
+The `hazelcast` trials of `20261106-012054-coordination-variants-c1376c7`, from
+`./scripts/bench/coordination-variants.sh`, with 1, 2 and 3 replicas of `crawler` and `indexer` together; raw data in
+`coordination.csv`, one row per book and trial, and `logs/<trial>/`, and these figures in `variants.csv`.
 
 | Replicas | Wait in `books-to-download` | Download | Wait in `books-to-index` | Indexing | Time to publication |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 1,436 ± 380 ms | 13.1 ± 1.9 ms | 46.7 ± 1.2 s | 3.49 ± 0.08 s | 51.7 ± 1.0 s |
-| 2 | 794 ± 68 ms | 27.4 ± 1.1 ms | 26.0 ± 1.4 s | 4.12 ± 0.21 s | 31.0 ± 1.6 s |
-| 3 | 836 ± 89 ms | 45.1 ± 2.7 ms | 19.7 ± 1.1 s | 5.08 ± 0.29 s | 25.6 ± 1.4 s |
+| 1 | 1,383 ± 327 ms | 12.6 ± 1.6 ms | 46.6 ± 1.9 s | 3.45 ± 0.13 s | 51.4 ± 1.9 s |
+| 2 | 670 ± 115 ms | 27.0 ± 3.8 ms | 27.0 ± 2.7 s | 4.19 ± 0.41 s | 31.9 ± 3.1 s |
+| 3 | 736 ± 127 ms | 44.4 ± 4.5 ms | 19.9 ± 0.7 s | 4.93 ± 0.21 s | 25.6 ± 0.9 s |
 
-- Coordination costs far more than the work: with one replica a book waits 1.5 s for a crawler to download it in
-  13 ms, as H1 expected.
+- Coordination costs far more than the work: with one replica a book waits 1.4 s for a crawler to download it in
+  13 ms.
 - The wait for a crawler halves with 2 replicas and does not fall further with 3, while the download itself gets
-  slower with every replica, 13 → 27 → 45 ms, as H2 expected.
-- Indexing is the bottleneck of the whole pipeline: the wait in `books-to-index` is 90 % of the time to publication
-  with one replica. It falls 44 % with 2 replicas and 58 % with 3, while the wait for a crawler falls 45 % and then
-  42 %, so it falls as much or more, against H3. Books wait for an indexer, not for their batch to fill: with one
-  replica the p95 of that wait is 88 s, far above the 30 s a batch waits at most to fill.
+  slower with every replica, 13 → 27 → 44 ms.
+- Indexing is the bottleneck of the whole pipeline: the wait in `books-to-index` is 91 % of the time to publication
+  with one replica. It falls 42 % with 2 replicas and 57 % with 3. Books wait for an indexer, not for their batch to
+  fill: with one replica the p95 of that wait is 87 s, far above the 30 s a batch waits at most to fill.
 
-## Resources: CPU and memory per service and of the whole stack
+## Resources: CPU and memory per service, of the whole stack and of the host
 
-`20261102-215134-resource-usage-77ed00a`, from `./scripts/bench/resource-usage.sh` with 1, 2 and 3 replicas of
-`crawler` and `indexer` together; raw data in `stats.csv`, one `docker stats` row per container and refresh, and
-`logs/<trial>/` for the phase windows. CPU is in percent of one core, as `docker stats` counts it.
+`20261105-235758-resource-usage-c1376c7`, from `./scripts/bench/resource-usage.sh` with 1, 2 and 3 replicas of
+`crawler` and `indexer` together; raw data in `stats.csv`, one `docker stats` row per container and refresh,
+`host.csv` for the whole host and `logs/<trial>/` for the phase windows. CPU is in percent of one core, as
+`docker stats` counts it.
 
-| Replicas | Phase | Crawlers' CPU | Indexers' CPU | Mongo's CPU | Stack CPU | Stack memory |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | Ingestion | 358 ± 42 % | – | 47 ± 12 % | 480 ± 91 % | 1,190 ± 95 MiB |
-| 2 | Ingestion | 505 ± 35 % | – | 63 ± 5 % | 689 ± 20 % | 1,484 ± 103 MiB |
-| 3 | Ingestion | 563 ± 48 % | – | 64 ± 6 % | 749 ± 41 % | 1,766 ± 106 MiB |
-| 1 | Indexing | – | 63 ± 1 % | 78 ± 1 % | 146 ± 1 % | 2,324 ± 132 MiB |
-| 2 | Indexing | – | 116 ± 8 % | 151 ± 4 % | 275 ± 5 % | 3,019 ± 191 MiB |
-| 3 | Indexing | – | 178 ± 3 % | 221 ± 2 % | 409 ± 4 % | 3,822 ± 221 MiB |
+| Replicas | Phase | Crawlers' CPU | Indexers' CPU | Mongo's CPU | Stack CPU | Stack memory | Host CPU |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Ingestion | 378 ± 94 % | – | 50 ± 9 % | 505 ± 105 % | 1,199 ± 122 MiB | 956 ± 85 % |
+| 2 | Ingestion | 512 ± 74 % | – | 62 ± 11 % | 680 ± 109 % | 1,398 ± 125 MiB | 1,163 ± 155 % |
+| 3 | Ingestion | 537 ± 53 % | – | 65 ± 4 % | 717 ± 32 % | 1,723 ± 73 MiB | 1,281 ± 71 % |
+| 1 | Indexing | – | 64 ± 2 % | 78 ± 0.4 % | 147 ± 2 % | 2,264 ± 199 MiB | 208 ± 7 % |
+| 2 | Indexing | – | 119 ± 10 % | 150 ± 3 % | 277 ± 7 % | 2,967 ± 148 MiB | 346 ± 12 % |
+| 3 | Indexing | – | 176 ± 11 % | 220 ± 3 % | 406 ± 10 % | 3,930 ± 134 MiB | 494 ± 11 % |
 
-- The crawlers' total CPU grows with replicas, as H1 expected, but each crawler uses less, 358 → 252 → 188 %, instead
+- The crawlers' total CPU grows with replicas, as H1 expected, but each crawler uses less, 378 → 256 → 179 %, instead
   of staying flat: the same books per second (see Ingestion) are split among more crawlers, and the 24 hardware
   threads are never near saturation.
-- During ingestion the crawlers use 7.6–8.8 times the CPU of Mongo, as H2 expected; during indexing Mongo uses more
+- During ingestion the crawlers use 7.6–8.3 times the CPU of Mongo, as H2 expected; during indexing Mongo uses more
   CPU than the indexers and grows with them, as H3 expected.
-- H4 does not hold as written: the memory of a crawler or indexer container reaches 634–653 MiB at p99, above its
-  `-Xmx512m`, because `docker stats` counts the whole JVM (heap, metaspace, thread stacks and buffers), not the heap.
-  `control` and `query` stay below 260 MiB.
+- H4 does not hold as written: the memory of a crawler or indexer container reaches 497–683 MiB at p99, above its
+  `-Xmx512m` in all but one configuration, because `docker stats` counts the whole JVM (heap, metaspace, thread stacks and buffers), not the heap.
+  `control` and `query` stay below 270 MiB.
+- The host uses 1.7–1.9 times the stack's CPU during ingestion and 1.2–1.4 times during indexing: the rest runs outside
+  the containers, in Docker Desktop's VM and Windows. Its used memory averages 19,432–21,213 MiB of
+  31.4 GiB, of which the stack is 1.2–3.9 GiB.
 - An ingestion window lasts about 5 s, about 10 `docker stats` refreshes per repetition, and the first refresh catches
-  the stack still starting, which is why the stack CPU mean during ingestion is below its median (480 % against
-  550 % with one replica). The indexing windows last 97, 64 and 48 s with 1, 2 and 3 replicas.
-- This run has no CPU or memory of the whole host. `bench stats` records `host.csv` from SPEC 1.9.2 on, so the next
-  resource-usage run adds `host_cpu_total` and `host_memory_used`.
+  the stack still starting, which is why the stack CPU mean during ingestion is below its median (505 % against
+  531 % with one replica).
 
 ## Recovery: time back to correct answers after each failure
 
-The 41 runs `20261103-…-recovery-<nn>-r<N>-…`, one per row of the failure matrix (`SPEC.md` §8) and replica count,
-from `./scripts/recovery/<nn>-<row>.sh <N>`; `20261103-184101-recovery-summary-34cac8a` charts them all and lists
-them in `sources.txt`. Each run has `checks.json` with the answers once recovered, and `recovery-compare` checks that
-the runs of a row give the same books and `/search` answers whatever N. Recovery runs use the short leases of
-`scripts/recovery/recovery.env` (6 s) and run once per row and N, so they have no CI.
+The 165 runs `2026110[56]-…-recovery-<nn>[-<mode>]-r<N>-c1376c7`, one per row of the failure matrix (`SPEC.md` §8),
+mode and replica count where the row applies (`SPEC.md` §11.5): 41 in `hazelcast`, 33 in `activemq` and in
+`activemq-persistent`, 26 in `polling` and 32 in `orchestrator`, from `./scripts/recovery/<nn>-<row>.sh <N>` with
+`TARANTINO_VARIANT` set to the mode. `20261106-073908-recovery-summary-c1376c7` charts them all and lists them in
+`sources.txt`. Each run has `checks.json` with the answers once recovered, and `recovery-compare` checks that the runs
+of a row give the same books and `/search` answers whatever N and mode: it passed for all 14 rows. Recovery runs use
+the short leases of `scripts/recovery/recovery.env` (6 s) and run once per row, mode and N, so they have no CI.
 
-| Rows | Failure | Corpus | Seconds with N = 1 / 2 / 3 |
-| --- | --- | --- | --- |
-| 01–04 | `crawler` crash points | sample | 8.4–19.7 |
-| 05–08 | `indexer` crash points | sample | 6.0–13.5 |
-| 09 | `crawler` paused longer than its lease | mirror | 372 / 273 / 239 |
-| 10 | `indexer` paused longer than its lease | mirror | 429 / 313 / 244 |
-| 11 | `control` killed while seeding | mirror | 410 / 276 / 236 |
-| 12 | Hazelcast restarted | mirror | 381 / 304 / 244 |
-| 13 | Mongo stopped for 10 s | sample | 17.6 / 17.7 / 16.1 |
-| 14 | A `query` replica killed | sample | – / 0.46 / 0.90 |
+| Rows | Failure | Corpus | `hazelcast`, N = 1 / 2 / 3 (s) | Other modes (s) |
+| --- | --- | --- | --- | --- |
+| 01–04 | `crawler` crash points | sample | 8.6–18.8 | 7.2–22.8 |
+| 05–08 | `indexer` crash points | sample | 6.3–17.7 | 6.6–16.9 |
+| 09 | `crawler` paused longer than its lease | mirror | 373 / 276 / 225 | 363–373, N = 1 |
+| 10 | `indexer` paused longer than its lease | mirror | 382 / 278 / 241 | 368–441, N = 1 |
+| 11 | `control` killed while seeding | mirror | 367 / 255 / 253 | 365–373, N = 1 |
+| 12 | Broker restarted | mirror | 374 / 261 / 235 | 372 and 384 in `activemq` and `activemq-persistent`, N = 1 |
+| 13 | Mongo stopped for 10 s | sample | 16.6 / 15.9 / 14.8 | 14.7–22.6 |
+| 14 | A `query` replica killed | sample | – / 0.9 / 0.7 | 0.2–1.2 |
 
-- The crash points of `crawler` and `indexer` recover within 20 s with the 20 sample books, whatever N.
+- Every row recovers in every mode where it applies, with the same answers.
+- The crash points of `crawler` and `indexer` recover within 23 s with the 20 sample books, whatever N and mode.
 - Rows 09–12 use the whole mirror, so their time includes ingesting and indexing the 2,800 books, and it falls with N
-  as indexing gets faster.
-- Killing one of two or three `query` replicas costs under a second of `/search` answers, because nginx sends the
+  as indexing gets faster. With N = 1 every mode takes 363–384 s except `polling` in row 10, 441 s.
+- Killing one of two or three `query` replicas costs at most 1.2 s of `/search` answers, because nginx sends the
   requests to the others.
 
 ## Where the bottlenecks are
 
-1. Indexing limits the pipeline: one indexer publishes 29 books/s while one crawler downloads 554, so books wait
+1. Indexing limits the pipeline: one indexer publishes 28.5 books/s while one crawler downloads 504, so books wait
    20–47 s in `books-to-index`, and writing postings to the one Mongo is what an indexer spends its time on.
-2. Ingestion stops growing at about 600 books/s whatever the replicas, with the CPU far from full: the shared queue,
-   Mongo and datalake volume limit it.
+2. Ingestion stops growing at 500–670 books/s with 8 or more workers, whatever the replicas, with at most 53 % of the
+   host's CPU in use: the shared queue, Mongo and datalake volume limit it.
 3. Search saturates one `query` replica at about 4,400 requests/s; a second replica adds 29 % and a third nothing.
-
-## Coordination modes: the campaign
-
-`scripts/bench/all.sh` runs the experiments above again, plus `publication-visibility`, `broker-latency`,
-`coordination-variants` and `recovery-delay`, and the recovery matrix in each of the five coordination modes
-(`SPEC.md` §11): 187 steps, about 11 hours, from one commit of `dev` on the machine above. Each script prints
-its hypotheses before measuring; `scripts/bench/all.sh --dry-run` lists every step and its command.
-
-The report cites only that campaign, so the November runs of this file are superseded once its runs are in
-`benchmarks/runs/`, except two that it reuses, on the same machine, because the code they measure did not change:
-
-| Measured with | Reused, or measured instead | Why |
-| --- | --- | --- |
-| `search-latency` | `20261104-140900-search-latency-8e1c1e8`, above | Its request path only had refactors since `8e1c1e8`, no dependency changed, and its JMH already met the protocol |
-| The indexer's JMH | `jmh/` of `20261103-204454-index-throughput-6925d4e` | The tokenizer, the header parser and the batch writer did not change since `6925d4e`; the rebuild trials run again |
-| `coordination-cost` | The `hazelcast` trials of `coordination-variants` | They run the same procedure with the same N and repetitions |
-| Rows 09–12 of the failure matrix | N = 1 only in the four modes other than `hazelcast` | Their recovery time is mostly processing the whole corpus, which `coordination-variants` measures for every N and mode |
-
-Without those cuts the campaign took about 18 hours, more than one night on the one official machine.
 
 ## What belongs to the single machine, and what Stage 3 changes
 
-These runs measure one host: every replica shares its CPUs, its disk and the one MongoDB and Hazelcast member, so a
-speedup here says how the design uses one machine, not how it scales across several. What the runs show depends on
-these single-host assumptions of `SPEC.md` §1:
+These runs measure one host: every replica shares its CPUs, its disk and the one MongoDB and broker, so a speedup here
+says how the design uses one machine, not how it scales across several. What the runs show depends on these
+single-host assumptions of `SPEC.md` §1:
 
 | Measured limit | Single-host cause | What changes in a cluster |
 | --- | --- | --- |
-| Indexing: 29 books/s per indexer, ×2.1 with 3, while Mongo's CPU grows faster than the indexers' | Every indexer writes postings to one MongoDB server | Postings sharded by `term` across a sharded MongoDB, so indexers on several nodes write to different shards; the batch, its lease and its publication stay single-document writes |
-| Ingestion: about 600 books/s whatever the replicas, with the CPU far from full | One `books-to-download` queue on one Hazelcast member, one MongoDB and one datalake volume | A Hazelcast cluster with one queue per partition of `book_id`, and a datalake on storage every node mounts, or one per node with the book's node in `book_states` |
+| Indexing: 28.5 books/s per indexer, ×2.1 with 3, while Mongo's CPU grows faster than the indexers' | Every indexer writes postings to one MongoDB server | Postings sharded by `term` across a sharded MongoDB, so indexers on several nodes write to different shards; the batch, its lease and its publication stay single-document writes |
+| Ingestion: 500–670 books/s whatever the replicas, with the CPU far from full | One `books-to-download` queue on one Hazelcast member, one MongoDB and one datalake volume | A Hazelcast cluster with one queue per partition of `book_id`, and a datalake on storage every node mounts, or one per node with the book's node in `book_states` |
 | Search: one `query` replica saturates at about 4,400 requests/s, and a third replica adds nothing to two | Replicas share nginx, the one MongoDB and the host's CPUs with the load generator | `query` replicas on several nodes behind a load balancer, reading a MongoDB replica set; the snapshot already lets each replica answer on its own |
-| Recovery: a lost message waits `TARANTINO_REQUEUE_SECONDS` for `control` | `control` is one process, which a single host makes acceptable | `control` elected among several nodes, or the persistent ActiveMQ mode, whose broker redelivers without `control` |
+| Recovery: a lost message waits `TARANTINO_REQUEUE_SECONDS` for `control` | `control` is one process, which a single host makes acceptable | `control` elected among several nodes, or the persistent ActiveMQ mode, whose broker redelivers without `control` in 3.8–6.1 s at p50 |
 
 The conditional writes of `SPEC.md` §5.1 already work across machines: claims, leases and expirations compare with
 MongoDB's clock (`$$NOW`), never a host's, and no process keeps a lock another one needs. What a cluster replaces is
 everything named after the host: Compose service names and nginx's resolver `127.0.0.11`, the local `datalake` volume,
-the single Hazelcast member and MongoDB server, and, in mode `orchestrator`, the JVM's 30-second DNS cache with which
-`control` finds the `query` replicas.
+the single Hazelcast member, ActiveMQ broker and MongoDB server, and, in mode `orchestrator`, the JVM's 30-second DNS
+cache with which `control` finds the `query` replicas.
