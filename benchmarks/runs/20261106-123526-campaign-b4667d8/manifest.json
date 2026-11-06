@@ -1,0 +1,28 @@
+{
+  "run_id" : "20261106-123526-campaign-b4667d8",
+  "git" : {
+    "commit" : "b4667d8",
+    "clean" : true,
+    "branch" : "dev"
+  },
+  "command" : [ "scripts/bench/all.sh", "--only", "broker-latency" ],
+  "start" : "2026-11-06T12:35:26.063641500Z",
+  "end" : "2026-11-06T13:14:00.298597700Z",
+  "host" : {
+    "cpu" : "Intel(R) Core(TM) Ultra 9 275HX",
+    "cores" : 24,
+    "memory_bytes" : 33690722304,
+    "disk_bytes" : 1023035830272,
+    "free_disk_bytes" : 646723850240,
+    "operating_system" : "Windows 11 10.0 amd64"
+  },
+  "docker" : {
+    "version" : "29.9.2",
+    "operating_system" : "Docker Desktop",
+    "cpus" : 24,
+    "memory_bytes" : 16435412992
+  },
+  "services" : { },
+  "client_concurrency" : 0,
+  "trials" : [ ]
+}
