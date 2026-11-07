@@ -1058,9 +1058,11 @@ Table~\ref{tab:decision} applies the rule. Every mode passes the gate: all 165 r
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3.5pt}
-\caption{Decision matrix of the five coordination modes, in the order of the decision rule. Pipeline figures are
-the means over 5 repetitions of \run{20261106-012054-coordination-variants-c1376c7}; recovery figures come from the
-165 recovery runs and \run{20261106-073911-recovery-delay-c1376c7}. ``N'' is the number of \code{crawler} and
+\caption{Decision matrix of the five coordination modes, in the order of the decision rule. Pipeline, visibility and
+CPU figures are means over the 5 repetitions of \run{20261106-012054-coordination-variants-c1376c7} of each
+repetition's value, as \code{pairs.csv} holds them: a p50 here is the mean of the five repetitions' medians, not the
+median of their pooled values that \code{summary.csv} gives, so the two differ slightly. Recovery figures come from
+the 165 recovery runs and \run{20261106-073911-recovery-delay-c1376c7}. ``N'' is the number of \code{crawler} and
 \code{indexer} replicas together, and ``*'' marks a significant difference against \mode{hazelcast}.}
 \label{tab:decision}
 \begin{tabularx}{\textwidth}{@{}L{2.45cm}YYYYY@{}}
@@ -1091,12 +1093,13 @@ Verdict & \textbf{Winner} & Ties on performance, costs more & \textbf{Runner-up}
 \end{table}
 
 \textbf{Performance.} \mode{orchestrator} loses: 41\,\% less throughput with 3 replicas, because one thread dispatches
-every book one \code{POST} at a time, and 4.7--5.5\,s more time to publication at every N. \mode{polling} keeps the
-throughput but takes 2.2--3.2\,s longer to publish with 1 and 3 replicas. \mode{hazelcast} and \mode{activemq} never
-differ significantly. \mode{hazelcast} and \mode{activemq-persistent} only differ with 3 replicas, in opposite
-directions: \mode{hazelcast} publishes 6\,\% more books per second, and \mode{activemq-persistent} has a 1.6\,s (6\,\%)
-lower median time to publication. Its median is lower because persistent sends feed the crawlers more slowly than they
-take books. A book waits 1\,ms in \code{books-to-download} instead of 0.8\,s, and slightly less in
+every book one \code{POST} at a time, and a median time to publication 4.7--5.5\,s longer at every N. \mode{polling}
+keeps the throughput, but its median time to publication is 2.2--3.2\,s longer with 1 and 3 replicas.
+\mode{hazelcast} and \mode{activemq} never differ significantly. \mode{hazelcast} and \mode{activemq-persistent} only
+differ with 3 replicas, in opposite directions: \mode{hazelcast} publishes 6\,\% more books per second, and
+\mode{activemq-persistent} has a 1.6\,s (6\,\%) lower median time to publication, 23.05 against 24.62\,s in
+\code{pairs.csv}, which Table~\ref{tab:decision} rounds to 23.1 and 24.6. Its median is lower because persistent sends
+feed the crawlers more slowly than they take books. A book waits 1\,ms in \code{books-to-download} instead of 0.8\,s, and slightly less in
 \code{books-to-index}, so part of the gain is a later start of each book's clock, not faster work. The same throttling
 costs the 6\,\% of throughput. Performance therefore leaves three modes in a tie.
 
@@ -1633,9 +1636,10 @@ publication of tens of seconds.
   the sorted claims and the idle polls. Visibility at p50 is 2.3--2.7\,s, about half the 5\,s refresh period. All three
   matched the hypotheses.
 \item \textbf{\mode{orchestrator}} keeps the throughput with 1 and 2 replicas and loses 41\,\% with 3, which its
-  hypothesis allowed, because one thread sends one \code{POST} at a time. Its time to publication is 4.3--6.3\,s above
-  \mode{hazelcast}, not the two ticks expected: books wait in MongoDB until \code{control} dispatches them, 4.2--5.6\,s
-  against 0.7--1.4\,s in \code{books-to-download}. Its visibility is 173--208\,ms at p50, under the expected 300\,ms.
+  hypothesis allowed, because one thread sends one \code{POST} at a time. Its mean time to publication is 4.3--6.3\,s
+  above \mode{hazelcast} (Figure~\ref{fig:modes}), and its median 4.7--5.5\,s (Table~\ref{tab:decision}), not the two
+  ticks expected: books wait in MongoDB until \code{control} dispatches them, 4.2--5.6\,s on average against
+  0.7--1.4\,s in \code{books-to-download}. Its visibility is 168--211\,ms at p50, under the expected 300\,ms.
 \item \textbf{Coordination is cheap in every mode.} The broker or \code{control} uses at most 17\,\% of one core,
   against MongoDB's 80--247\,\%.
 \end{itemize}
@@ -1788,8 +1792,9 @@ Mode & Requeue & Claim & Requeue & Claim \\
 \item \textbf{Search saturates one \code{query} replica at about 4{,}400 requests/s.} A second replica adds 29\,\%,
   and a third adds nothing.
 \item \textbf{Coordination is not a bottleneck in any mode.} A message takes 0.1--0.2\,ms, and the broker or
-  \code{control} uses less than 17\,\% of a core. The mode changes how soon a book is searchable: about 40\,ms with a
-  listener, 170--210\,ms with the orchestrator, and 2.3--2.7\,s with polling.
+  \code{control} uses less than 17\,\% of a core. The mode changes how soon a book is searchable, at the median:
+  38--48\,ms with a listener, 168--211\,ms with the orchestrator, and 2.3--2.7\,s with polling
+  (Table~\ref{tab:decision}).
 \end{enumerate}
 
 These results describe one host. Every replica shares its CPUs, its disk, and the one MongoDB and broker, so a speedup

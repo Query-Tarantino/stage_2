@@ -222,9 +222,12 @@ repetition's p50.
 each of the five modes with 1, 2 and 3 replicas of `crawler` and `indexer` together, 5 interleaved repetitions each;
 raw data in `coordination.csv`, `visibility.csv` and `stats.csv`, these figures in `variants.csv`, and in `pairs.csv`
 the difference of every pair of modes with its 95 % CI and whether it differs. Coordination CPU is the broker's, or
-`control`'s in `polling` and `orchestrator`.
+`control`'s in `polling` and `orchestrator`. The p50 of `variants.csv` is the median of the values of the five
+repetitions pooled; `pairs.csv`, and the decision matrix of the report that uses it, take the mean of the five
+repetitions' medians instead, so their p50s differ slightly: 168–211 ms of visibility for `orchestrator`, for example,
+against the 173–208 ms below.
 
-| Mode | Books/s, N = 1 / 2 / 3 | Time to publication (s) | Visibility p50 (ms) | Coordination CPU | Mongo's CPU |
+| Mode | Books/s, N = 1 / 2 / 3 | Mean time to publication (s) | Visibility p50 (ms) | Coordination CPU | Mongo's CPU |
 | --- | --- | --- | --- | --- | --- |
 | `hazelcast` | 28.5 / 46.7 / 58.6 | 51.4 / 31.9 / 25.6 | 38 / 41 / 46 | 3.6 / 6.0 / 8.3 % | 80 / 152 / 224 % |
 | `activemq` | 28.4 / 45.5 / 57.5 | 52.2 / 33.5 / 26.8 | 39 / 43 / 48 | 5.4 / 9.0 / 12.8 % | 80 / 153 / 219 % |
@@ -246,9 +249,9 @@ the difference of every pair of modes with its 95 % CI and whether it differs. C
   expected.
 - `orchestrator`, H1: throughput within the CI of `hazelcast` with 1 and 2 replicas, and 41 % lower with 3, which H1
   allowed because one thread sends one `POST` at a time; Mongo's CPU falls with it.
-- `orchestrator`, H2 does not hold: the time to publication is 4.3–6.3 s above `hazelcast`, not two ticks. Books wait
-  in Mongo until `control` dispatches them, inside its window: 4.2–5.6 s in `books-to-download` against 0.7–1.4 s
-  in `hazelcast`.
+- `orchestrator`, H2 does not hold: the mean time to publication is 4.3–6.3 s above `hazelcast`, and the mean of the
+  repetitions' medians 4.7–5.5 s, not two ticks. Books wait in Mongo until `control` dispatches them, inside its
+  window: 4.2–5.6 s on average in `books-to-download` against 0.7–1.4 s in `hazelcast`.
 - `orchestrator`, H3: visibility under 300 ms, 173–208 ms at p50, as expected.
 - Coordination is cheap in every mode: the broker or `control` uses at most 17 % of one core, against Mongo's 80–247 %.
 
@@ -317,7 +320,7 @@ dispatch again, and `reclaim_delay` to its next claim. Rows 04, 05 and 12 do not
    the queue and Mongo take under 3 ms per book.
 3. Search saturates one `query` replica at about 4,400 requests/s; a second replica adds 29 % and a third nothing.
 4. Coordination is not a bottleneck in any mode: a message takes 0.1–0.2 ms and the broker or `control` under 17 % of
-   a core. The mode changes how soon a book is searchable, about 40 ms with a listener, 170–210 ms with the
+   a core. The mode changes how soon a book is searchable, at p50 38–48 ms with a listener, 173–208 ms with the
    orchestrator and 2.3–2.7 s with polling, and the orchestrator alone loses throughput, 41 % with 3 replicas.
 
 ## What belongs to the single machine, and what Stage 3 changes
