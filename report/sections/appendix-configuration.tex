@@ -1,0 +1,44 @@
+\section{Configuration}
+\label{app:config}
+
+Every service reads its configuration from environment variables through \code{TarantinoConfig}, which validates
+them at startup and stops the service naming any invalid one (\spec{4.7}). Table~\ref{tab:variables} lists the
+variables that set ports, addresses, data paths, replicas, threads and timing. Compose passes the same timing values to
+every service, and \code{scripts/recovery/recovery.env} shortens them for the recovery tests while keeping the
+invariants: heartbeat $\leq$ lease / 3, garbage collection and orphan age $\geq$ 10 leases, and requeue $>$ batch
+timeout.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\caption{Main configuration variables, their defaults and the recovery-test values.}
+\label{tab:variables}
+\begin{tabularx}{\textwidth}{@{}L{5.55cm}L{2.75cm}L{1.3cm}Y@{}}
+\toprule
+Variable & Default & Recovery & Purpose \\
+\midrule
+\code{TARANTINO_PORT} & 7001--7004 & & HTTP port of \code{crawler}, \code{indexer}, \code{query}, \code{control} \\
+\code{TARANTINO_HTTP_THREADS} & Javalin's, 8--250 & & Maximum request threads \\
+\code{TARANTINO_MONGO_URI}, \code{TARANTINO_HAZELCAST} & \code{localhost} & & MongoDB and Hazelcast addresses; Compose points them to its services \\
+\code{TARANTINO_DATALAKE}, \code{TARANTINO_WORKLOAD}, \code{TARANTINO_MIRROR} & \code{datalake}, \code{workload}, none & & Datalake root, workload folder and local Gutenberg mirror \\
+\code{TARANTINO_CANDIDATES} & \code{sample_ids.txt} & & Books that \code{control} seeds, or \code{mirror} \\
+\code{TARANTINO_PARALLEL_DOWNLOADS} & 8 & & Download workers per \code{crawler} replica \\
+\code{TARANTINO_MAX_ATTEMPTS} & 3 & & Downloads of a book before \code{FAILED} \\
+\code{TARANTINO_INDEX_BATCH} & 100 & 5 & Books per batch \\
+\code{TARANTINO_BATCH_TIMEOUT_SECONDS} & 30 & 5 & Longest wait to close a batch \\
+\code{TARANTINO_LEASE_SECONDS} & 60 & 6 & Duration of a book or batch lease \\
+\code{TARANTINO_HEARTBEAT_SECONDS} & 20 & 2 & How often a lease is renewed \\
+\code{TARANTINO_RECONCILE_SECONDS} & 30 & 3 & How often \code{control} reconciles \\
+\code{TARANTINO_REQUEUE_SECONDS} & 120 & 10 & Age after which a lost message is requeued \\
+\code{TARANTINO_GC_SECONDS} & 600 & 60 & Wait before deleting abandoned postings and old generations \\
+\code{TARANTINO_SNAPSHOT_SECONDS} & 5 & 2 & Periodic refresh of the \code{query} snapshot \\
+\code{TARANTINO_CORS_ORIGIN} & \code{*} & & Origin that \code{query} allows \\
+\code{TARANTINO_COORDINATION} & \code{hazelcast} & & Coordination mode \\
+\code{TARANTINO_SNAPSHOT_ON_PUBLISH} & \code{true} & & Topic listener in \code{query} \\
+\code{TARANTINO_ACTIVEMQ_PERSISTENT} & \code{false} & & Persistent delivery and acknowledgement after the job \\
+\code{TARANTINO_POLL_MILLIS} & 200 & & Sleep after an empty poll, mode \mode{polling} \\
+\code{TARANTINO_ORCHESTRATOR_TICK_MILLIS} & 200 & & Pause between ticks, mode \mode{orchestrator} \\
+\code{JAVA_TOOL_OPTIONS} & \code{-Xmx512m}, exit when out of memory & & Fixed heap; a JVM out of memory exits instead of losing a thread \\
+\bottomrule
+\end{tabularx}
+\end{table}

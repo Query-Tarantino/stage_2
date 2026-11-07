@@ -1,0 +1,187 @@
+\section{API Design and Contracts}
+\label{sec:api}
+
+The API has four separate inventories: front-end, operational, health and internal. Each one has a different consumer
+and a different nginx port (Table~\ref{tab:inventory}). The full specification is \code{api/openapi.yaml}, in
+OpenAPI~3.1~\cite{openapi}. Its \code{info.version} follows the version of \code{SPEC.md}, now 1.10, and its tags are the four
+inventories. Appendix~\ref{app:endpoints} lists every operation with its responses.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Endpoint inventories. The front-end only sees port 8080, and only \code{query} serves it.}
+\label{tab:inventory}
+\begin{tabularx}{\textwidth}{@{}L{2.1cm}L{4.65cm}L{2.15cm}Y@{}}
+\toprule
+Inventory & Operations & Provider & Consumer \\
+\midrule
+Front-end, port 8080 & \code{GET /search}, \code{GET /books/{book_id}}, \code{GET /search/filters} & \code{query} replicas behind nginx & Front-end, and the \code{checks} and the load generator acting as one \\
+Operational, port 8081 & \code{POST /ingest/{book_id}}, \code{GET /ingest/status/{book_id}}, \code{GET /ingest/list} & \code{crawler} & Admin and load scripts, \code{checks} \\
+ & \code{POST /index/update/{book_id}}, \code{GET /index/status/{book_id}}, \code{POST /index/rebuild}, \code{GET /index/status} & \code{indexer} & Admin, benchmark scripts \\
+ & \code{GET /control/status} & \code{control} & Admin, \code{bench wait} \\
+Health, no nginx & \code{GET /health} on each service port & Every service & Compose healthchecks \\
+Internal, port 8082 & \code{POST /internal/download}, \code{POST /internal/index}, \code{POST /internal/snapshot/refresh} & \code{crawler}, \code{indexer}, each \code{query} & \code{control}, in mode \mode{orchestrator} only \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Front-end interface}
+
+The front-end needs three use cases: searching with optional filters and pages, showing one book, and offering the
+filter values. Search is one endpoint with optional parameters, not one route per filter.
+
+\begin{lstlisting}
+GET /search?q=pride%20prejudice&author=austen&language=en&offset=0&limit=20
+200 OK
+{"query": "pride prejudice", "filters": {"author": "austen", "language": "en"},
+ "total": 1, "offset": 0, "limit": 20,
+ "results": [{"book_id": 1342, "title": "Pride and Prejudice", "author": "Jane Austen",
+              "language": "en", "year": 1998}]}
+\end{lstlisting}
+
+Table~\ref{tab:search} gives the rules of each parameter. Parameters are validated in the order of the table, and the
+first one that fails gives \code{400} with Problem Details naming it in \code{parameter}. A valid query that matches
+nothing answers \code{200} with \code{total: 0} and an empty list. \code{total} counts every match after the filters,
+while \code{results} holds only the requested page.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Parameters and semantics of \code{GET /search} (\spec{6.3}).}
+\label{tab:search}
+\begin{tabularx}{\textwidth}{@{}L{2.2cm}Y@{}}
+\toprule
+Parameter & Rule \\
+\midrule
+\code{q} & Required. Tokenized with the same tokenizer as the index, and a book must contain every word. Missing or blank: \code{400 MISSING_PARAMETER}; only stopwords: \code{200} with no results \\
+\code{author} & Every word of the author, through the same tokenizer, must be among the book's \code{author_terms}: \code{austen} finds ``Jane Austen'' \\
+\code{language} & ISO~639-1 code, two lowercase letters. A book with several languages matches any of them; an unknown code gives an empty \code{200} \\
+\code{year} & Four digits, equal to the Gutenberg release year of the book \\
+\code{offset}, \code{limit} & 0 and 20 by default; \code{offset} $\geq 0$, \code{limit} from 1 to 100 \\
+Order & Descending TF-IDF, the sum of $(1 + \ln tf) \cdot \ln(N/df)$ over the query words; ties by ascending \code{book_id} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\code{GET /books/{book_id}} returns the fields of a search result plus every language and the original year. It answers
+\code{404} for a book that is not in the published snapshot, even if it is being indexed. \code{GET /search/filters}
+returns the languages with their book counts, the range of years and the number of searchable books, computed once per
+snapshot. All three routes answer \code{503} until \code{query} holds its first snapshot. \code{query} allows CORS from
+\code{TARANTINO_CORS_ORIGIN} (\code{*} by default), so a browser front-end served from another origin can call
+port 8080 directly.
+
+\subsection{Operational interface and completion semantics}
+\label{sec:async}
+
+Every request that changes state answers \code{202 Accepted} with the book's current state and a \code{Location}
+header that points to it, or \code{200} if the work was already done. The caller polls that \code{Location}: an
+accepted book has finished when its state is \code{PUBLISHED}, and has failed when it is \code{FAILED}, with the reason
+in \code{last_error}. Handlers never download or index, so they answer in milliseconds, and a client can use a 5\,s
+timeout. This replaces the synchronous \code{POST /ingest} of the assignment's example, which would hold a request
+thread for a whole download.
+
+\begin{itemize}
+\item \code{POST /ingest/{book_id}} creates the book's state and enqueues it. For a book that is already queued or
+  downloading, it answers \code{202} without enqueuing it again; for a \code{FAILED} book, it retries it.
+\item \code{POST /index/update/{book_id}} enqueues a \code{DOWNLOADED} book. It answers \code{409 NOT_DOWNLOADED} for a
+  book that is not in the datalake yet, \code{202} without a new message for one that is already \code{INDEXING}, and
+  \code{200} for a \code{PUBLISHED} one.
+\item \code{POST /index/rebuild} opens a rebuild of the next generation, and \code{GET /index/status} reports its
+  progress in \code{books_pending}. A second request while one runs answers \code{202} with the running rebuild.
+\item \code{GET /index/status} and \code{GET /control/status} report the generation, the books per state, the batches
+  published, the size of the index, both queues and the last reconciliation.
+\end{itemize}
+
+Repeating any \code{POST} duplicates nothing, whether in sequence or concurrently. The state lives in MongoDB, and each
+transition is a conditional write that only one caller can win.
+
+\subsection{Internal contracts}
+\label{sec:internal}
+
+In the default mode the services make no HTTP calls to each other: Hazelcast replaces the internal calls of an
+orchestrated design. The broker contract is documented like an endpoint (Table~\ref{tab:messages}). Both messages are
+JSON with the same \code{ObjectMapper} as the API, so the broker never needs the Java classes.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Non-HTTP contract of mode \mode{hazelcast} (\spec{4.2}). Mode \mode{activemq} uses the same names as JMS
+destinations.}
+\label{tab:messages}
+\begin{tabularx}{\textwidth}{@{}L{2.55cm}L{2.65cm}L{4.15cm}Y@{}}
+\toprule
+Destination & Message & Produced by & Consumed by \\
+\midrule
+\code{books-to-download}, queue & \code{BookTask} & \code{control} (seeding, lost messages, expired downloads), \code{POST /ingest}, \code{crawler} retries & \code{crawler} workers, one book each \\
+\code{books-to-index}, queue & \code{BookTask} & \code{crawler} after a download, \code{POST /index/update}, \code{control} (lost messages, released books, reindexing) & \code{indexer}, a batch at a time with \code{drainTo} \\
+\code{published-batches}, topic & \code{BatchPublished} & \code{indexer}, after publishing a batch & Every \code{query} replica \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}
+BookTask        {"book_id": 1342, "enqueued_at": "2026-10-21T10:05:00Z"}
+BatchPublished  {"batch_id": "6716f0c2a1b2c3d4e5f60718", "generation": 1,
+                 "book_count": 100, "published_at": "2026-10-21T10:06:00Z"}
+\end{lstlisting}
+
+The acknowledgement and retry rules follow from one principle: a message is a hint, and MongoDB decides. A consumer
+acknowledges a message by claiming the book with a conditional write. If the claim does not match, the message was a
+duplicate or stale, and it is dropped. No ordering is assumed. An \code{IQueue} has no acknowledgement, so a message
+taken by a consumer that dies before its claim is lost. \code{control} detects that case when the queue is empty while
+a book has waited longer than \code{TARANTINO_REQUEUE_SECONDS}, and enqueues the book again. A lost
+\code{BatchPublished} only delays visibility, because each \code{query} replica also re-reads the published batches
+every 5\,s.
+
+In mode \mode{orchestrator}, \code{control} dispatches each book with \code{POST /internal/download} or
+\code{POST /internal/index}, through nginx's internal port 8082. The call only offers the task to a bounded local queue
+of the replica. It answers \code{202} if the task went in, \code{400} for an invalid body, and \code{503} with
+\code{Retry-After: 1} when the queue is full, and nginx then hands the call to the next replica. \code{control} stops
+dispatching a stage at the first \code{503} and dispatches again any book that has not been claimed after
+\code{TARANTINO_REQUEUE_SECONDS}. It announces each new batch to every \code{query} replica with
+\code{POST /internal/snapshot/refresh}.
+
+\subsection{Errors}
+
+Every error is Problem Details (RFC~9457~\cite{rfc9457}) with \code{application/problem+json}, produced by one handler
+in \code{common}. nginx formats its own errors the same way, including the \code{503} it returns when no replica
+answers. Table~\ref{tab:errors} lists the codes. Every \code{503} carries \code{Retry-After: 5}, and an unexpected
+exception gives \code{500} in the same format.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Error codes of the API.}
+\label{tab:errors}
+\begin{tabularx}{\textwidth}{@{}L{4.4cm}L{1.0cm}Y@{}}
+\toprule
+\code{code} & HTTP & When \\
+\midrule
+\code{MISSING_PARAMETER} & 400 & \code{q} is missing or blank \\
+\code{INVALID_PARAMETER} & 400 & A malformed or out-of-range parameter or \code{book_id}, named in \code{parameter} \\
+\code{BOOK_NOT_FOUND} & 404 & The book has no state or, in \code{query}, is not in the snapshot \\
+\code{NOT_DOWNLOADED} & 409 & \code{POST /index/update} for a book that is not downloaded \\
+\code{DEPENDENCY_UNAVAILABLE} & 503 & MongoDB or the broker do not answer, \code{query} has no snapshot yet, or nginx finds no replica \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Validation evidence}
+\label{sec:checks}
+
+The \code{checks} module runs against the live stack and validates every response, status, header and body against
+the schemas of \code{api/openapi.yaml}. It also compares answers with \code{checks/expected.json}, generated from the
+20 sample books. It covers everything the assignment asks for:
+\begin{itemize}
+\item 14 search cases: one word (13 matches), two words, author, language (\code{en}, \code{de}, \code{fr} and an
+  unknown code), year, all filters combined, two pages of size one, an offset past the end, stopwords only and a query
+  with no matches;
+\item parameter validation in the order of Table~\ref{tab:search}, and Problem Details for unknown paths and methods;
+\item book details, filter values, every operational endpoint, \code{/health} on each service port, and the
+  idempotency of repeated \code{POST}s;
+\item in mode \mode{orchestrator}, the internal routes, called from inside the \code{control} container.
+\end{itemize}
+It runs with one command after starting the stack, \code{java -jar checks/target/checks-1.0-SNAPSHOT.jar}.
+Continuous integration runs it in mode \mode{hazelcast} with one \code{query} replica and again with three, and once in
+each other mode. Replicas and modes must give the same answers. The README lists the commands and the expected
+results.
