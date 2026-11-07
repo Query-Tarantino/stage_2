@@ -12,7 +12,7 @@ import java.util.Optional;
 
 /**
  * Ingests a book: looks it up in the datalake and, if it is not there, downloads, splits and stores it. A book is
- * in the datalake once its body exists (SPEC §4.6). Nothing is written once the book's lease is lost (SPEC §5.1).
+ * in the datalake once its header and body exist (SPEC §4.6). Nothing is written once the book's lease is lost (SPEC §5.1).
  */
 public class IngestBookCommand {
 

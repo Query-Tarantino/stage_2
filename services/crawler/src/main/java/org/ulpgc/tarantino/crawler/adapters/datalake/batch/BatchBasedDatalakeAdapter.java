@@ -34,7 +34,7 @@ public class BatchBasedDatalakeAdapter implements DatalakeStorage {
 
     @Override
     public Optional<StoredPaths> pathsOf(int bookId) {
-        return Optional.of(paths(bookId)).filter(stored -> Files.exists(stored.body()));
+        return Optional.of(paths(bookId)).filter(stored -> Files.exists(stored.header()) && Files.exists(stored.body()));
     }
 
     private StoredPaths paths(int bookId) {
