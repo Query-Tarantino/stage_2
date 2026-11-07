@@ -1041,7 +1041,7 @@ Coordination containers & 1, Hazelcast & 1, ActiveMQ & 1, ActiveMQ with a disk s
 Main code of the mode & 192 lines & 328 lines & 328 lines & 104 lines & 506 lines \\
 \addlinespace
 Lost work (rows 04, 05) & \code{control} requeues after 11.7--11.8\,s & \code{control} requeues after 11.7--11.8\,s & Broker redelivers; reclaimed in 3.8--5.0\,s & Nothing to lose & \code{control} redispatches after 9.7\,s \\
-Broker restart (row 12) & Queues lost; requeued after 12\,s with N = 1, 82--97\,s with N = 2--3 & Queues lost; requeued after 11.7\,s & Messages survive; reclaimed in 6.1\,s & No broker & No broker \\
+Broker restart (row 12) & Queues lost; download messages requeued after 12\,s, index messages once \code{books-to-index} empties, 82--207\,s & Queues lost; download messages requeued after 11.7\,s & Messages survive; reclaimed in 6.0\,s & No broker & No broker \\
 \code{control} down (row 11) & Pipeline goes on & Pipeline goes on & Pipeline goes on & Pipeline goes on & Pipeline stops \\
 \addlinespace
 Stage~3 fit (argued, not measured) & Native cluster with partition backups, in memory & Network of brokers or a shared store & A shared or replicated disk store; capped at 1{,}460 messages/s & MongoDB load grows with every worker & One dispatcher: a bottleneck and a single point of failure \\
@@ -1069,7 +1069,7 @@ stops here: \textbf{\mode{hazelcast} wins}, and it remains the mode of Stage~2.
 
 \textbf{What the rule leaves to Stage~3.} Robustness, the criterion after cost, favours \mode{activemq-persistent}.
 It is the only mode whose lost work comes back without \code{control}: the broker redelivers what a dead consumer did
-not acknowledge, and the book is claimed again 3.8--6.1\,s after the failure, against 11.7\,s for a requeue by
+not acknowledge, and the book is claimed again 3.8--6.0\,s after the failure, against 11.7\,s for a requeue by
 \code{control}. If robustness came before cost, \mode{activemq-persistent} would win. That is why its property, not its
 broker, goes into the Stage~3 plan (Section~\ref{sec:stage3}). \code{control} stays necessary in every mode, because it
 also releases expired leases and drives rebuilds, and persistence caps the broker at about 1{,}460 messages/s. At the
@@ -1278,14 +1278,43 @@ Replicas & Workers per replica & Whole window (books/s) & Steady 10--90\,\% (boo
   16. The curve bends but does not flatten by 16 workers, as the hypothesis expected.
 \item \textbf{Replicas do not help}, against the hypothesis: 2 and 3 replicas of 8 workers download as many books per
   second as one, within their intervals.
-\item \textbf{CPU is not the limit.} During ingestion the host uses 956--1{,}281\,\% of the 2{,}400\,\% available
-  (Table~\ref{tab:resources}), and more crawlers raise their total CPU from 378\,\% to 537\,\% without more books per
-  second. Splitting a book takes at most 12\,ms, while each of 8 workers has 16\,ms per book at 504 books/s. The limit
-  is in what every crawler shares: the one \code{books-to-download} queue, the one MongoDB and the datalake volume.
-  These runs do not tell which of the three.
+\item \textbf{The workers wait on the file I/O they share} (Table~\ref{tab:ingest-workers}). In every trial the
+  workers are busy for 94--100\,\% of the window. Between two books, the enqueue, the poll of \code{books-to-download}
+  and the claim in MongoDB take 1.5--2.9\,ms from 4 to 24 threads, so neither the queue nor MongoDB holds ingestion
+  back. The work of a book grows instead, from 9.4\,ms with 4 threads to 23.6\,ms with 16 in one replica and 40.6\,ms
+  with 3 replicas of 8, while the CPU it costs within one replica stays at 6.7--7.5\,ms: the threads mostly wait. The
+  host has CPU to spare, 956--1{,}281\,\% of its 2{,}400\,\% in use (Table~\ref{tab:resources}). What that work shares is
+  file I/O: reading the book from the mirror, a folder of the Windows host mounted into Docker Desktop's VM, and writing
+  its header and body to the datalake volume. These runs cannot tell the read from the write; a run with the mirror
+  inside a Docker volume would.
+\item \textbf{Replicas cost CPU without adding books.} With 2 and 3 replicas a book costs 10.2 and 12.0\,ms of CPU,
+  because each JVM warms up its own code within a window of about 5\,s. That is why 16 workers in one replica download
+  more than 3 replicas of 8.
 \end{itemize}
 
+\begin{table}[ht]
+\centering
+\small
+\caption{How the download workers of Table~\ref{tab:ingest} spend their time: the work of a book, from its claim to its
+download by the same thread, the gap until that thread's next claim, and the crawlers' CPU during the ingestion, in
+total and per book (the total divided by the books per second). Mean $\pm$ 95\,\% interval of 5 repetitions.
+\code{workers.csv} and \code{summary.csv} of \run{20261105-215351-ingest-throughput-c1376c7}.}
+\label{tab:ingest-workers}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+Replicas & Workers & Work per book (ms) & Gap (ms) & Crawlers' CPU (\%) & CPU per book (ms) \\
+\midrule
+1 & 4 & 9.4 $\pm$ 1.3 & 1.5 $\pm$ 0.3 & 247 $\pm$ 14 & 6.7 \\
+1 & 8 & 14.7 $\pm$ 4.6 & 1.8 $\pm$ 0.4 & 354 $\pm$ 71 & 7.0 \\
+1 & 16 & 23.6 $\pm$ 1.1 & 2.1 $\pm$ 0.1 & 469 $\pm$ 24 & 7.5 \\
+2 & 8 & 26.2 $\pm$ 4.2 & 2.6 $\pm$ 0.2 & 558 $\pm$ 86 & 10.2 \\
+3 & 8 & 40.6 $\pm$ 1.6 & 2.9 $\pm$ 0.1 & 625 $\pm$ 51 & 12.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Indexing throughput and latency}
+\label{sec:index}
 
 \begin{figure}[ht]
 \centering
@@ -1669,25 +1698,35 @@ replicas costs at most 1.2\,s of search answers, because nginx sends the request
 \textbf{How lost work comes back.} \code{recovery-delay} reads the 29 runs of rows 04, 05 and 12, where a crash or a
 broker restart loses work after its message was taken, and measures for each book the time from the failure to its
 requeue and to its next claim (Table~\ref{tab:delay}). In \mode{hazelcast} and \mode{activemq}, \code{control} requeues
-10.8--11.8\,s after the failure, as expected. Row 12 of \mode{hazelcast} is the exception: with 2 and 3 replicas the
-median requeue takes 97 and 82\,s, against 12\,s with one, and these runs do not tell why. \mode{activemq-persistent}
-requeues nothing: the broker redelivers, and books are claimed again in 3.8--6.1\,s at the median. The orchestrator
-dispatches again after 9.5--10.1\,s, because its 10\,s count from the book's last dispatch, which comes before the crash.
+10.8--12.7\,s after the failure, as expected. \mode{activemq-persistent} requeues nothing: the broker redelivers, and
+books are claimed again in 3.8--6.0\,s at the median. The orchestrator dispatches again after 9.5--10.1\,s, because its
+10\,s count from the book's last dispatch, which comes before the crash.
+
+\textbf{Row 12 loses two kinds of messages.} Download messages come back like those of rows 04 and 05, 11.7--12.7\,s
+after the restart whatever N. Index messages wait 207, 97 and 82\,s with 1, 2 and 3 replicas, because \code{control}
+only requeues into an empty queue (\spec{5.3}, step~4). After the restart the crawlers keep enqueuing the books they
+download, so \code{books-to-index} only empties once the indexers, with the batches of 5 of the recovery tests, have
+taken every one of them. The transition lines of the three runs show it: the requeue comes in the first
+reconciliation after the indexers take the last message of the queue. The wait therefore follows indexing, and the
+more indexers the shorter it is.
 
 \begin{table}[ht]
 \centering
 \small
 \caption{Median seconds from the failure to a book's requeue (or new dispatch) and to its next claim, over the books
-of every run of the row. \run{20261106-073911-recovery-delay-c1376c7}.}
+of every run of the row; row 12 apart for the books that were waiting for a download and for an index.
+\run{20261106-073911-recovery-delay-c1376c7}.}
 \label{tab:delay}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
-Mode & Rows 04 / 05: requeue & Rows 04 / 05: claim & Row 12: requeue & Row 12: claim \\
+& \multicolumn{2}{c}{Rows 04 / 05} & \multicolumn{2}{c}{Row 12, download / index messages} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Mode & Requeue & Claim & Requeue & Claim \\
 \midrule
-\mode{hazelcast} & 11.8 / 11.7 & 11.5 / 5.6 & 82.4 & 12.3 \\
-\mode{activemq} & 11.8 / 11.7 & 10.8 / 8.5 & 11.7 & 13.5 \\
-\mode{activemq-persistent} & none & 3.8 / 5.0 & none & 6.1 \\
+\mode{hazelcast} & 11.8 / 11.7 & 11.5 / 5.6 & 11.9 / 96.8 & 9.3 / 134.3 \\
+\mode{activemq} & 11.8 / 11.7 & 10.8 / 8.5 & 11.7 / -- & 13.5 / -- \\
+\mode{activemq-persistent} & none & 3.8 / 5.0 & none & 6.0 / 11.7 \\
 \mode{orchestrator} & 9.7 / 9.7 & 5.0 / 9.8 & -- & -- \\
 \bottomrule
 \end{tabular}
@@ -1700,7 +1739,8 @@ Mode & Rows 04 / 05: requeue & Rows 04 / 05: claim & Row 12: requeue & Row 12: c
   Books therefore wait 20--47\,s in \code{books-to-index}, and an indexer spends its time writing postings to the one
   MongoDB.
 \item \textbf{Ingestion stops at 500--670 books/s} with 8 or more workers, whatever the replicas, with at most 53\,\% of
-  the host's CPU in use. The shared queue, MongoDB and the datalake volume limit it.
+  the host's CPU in use. The download workers wait on the file I/O they share, the mirror and the datalake volume; the
+  queue and MongoDB take under 3\,ms per book.
 \item \textbf{Search saturates one \code{query} replica at about 4{,}400 requests/s.} A second replica adds 29\,\%,
   and a third adds nothing.
 \item \textbf{Coordination is not a bottleneck in any mode.} A message takes 0.1--0.2\,ms, and the broker or
@@ -1742,11 +1782,11 @@ searchable about 40\,ms after its batch is published. The contracts held: the AP
 with one or three \code{query} replicas, and every figure traces to a run.
 
 \textbf{Weaknesses.} Indexing is the bottleneck: one indexer publishes 28.5 books/s against about 500 downloaded, and
-its time goes into MongoDB writes. Crawler replicas add nothing beyond 500--670 books/s, because they share one queue,
-one database and one volume. \code{control} is a single process that every mode needs, since it alone releases leases
-and drives rebuilds. When the broker loses messages, \code{control} brings them back after
-\code{TARANTINO_REQUEUE_SECONDS}, slower than the redelivery of a persistent broker. One open question is why that
-requeue took 82--97\,s after a Hazelcast restart with 2 and 3 replicas, against 12\,s with one.
+its time goes into MongoDB writes. Crawler replicas add nothing beyond 500--670 books/s, because their workers wait on
+the file I/O they all share, not on the queue or MongoDB. \code{control} is a single process that every mode needs,
+since it alone releases leases and drives rebuilds. When the broker loses messages, \code{control} brings them back
+after \code{TARANTINO_REQUEUE_SECONDS}, slower than the redelivery of a persistent broker, and only into an empty queue:
+after a Hazelcast restart, lost index messages waited 82--207\,s for \code{books-to-index} to empty.
 
 \subsection{From one host to the Stage~3 cluster}
 \label{sec:stage3}
@@ -1767,7 +1807,7 @@ cache through which \code{control} finds the \code{query} replicas.
 Measured limit & Single-host cause & Stage~3 change \\
 \midrule
 Indexing: 28.5 books/s per indexer, $\times$2.10 with 3, with MongoDB's CPU growing faster than the indexers' & Every indexer writes postings to one MongoDB server & Postings sharded by \code{term} across a sharded MongoDB, so indexers on several nodes write to different shards; the batch, its lease and its publication stay single-document writes \\
-Ingestion: 500--670 books/s whatever the replicas, with the CPU far from full & One queue on one Hazelcast member, one MongoDB, one datalake volume & A Hazelcast cluster with the queue partitioned by \code{book_id}, and a datalake on shared storage, or one per node with the book's node in \code{book_states} \\
+Ingestion: 500--670 books/s whatever the replicas, with the CPU far from full & Every crawler reads the one mirror and writes the one datalake volume of the host & Crawlers on several nodes, each with its own disk: the datalake split by \code{book_id} across the nodes, with each book's node in \code{book_states}, so file I/O grows with the nodes \\
 Search: one \code{query} replica saturates at about 4{,}400 requests/s, and a third adds nothing to two & Replicas share nginx, the one MongoDB and the host's CPUs with the load generator & \code{query} replicas on several nodes behind a load balancer, reading a MongoDB replica set; the snapshot already lets each replica answer on its own \\
 Recovery: lost messages wait for \code{control}'s requeue & \code{control} is one process, acceptable on one host & \code{control} on several nodes with one leader, elected through a lease document in MongoDB; lost work acknowledged after the job (below) \\
 Mode \mode{orchestrator}: 41\,\% less throughput with 3 replicas & One thread dispatches every book, one \code{POST} at a time & Not carried to Stage~3 \\
@@ -1782,8 +1822,9 @@ replica set, with majority writes for every conditional write, so a failover nev
 storage that every node mounts.
 
 \textbf{Distribution of tasks and requests.} Crawlers and indexers keep competing for queues, which needs no
-coordination between them. Partitioning \code{books-to-download} and \code{books-to-index} by \code{book_id} removes
-the single queue owner that limits ingestion today. Search requests are spread by a load balancer, as nginx does now.
+coordination between them. Partitioning \code{books-to-download} and \code{books-to-index} by \code{book_id} spreads
+them over the members, so no member holds every message. Search requests are spread by a load balancer, as nginx does
+now.
 
 \textbf{Consistency and unavailable nodes.} Publication stays one conditional write, and \code{query} keeps reading a
 snapshot of published batches, so a reader never sees a half-built index on any node. A node that disappears leaves
@@ -1795,14 +1836,15 @@ is a MongoDB document, not a broker message.
 
 \mode{hazelcast} wins under the decision rule fixed before the campaign (Section~\ref{sec:winner}), so Stage~3 keeps it
 and does not migrate to another broker. The runner-up, \mode{activemq-persistent}, showed the one property worth
-taking: lost work comes back without \code{control}, in 3.8--6.1\,s instead of about 12\,s, because the message is
+taking: lost work comes back without \code{control}, in 3.8--6.0\,s instead of about 12\,s, because the message is
 acknowledged only after the job. Stage~3 adds that property to the Hazelcast design and measures it with the same
 rows and the same \code{recovery-delay} experiment:
 \begin{enumerate}
 \item Take each book inside a Hazelcast transaction that commits after the claim and the job, so a consumer that dies
   returns its message to the queue. Hazelcast's transactional queue offers that rollback~\cite{hazelcast}, and the claim in MongoDB
   still drops any duplicate it produces.
-\item Explain and fix the 82--97\,s requeue after a broker restart with several replicas (row 12).
+\item Requeue lost messages without waiting for their queue to empty, for example as soon as a queue holds fewer
+  messages than the books that wait for it, and measure row 12 again.
 \item Elect the \code{control} leader through a lease in MongoDB, so reconciliation survives the loss of a node.
 \item Repeat \code{coordination-variants} for \mode{hazelcast} and \mode{activemq-persistent} on the cluster. If the
   transactional queue does not close the gap in rows 04, 05 and 12, persistent ActiveMQ replaces Hazelcast as the
