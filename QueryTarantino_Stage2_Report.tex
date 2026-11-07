@@ -555,6 +555,11 @@ GET /search?q=pride%20prejudice&author=austen&language=en&offset=0&limit=20
               "language": "en", "year": 1998}]}
 \end{lstlisting}
 
+\code{year} is the year a book was released on Project Gutenberg, read from the \code{Release date:} line of its
+header (\spec{4.3}), so Pride and Prejudice answers 1998, not the 1813 of its first edition that the assignment's
+example shows. \code{GET /books/{book_id}} adds \code{original_year} when the header has an
+\code{Original publication:} line.
+
 Table~\ref{tab:search} gives the rules of each parameter. Parameters are validated in the order of the table, and the
 first one that fails gives \code{400} with Problem Details naming it in \code{parameter}. A valid query that matches
 nothing answers \code{200} with \code{total: 0} and an empty list. \code{total} counts every match after the filters,
@@ -1410,6 +1415,11 @@ replica. \run{20261105-220915-index-throughput-c1376c7}.}
   publication and marking) that more books share.
 \item \textbf{Replicas help less than linearly}, as expected: $\times$1.70 with 2 and $\times$2.10 with 3, that is 85\,\%
   and 70\,\% of linear.
+\item \textbf{A rebuild is not the whole pipeline.} These trials rebuild a corpus already in the datalake, from the
+  first index claim to the last batch published, with no download running. Table~\ref{tab:decision} gives
+  \mode{hazelcast} 46.7 and 58.6 books/s with 2 and 3 replicas instead, because \code{coordination-variants} counts
+  from the first download to the last publication, with crawlers and indexers working at the same time. The intervals
+  of the two experiments overlap.
 \item \textbf{Batches of 250 fit in a 512\,MB heap}, as expected: no indexer ran out of memory, and the container
   peaked at 745--808\,MiB per trial with batches of 250, against 587--778\,MiB with batches of 100.
 \item \textbf{MongoDB is where the time goes.} JMH writes a batch of 100 books in 2.81\,s, which alone caps one

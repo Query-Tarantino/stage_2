@@ -82,6 +82,10 @@ One known flaw: the campaign brought the stack down without the `activemq` profi
 - Bigger batches pay off, then flatten, as H1 expected: ×2.3 from 1 to 10 books, ×2.3 from 10 to 100, but only +17 %
   from 100 to 250. A batch pays a fixed cost (its lease, publishing and marking) that more books share.
 - Replicas help less than linearly, as H2 expected: ×1.70 with 2 and ×2.10 with 3.
+- A rebuild is not the whole pipeline: these trials count from the first index claim to the last batch published,
+  with no download running. `coordination-variants` gives `hazelcast` 46.7 and 58.6 books/s with 2 and 3 replicas
+  instead, because it counts from the first download to the last publication, with crawlers and indexers working at
+  the same time. The intervals of the two experiments overlap.
 - Batches of 250 fit in `-Xmx512m`, as H3 expected: no indexer stopped with `OutOfMemoryError`, and in `stats.csv` the
   indexer container peaks at 745–808 MiB per trial with batches of 250 against 587–778 MiB with batches of 100.
 - Mongo is where the time goes. The indexer's JMH, reused from `jmh/indexer.csv` of
