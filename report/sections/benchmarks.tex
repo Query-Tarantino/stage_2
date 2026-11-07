@@ -318,3 +318,134 @@ N & Phase & Crawlers' CPU & Indexers' CPU & MongoDB's CPU & Stack CPU & Stack me
 \item \textbf{The host pays for Docker.} The host uses 1.7--1.9 times the stack's CPU during ingestion and 1.2--1.4
   times during indexing: the rest runs in Docker Desktop's VM and Windows.
 \end{itemize}
+
+\subsection{Coordination mechanisms compared}
+\label{sec:modes}
+
+\code{coordination-variants} ran the whole corpus through the five modes of Table~\ref{tab:modes}, with 1, 2 and 3
+replicas of \code{crawler} and \code{indexer} together, 5 interleaved repetitions each: 75 trials. Its
+\code{pairs.csv} holds the difference of every pair of modes, for every metric and replica count, with its 95\,\%
+confidence interval. Figure~\ref{fig:modes} shows the pipeline metrics, and Table~\ref{tab:decision} in
+Section~\ref{sec:winner} the rest.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.7cm},
+  report,
+  width=7.6cm, height=5.6cm,
+  xtick={1,2,3}, xmin=0.75, xmax=3.25,
+  xlabel={Replicas of \code{crawler} and \code{indexer}},
+  ymin=0,
+]
+\nextgroupplot[ylabel={Books per second}, ymax=70, title={Pipeline throughput}, legend to name=modeslegend, legend columns=5, legend style={/tikz/every even column/.append style={column sep=0.35cm}}]
+\addplot[color=modehazelcast, mark=*, modeline] table[x expr=\thisrow{replicas}-0.08, y=hz, y error=hzci, col sep=comma] {data/modes_throughput.csv};
+\addlegendentry{\mode{hazelcast}}
+\addplot[color=modeactivemq, mark=square*, modeline] table[x expr=\thisrow{replicas}-0.04, y=amq, y error=amqci, col sep=comma] {data/modes_throughput.csv};
+\addlegendentry{\mode{activemq}}
+\addplot[color=modepersistent, mark=diamond*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}, y=amqp, y error=amqpci, col sep=comma] {data/modes_throughput.csv};
+\addlegendentry{\mode{activemq-persistent}}
+\addplot[color=modepolling, mark=triangle*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}+0.04, y=poll, y error=pollci, col sep=comma] {data/modes_throughput.csv};
+\addlegendentry{\mode{polling}}
+\addplot[color=modeorchestrator, mark=pentagon*, modeline, mark size=2.8pt] table[x expr=\thisrow{replicas}+0.08, y=orch, y error=orchci, col sep=comma] {data/modes_throughput.csv};
+\addlegendentry{\mode{orchestrator}}
+\node[font=\scriptsize, color=inkprimary, anchor=north east] at (axis cs:3.2,33) {\mode{orchestrator}: 34.6};
+\nextgroupplot[ylabel={Mean time to publication (s)}, ymax=62, title={Time from enqueue to publication}]
+\addplot[color=modehazelcast, mark=*, modeline] table[x expr=\thisrow{replicas}-0.08, y=hz, y error=hzci, col sep=comma] {data/modes_publication.csv};
+\addplot[color=modeactivemq, mark=square*, modeline] table[x expr=\thisrow{replicas}-0.04, y=amq, y error=amqci, col sep=comma] {data/modes_publication.csv};
+\addplot[color=modepersistent, mark=diamond*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}, y=amqp, y error=amqpci, col sep=comma] {data/modes_publication.csv};
+\addplot[color=modepolling, mark=triangle*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}+0.04, y=poll, y error=pollci, col sep=comma] {data/modes_publication.csv};
+\addplot[color=modeorchestrator, mark=pentagon*, modeline, mark size=2.8pt] table[x expr=\thisrow{replicas}+0.08, y=orch, y error=orchci, col sep=comma] {data/modes_publication.csv};
+\end{groupplot}
+\node at ($(group c1r1.south)!0.5!(group c2r1.south)+(0,-1.25cm)$) {\pgfplotslegendfromname{modeslegend}};
+\end{tikzpicture}
+\caption{The same pipeline in each coordination mode: books published per second over the whole corpus, and mean time
+from a book's enqueue to the publication of its batch. Mean and 95\,\% confidence interval of 5 repetitions; the modes
+are shifted slightly along the x axis so their intervals do not overlap.
+\run{20261106-012054-coordination-variants-c1376c7}.}
+\label{fig:modes}
+\end{figure}
+
+The script stated one hypothesis per mode before measuring. The common hypothesis, that the work per book is the same
+in every mode, holds for indexing but not for downloads. In \mode{activemq-persistent} and \mode{orchestrator} a
+download takes 8--15\,ms at p50 with 2 and 3 replicas, against 21--45\,ms elsewhere, because books reach the crawlers
+more slowly than the crawlers take them, so fewer downloads overlap. That changes milliseconds against a time to
+publication of tens of seconds.
+
+\begin{itemize}
+\item \textbf{\mode{activemq}} has the throughput and time to publication of \mode{hazelcast} at every N, within
+  their intervals, as expected, with 1.5 times its coordinator CPU.
+\item \textbf{\mode{activemq-persistent}} has the throughput of \mode{activemq} at every N, as expected, with 1.3--1.4
+  times its broker CPU.
+\item \textbf{\mode{polling}} has the throughput of \mode{hazelcast} at every N and 10--12\,\% more MongoDB CPU, from
+  the sorted claims and the idle polls. Visibility at p50 is 2.3--2.7\,s, about half the 5\,s refresh period. All three
+  matched the hypotheses.
+\item \textbf{\mode{orchestrator}} keeps the throughput with 1 and 2 replicas and loses 41\,\% with 3, which its
+  hypothesis allowed, because one thread sends one \code{POST} at a time. Its time to publication is 4.3--6.3\,s above
+  \mode{hazelcast}, not the two ticks expected: books wait in MongoDB until \code{control} dispatches them, 4.2--5.6\,s
+  against 0.7--1.4\,s in \code{books-to-download}. Its visibility is 173--208\,ms at p50, under the expected 300\,ms.
+\item \textbf{Coordination is cheap in every mode.} The broker or \code{control} uses at most 17\,\% of one core,
+  against MongoDB's 80--247\,\%.
+\end{itemize}
+
+\textbf{Publication visibility.} The time from a batch's publication to the moment a \code{query} replica holds it
+in its snapshot depends on how \code{query} learns of the batch (Table~\ref{tab:visibility}). With the topic listener
+a batch is searchable in about 40\,ms, under the expected 100\,ms. Without it, delays spread between 0 and the 5\,s
+period, with a median of 2.7\,s. The listener costs no CPU that the run can see: each \code{query} replica uses about
+3\,\% of a core either way.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Publication visibility with 2 \code{query} replicas, one value per batch and replica.
+\run{20261106-002208-publication-visibility-c1376c7}.}
+\label{tab:visibility}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\code{published-batches} listener & Mean (ms) & p50 (ms) & p95 (ms) & p99 (ms) \\
+\midrule
+\tablerows{tables/visibility.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Broker latency in isolation.} \code{broker-latency} sends 30{,}000 messages per trial through each broker, with
+1, 3 and 8 consumers (Figure~\ref{fig:broker}). Every p50 is between 0.1 and 0.2\,ms: 102--105\,\textmu s for Hazelcast,
+137--139\,\textmu s for ActiveMQ and 180--185\,\textmu s for persistent ActiveMQ. Persistence costs 1.3 times the latency,
+not the 3 times expected, but it caps the throughput at about 1{,}460 messages/s whatever the consumers, because each
+send waits for its disk write~\cite{activemq}. Non-persistent ActiveMQ scales with consumers, $\times$2.8 from 1 to 8, while Hazelcast
+stays at about 8{,}700 messages/s. A message is never what a book waits for: the slowest p50, 185\,\textmu s, is about
+7{,}700 times shorter than the median wait in \code{books-to-download} with one replica.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  report,
+  width=12cm, height=5.2cm,
+  ybar, bar width=0.42cm,
+  symbolic x coords={1,3,8}, xtick=data,
+  enlarge x limits=0.22,
+  xlabel={Consumers},
+  ylabel={Messages per second},
+  ymin=0, ymax=32000,
+  scaled y ticks=false,
+  yticklabel style={/pgf/number format/fixed, /pgf/number format/1000 sep={{,}}},
+  legend style={at={(0.02,0.97)}, anchor=north west},
+  error bars/y dir=both, error bars/y explicit,
+  every axis plot/.append style={draw=none, error bars/error bar style={draw=inkprimary, line width=0.6pt}},
+]
+\addplot[fill=modehazelcast] table[x=consumers, y=hz, y error=hzci, col sep=comma] {data/broker.csv};
+\addlegendentry{Hazelcast}
+\addplot[fill=modeactivemq] table[x=consumers, y=amq, y error=amqci, col sep=comma] {data/broker.csv};
+\addlegendentry{ActiveMQ, non-persistent}
+\addplot[fill=modepersistent] table[x=consumers, y=amqp, y error=amqpci, col sep=comma] {data/broker.csv};
+\addlegendentry{ActiveMQ, persistent}
+\end{axis}
+\end{tikzpicture}
+\caption{Throughput of each broker in isolation, mean and 95\,\% confidence interval of 5 repetitions of 30{,}000
+messages: Hazelcast 8{,}513--8{,}872 messages/s, non-persistent ActiveMQ 9{,}350, 18{,}338 and 25{,}904, persistent
+ActiveMQ 1{,}454--1{,}475. \run{20261106-123534-broker-latency-b4667d8}.}
+\label{fig:broker}
+\end{figure}
