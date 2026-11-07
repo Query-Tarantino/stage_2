@@ -167,6 +167,44 @@ consumers,hz,hzci,amq,amqci,amqp,amqpci
 \tableofcontents
 \newpage
 
+\section*{Executive Summary}
+\addcontentsline{toc}{section}{Executive Summary}
+
+Query Tarantino turns the Stage~1 data layer into four Java~25 services that run on one host with Docker Compose.
+\code{crawler} downloads Project Gutenberg books into the datalake, \code{indexer} publishes them in batches to MongoDB,
+\code{query} answers keyword search with author, language and year filters, and \code{control} seeds the work and
+repairs what failures leave behind. The services coordinate by choreography over Hazelcast queues; MongoDB is the only
+source of truth, every state change is one conditional write, and a book becomes searchable only through a published
+batch. The same code runs in four other coordination modes, and one overnight campaign measured all five on one
+machine with 24 hardware threads. Table~\ref{tab:summary} answers the questions of the assignment with it.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{The questions of the assignment and what the campaign measured, in the default mode \mode{hazelcast}.}
+\label{tab:summary}
+\begin{tabularx}{\textwidth}{@{}L{3.9cm}YL{1.45cm}@{}}
+\toprule
+Question & Answer & Section \\
+\midrule
+Books ingested and indexed per second & One crawler downloads 504 books/s with 8 workers and one indexer publishes 28.5 with batches of 100, so indexing limits the pipeline & \ref{sec:ingest}, \ref{sec:index} \\
+Search response time under concurrent load & 7.3\,ms on average and 14.5\,ms at p95 with 32 clients; one \code{query} replica saturates at about 4{,}400 requests/s & \ref{sec:search} \\
+CPU and memory as the load grows & MongoDB's CPU follows the indexers, 78--220\,\% of a core; the host never runs out of CPU, and no container's memory grows with the load & \ref{sec:resources} \\
+Clients, threads and replicas & Three indexers index $\times$2.10 faster and a second \code{query} replica answers 29\,\% more; crawler replicas add nothing, because their workers wait on shared file I/O & \ref{sec:ingest}--\ref{sec:search} \\
+Overhead of the coordination & A message takes 0.1--0.2\,ms and the broker uses under 17\,\% of a core; books wait for a free worker, not for the broker & \ref{sec:coordcost}, \ref{sec:modes} \\
+Limits of one host, and Stage~3 & One MongoDB, one broker and one disk; Stage~3 shards the postings, spreads the datalake over the nodes and runs Hazelcast and \code{control} on several nodes & \ref{sec:limits}, \ref{sec:stage3} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+All 165 recovery runs of the campaign recover with the same books and search answers in every mode and with 1, 2 and 3
+replicas, and continuous integration validates every API response against \code{api/openapi.yaml} in every mode. Under
+the decision rule fixed before the campaign, \mode{hazelcast} wins: it ties ActiveMQ on performance and visibility with
+the least coordinator CPU. The runner-up, persistent ActiveMQ, brings lost work back without \code{control}, a property
+Stage~3 adds to the Hazelcast design (Section~\ref{sec:winner}).
+
+\newpage
+
 \section{Introduction and Objectives}
 \label{sec:introduction}
 
@@ -201,11 +239,6 @@ We set six objectives and met all of them:
   interleaved repetitions and 95\,\% confidence intervals. Every figure in this report names the run it comes from,
   and that run keeps its command, commit, configuration and raw data in the repository (Appendix~\ref{app:runs}).
 \end{enumerate}
-
-The campaign answers the questions of the assignment. Indexing limits the pipeline: one indexer publishes 28.5
-books/s, while one crawler downloads about 500. One \code{query} replica saturates at about 4{,}400 requests/s.
-Coordination itself is cheap in every mode, below 17\,\% of one core. The default mode, \mode{hazelcast}, remains the
-winner under the decision rule we fixed before the campaign (Section~\ref{sec:winner}).
 
 Table~\ref{tab:team} shows how the team split the work. Each member owned one piece and reviewed another member's pull
 requests, and changes to the shared contracts required all four. The work advanced through seven phases, F0 to F6,
@@ -429,7 +462,8 @@ The design keeps replicas and threads from interfering in four ways:
   the expected state and the \code{claim_id}. A worker that loses its lease writes nothing else, and a write that does
   not match is never retried.
 \item \textbf{Thread exhaustion.} Handlers answer in milliseconds and never wait for a job. Worker threads are a fixed
-  number per replica, and a JVM that runs out of memory exits instead of losing one thread.
+  number per replica, and a service exits instead of losing one: when a worker thread or a periodic task dies, or its
+  JVM runs out of memory.
 \item \textbf{Contention.} Replicas compete for the single MongoDB, the broker and the datalake volume. Batches share a
   per-batch cost among their books, postings go in \code{bulkWrite}s of 1{,}000 terms, and \code{query} reads an
   immutable snapshot without locks. Section~\ref{sec:benchmarks} measures the contention that is left.
@@ -931,7 +965,9 @@ Two lessons from building it shaped the configuration:
   about 0.7\,MB per book. In a pilot with batches of 500 books and a 512\,MB heap, the indexing thread threw
   \code{OutOfMemoryError} and died, but the JVM and its HTTP server did not. \code{/health} kept answering \code{UP}
   while the batch's books stayed \code{INDEXING}. Since then every JVM runs with \code{-XX:+ExitOnOutOfMemoryError}, so
-  it exits and recovers like a crash, and batches stop at 250 books.
+  it exits and recovers like a crash, and batches stop at 250 books. The same holds for any other failure: every worker
+  thread and periodic task of a service is started through \code{WorkerThreads}, which exits the service with code 1
+  if anything escapes the task, instead of leaving it dead behind a healthy \code{/health}.
 \end{itemize}
 
 \subsection{Testing and continuous integration}
@@ -945,8 +981,10 @@ one rebuild without an error. Commands are tested with a fake lease that is lost
 that the crash points are reached in order. Routes run on a real Javalin server with fake ports, checking status
 codes, \code{Location} headers, Problem Details and the exact snake\_case JSON.
 
-On 7 November 2026, \texttt{mvn clean verify} on the delivered code (\code{29bd276}, the last commit that changes code)
-ran 636 tests, all passing, in 82\,s (Table~\ref{tab:tests}). GitHub Actions requires five checks before anything merges into \code{dev} or \code{main}:
+On 7 November 2026, \texttt{mvn clean verify} on the delivered code (\code{8c26405}, the last commit that changes code)
+ran 646 tests, all passing, in 90\,s (Table~\ref{tab:tests}). JaCoCo measures in the same build the lines and branches
+each module's own tests run: 83\,\% of the lines and 83\,\% of the branches of \code{common} and the four services.
+\code{checks} is low because it runs against the live stack in continuous integration, not in unit tests. GitHub Actions requires five checks before anything merges into \code{dev} or \code{main}:
 the build with every test, failing if the MongoDB tests were skipped; the end-to-end API checks in every mode; the shell
 and workflow linters; CodeQL; and the whole failure matrix with 1, 2 and 3 replicas on the benchmark corpus, which runs
 on every pull request to \code{main} and on those to \code{dev} that change the recovery scripts.
@@ -954,21 +992,22 @@ on every pull request to \code{main} and on those to \code{dev} that change the 
 \begin{table}[ht]
 \centering
 \small
-\caption{Size of each module and its tests at \code{29bd276}. Lines include blank lines.}
+\caption{Size of each module, its tests and the share of its lines they run, at \code{8c26405}. Lines include blank
+lines; coverage counts executable lines, as JaCoCo does.}
 \label{tab:tests}
-\begin{tabular}{@{}lrrrr@{}}
+\begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Module & Main files & Main lines & Test lines & Tests \\
+Module & Main files & Main lines & Test lines & Tests & Line coverage \\
 \midrule
-\code{common} & 61 & 2{,}466 & 2{,}080 & 132 \\
-\code{crawler} & 31 & 1{,}310 & 2{,}245 & 93 \\
-\code{indexer} & 37 & 1{,}531 & 1{,}794 & 75 \\
-\code{query} & 20 & 1{,}061 & 1{,}046 & 47 \\
-\code{control} & 63 & 2{,}392 & 2{,}804 & 95 \\
-\code{bench} & 86 & 5{,}812 & 3{,}716 & 180 \\
-\code{checks} & 26 & 1{,}883 & 315 & 14 \\
+\code{common} & 62 & 2{,}512 & 2{,}128 & 135 & 82\,\% \\
+\code{crawler} & 31 & 1{,}311 & 2{,}245 & 93 & 82\,\% \\
+\code{indexer} & 37 & 1{,}532 & 1{,}794 & 75 & 77\,\% \\
+\code{query} & 20 & 1{,}063 & 1{,}046 & 47 & 89\,\% \\
+\code{control} & 63 & 2{,}396 & 2{,}804 & 95 & 86\,\% \\
+\code{bench} & 89 & 6{,}050 & 3{,}851 & 187 & 79\,\% \\
+\code{checks} & 26 & 1{,}883 & 315 & 14 & 13\,\% \\
 \midrule
-Total & 324 & 16{,}455 & 14{,}000 & 636 \\
+Total & 328 & 16{,}747 & 14{,}183 & 646 & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1151,7 +1190,7 @@ Jackson & Javalin's default mapper; one \code{ObjectMapper} for the API, MongoDB
 Generation pointer for rebuilds & Switching it is one atomic write & Renaming three collections, which is not atomic \\
 One conditional write per transition, on \code{$$NOW} & Single-document atomicity needs no transactions, and MongoDB's clock is the only clock & Read, decide in Java, write \\
 A lease is lost only by a renewal that does not match & A moment without MongoDB should not cost a batch & Losing the lease on any exception \\
-Every JVM exits on \code{OutOfMemoryError} & A dead thread behind a healthy \code{/health} is never recovered & Catching \code{Error} in the worker \\
+A service exits when a worker thread dies or its JVM runs out of memory & A dead thread behind a healthy \code{/health} is never recovered & Catching \code{Error} in the worker and going on \\
 Ten-year Hazelcast connect timeout & The infinite one overflows when the clock steps back & $-1$ \\
 JMH with three forks and the protocol in annotations & The error covers differences between JVMs, and every way of launching keeps the protocol & One fork, protocol in a runner \\
 \bottomrule
@@ -1252,6 +1291,7 @@ an 11\,KB body. Splitting a book in the crawler takes at most 12\,ms, and rankin
 operations is what limits the pipeline, as the next sections show.
 
 \subsection{Ingestion throughput}
+\label{sec:ingest}
 
 \begin{table}[ht]
 \centering
@@ -1379,6 +1419,7 @@ replica. \run{20261105-220915-index-throughput-c1376c7}.}
 to its batch's publication it takes 3.45\,s with one replica and 4.93\,s with three (Table~\ref{tab:coordination}).
 
 \subsection{Search latency under concurrency}
+\label{sec:search}
 
 \begin{figure}[ht]
 \centering
@@ -1456,6 +1497,7 @@ Clients & HTTP threads & Replicas & Mean latency (ms) & p95 (ms) & Requests/s \\
 \end{itemize}
 
 \subsection{Coordination cost}
+\label{sec:coordcost}
 
 \begin{table}[ht]
 \centering
@@ -1490,6 +1532,7 @@ N & Wait for a crawler & Download & Wait for an indexer & Indexing & Enqueue to 
 \end{itemize}
 
 \subsection{Resource usage}
+\label{sec:resources}
 
 \begin{table}[ht]
 \centering
@@ -1733,6 +1776,7 @@ Mode & Requeue & Claim & Requeue & Claim \\
 \end{table}
 
 \subsection{Bottlenecks and the limits of this evidence}
+\label{sec:limits}
 
 \begin{enumerate}
 \item \textbf{Indexing limits the pipeline.} One indexer publishes 28.5 books/s, while one crawler downloads about 500.
@@ -1755,7 +1799,7 @@ here shows how the design uses one machine, not how it will scale across several
 \item After the campaign, \code{dev} changed one class of \code{control} (\code{65095a7}): the orchestrator now asks
   \code{query} to refresh once per tick with new batches, not once per batch. Only the visibility of mode
   \mode{orchestrator} can differ from what was measured at \code{c1376c7}.
-\item A code review after the campaign fixed ten defects (\code{SPEC.md} 1.11). One touches a measured path: in both
+\item A code review after the campaign fixed eleven defects (\code{SPEC.md} 1.11). One touches a measured path: in both
   \mode{activemq} modes, every queue size \code{control} read, two per reconciliation and two per
   \code{GET /control/status}, which \code{bench wait} asks every second, left a temporary queue in the broker until the
   trial ended. Their coordinator CPU includes that extra work, which was not measured on its own, so it is an upper
@@ -1954,7 +1998,7 @@ one step that failed.
 \toprule
 In this report & Run & Command & Raw data \\
 \midrule
-Table~\ref{tab:ingest}; crawler JMH & \run{20261105-215351-ingest-throughput-c1376c7} & \code{./scripts/bench/ingest-throughput.sh} & \code{ingest.csv}, \code{stats.csv}, \code{host.csv}, \code{jmh/crawler.csv} \\
+Tables~\ref{tab:ingest} and \ref{tab:ingest-workers}; crawler JMH & \run{20261105-215351-ingest-throughput-c1376c7} & \code{./scripts/bench/ingest-throughput.sh} & \code{ingest.csv}, \code{workers.csv}, \code{stats.csv}, \code{host.csv}, \code{jmh/crawler.csv} \\
 Figure~\ref{fig:index} & \run{20261105-220915-index-throughput-c1376c7} & \code{./scripts/bench/index-throughput.sh --without-jmh} & \code{index.csv}, \code{stats.csv} \\
 Indexer JMH & \run{20261103-204454-index-throughput-6925d4e} & \code{./scripts/bench/index-throughput.sh} & \code{jmh/indexer.json}, \code{jmh/indexer.csv} \\
 Figure~\ref{fig:search}, Table~\ref{tab:search-latency}; query JMH & \run{20261104-140900-search-latency-8e1c1e8} & \code{./scripts/bench/search-latency.sh} & \code{load/<trial>.csv.gz}, \code{jmh/query.csv}, \code{explain/} \\
@@ -1968,13 +2012,20 @@ Table~\ref{tab:delay} & \run{20261106-073911-recovery-delay-c1376c7} & \code{./s
 \end{tabularx}
 \end{table}
 
-Each table and chart of this report takes its numbers from the \code{summary.csv}, \code{variants.csv} or
-\code{pairs.csv} of the run named in its caption. The rows they use are written into this report's
-source, \code{QueryTarantino_Stage2_Report.tex}, at the root of the repository. The medians of Table~\ref{tab:delay} come from \code{recovery-delay.csv}, over the books of
-every run of each row. To summarize a run again, delete its \code{summary.csv} and run its \code{bench} command on the
-run folder, for example \code{java -jar bench/target/bench-1.0-SNAPSHOT.jar coordination benchmarks/runs/<run_id>};
-\code{bench charts} redraws its charts. The report itself builds with
-\code{tectonic -X compile QueryTarantino_Stage2_Report.tex} from the root of the repository.
+Each table and chart of this report takes its numbers from the \code{summary.csv}, \code{variants.csv},
+\code{pairs.csv} or \code{workers.csv} of the run named in its caption. The rows they use are written into this
+report's source, \code{QueryTarantino_Stage2_Report.tex}, at the root of the repository. The medians of
+Table~\ref{tab:delay} come from \code{recovery-delay.csv}, over the books of every run of each row, and in row 12 apart
+by their \code{status}. \code{bench ingest-workers} and \code{bench resources} added \code{workers.csv} and the CPU rows
+of the ingestion run after the campaign, from the transition lines and the \code{stats.csv} the run already kept. To
+summarize a run again, delete its \code{summary.csv} and run its \code{bench} commands on the run folder, for example:
+\begin{lstlisting}
+java -jar bench/target/bench-1.0-SNAPSHOT.jar coordination benchmarks/runs/<run_id>
+\end{lstlisting}
+\code{bench charts} redraws the charts of a run. The report itself builds from the root of the repository with:
+\begin{lstlisting}
+tectonic -X compile QueryTarantino_Stage2_Report.tex
+\end{lstlisting}
 \clearpage
 \section{Endpoint Inventory}
 \label{app:endpoints}
