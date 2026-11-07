@@ -78,9 +78,8 @@ rows and the same \code{recovery-delay} experiment:
   broker. The rest of the code stays the same, because both already sit behind the same ports.
 \end{enumerate}
 
-Smaller improvements follow from this report: batches of 250 books once the indexer has a larger heap, which gave
-17\,\% more throughput, and ``Open a rebuild'' computing its target inside its own write, which closes the rebuild race
-of Section~\ref{sec:indexer}.
+A smaller improvement follows from this report: batches of 250 books once the indexer has a larger heap, which gave
+17\,\% more throughput. The rebuild race of Section~\ref{sec:indexer} is already closed in \code{SPEC.md} 1.11.
 
 \subsection{Lessons}
 

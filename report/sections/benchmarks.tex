@@ -535,6 +535,11 @@ here shows how the design uses one machine, not how it will scale across several
 \item After the campaign, \code{dev} changed one class of \code{control} (\code{65095a7}): the orchestrator now asks
   \code{query} to refresh once per tick with new batches, not once per batch. Only the visibility of mode
   \mode{orchestrator} can differ from what was measured at \code{c1376c7}.
+\item A code review after the campaign fixed eight defects (\code{SPEC.md} 1.11). One touches a measured path: in both
+  \mode{activemq} modes, every queue size \code{control} read, two per reconciliation and two per
+  \code{GET /control/status}, which \code{bench wait} asks every second, left a temporary queue in the broker until the
+  trial ended. Their coordinator CPU includes that extra work, which was not measured on its own, so it is an upper
+  bound.
 \item The campaign left an idle ActiveMQ container running during the recovery runs of \mode{polling} and
   \mode{orchestrator}. No service of those modes connects to it, and the scripts bring every mode down since
   \code{b4667d8}.

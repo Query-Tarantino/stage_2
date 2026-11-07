@@ -180,11 +180,11 @@ writes into the target generation while \code{query} keeps serving the old one. 
 be indexed and switches the pointer with one write once no book blocks the switch. Renaming three collections would
 not be atomic; switching a pointer is.
 
-\textbf{Known limitation.} \code{POST /index/rebuild} reads the current generation and then opens the rebuild, while
-\code{control} switches the generation and then finishes the rebuild: two writes on each side. A request that falls
-between \code{control}'s two writes answers \code{202} but builds no new generation, so the operator sees
-\code{rebuild: null} in \code{GET /index/status} and sends it again. Closing the gap needs ``Open a rebuild'' to
-compute its target inside its own write, a contract change left for Stage~3.
+\textbf{Rebuild race, closed after the campaign.} \code{POST /index/rebuild} read the current generation and then
+opened the rebuild, while \code{control} switches the generation and then finishes the rebuild: two writes on each
+side. A request that fell between \code{control}'s two writes answered \code{202} but built no new generation. Since
+\code{SPEC.md} 1.11, ``Open a rebuild'' takes its target from the previous rebuild's target inside its own write, so
+that request opens the next generation.
 
 \subsection{Crawler, query and control}
 
