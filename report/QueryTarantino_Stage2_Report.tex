@@ -1,0 +1,120 @@
+\documentclass[11pt,a4paper]{article}
+
+\PassOptionsToPackage{hyphens,obeyspaces,spaces}{url}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric,backgrounds}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\usepackage{listings}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{enumitem}
+\usepackage[section]{placeins}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{inkprimary}{HTML}{0B0B0B}
+\definecolor{inksecondary}{HTML}{52514E}
+\definecolor{inkmuted}{HTML}{8A8984}
+\definecolor{gridline}{HTML}{E4E3DF}
+\definecolor{hostfill}{HTML}{F6F5F2}
+\definecolor{modehazelcast}{HTML}{2A78D6}
+\definecolor{modeactivemq}{HTML}{EB6834}
+\definecolor{modepersistent}{HTML}{1BAF7A}
+\definecolor{modepolling}{HTML}{EDA100}
+\definecolor{modeorchestrator}{HTML}{E87BA4}
+
+\newcommand{\code}[1]{\nolinkurl{#1}}
+\newcommand{\mode}[1]{\code{#1}}
+\newcommand{\run}[1]{\nolinkurl{#1}}
+\newcommand{\spec}[1]{\code{SPEC.md}~\S#1}
+\newcommand{\repourl}{\url{https://github.com/Query-Tarantino/stage_2}}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framesep=3pt,
+  rulecolor=\color{black!25},
+  aboveskip=6pt,
+  belowskip=4pt,
+  showstringspaces=false,
+  breaklines=true,
+}
+
+\pgfplotsset{
+  report/.style={
+    width=7.4cm,
+    height=5.4cm,
+    axis lines*=left,
+    axis line style={inkmuted},
+    tick style={inkmuted},
+    major tick length=2pt,
+    ymajorgrids,
+    grid style={gridline},
+    tick label style={font=\footnotesize, color=inksecondary},
+    label style={font=\footnotesize, color=inkprimary},
+    title style={font=\small, color=inkprimary},
+    legend style={font=\footnotesize, draw=none, fill=none, text=inkprimary},
+    legend cell align=left,
+    every axis plot/.append style={line width=1.1pt},
+  },
+  modeline/.style={mark size=2.4pt, error bars/y dir=both, error bars/y explicit, error bars/error bar style={line width=0.7pt}, error bars/error mark options={rotate=90, mark size=2pt, line width=0.7pt}},
+}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\arraystretch}{1.12}
+\makeatletter
+\newcommand{\tablerows}[1]{\@@input #1 }
+\makeatother
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\hypersetup{
+  pdftitle={Search Engine Project: Stage 2. Building a Service-Oriented Architecture},
+  pdfauthor={Query Tarantino: Abel Castro Villar, Hugo Gonz\'alez Fern\'andez, Javier Mart\'in Rodr\'iguez, M\'aximo Prosperi Reynoso},
+}
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\input{sections/cover}
+\hypersetup{pageanchor=true}
+
+\tableofcontents
+\newpage
+
+\input{sections/introduction}
+\input{sections/architecture}
+\input{sections/api}
+\input{sections/implementation}
+\input{sections/decisions}
+\input{sections/benchmarks}
+\input{sections/conclusions}
+\input{sections/ai-usage}
+\input{sections/references}
+
+\appendix
+\clearpage
+\input{sections/appendix-reproducibility}
+\clearpage
+\input{sections/appendix-endpoints}
+\clearpage
+\input{sections/appendix-failure-matrix}
+\clearpage
+\input{sections/appendix-configuration}
+
+\end{document}

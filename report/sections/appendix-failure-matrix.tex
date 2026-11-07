@@ -1,0 +1,35 @@
+\section{Failure Matrix}
+\label{app:failures}
+
+Each row of Table~\ref{tab:failures} has its own script, \code{scripts/recovery/<nn>-<row>.sh <N>}. The script brings
+the stack up, causes the failure, restarts what went down, and checks three things: every book ends
+\code{PUBLISHED}, \code{/search} finds it exactly once, and no book is in two published batches of the current
+generation (\spec{8}). A crash point stops the service with \code{Runtime.halt(1)}, without shutdown hooks, the first
+time it reaches the named point.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\caption{What each failure leaves behind, who notices and how the system recovers, in mode \mode{hazelcast}. In the
+other modes, rows 04, 05 and 12 recover by redelivery or a new dispatch, or do not apply (\spec{11.5}).}
+\label{tab:failures}
+\begin{tabularx}{\textwidth}{@{}L{0.65cm}L{2.75cm}L{2.85cm}L{2.2cm}YL{2.65cm}@{}}
+\toprule
+Row & What goes down & What is left & Who notices & How it recovers & How it is caused \\
+\midrule
+01 & \code{crawler} while downloading & A \code{DOWNLOADING} book with a lease & \code{control}, when it expires & Back to \code{QUEUED} and to the queue & \code{after-claim} \\
+02 & \code{crawler} after the datalake write & The book in the datalake, still \code{DOWNLOADING} & \code{control}, when it expires & Back to \code{QUEUED}; the next claim finds it in the datalake & \code{after-datalake-write} \\
+03 & \code{crawler} after \code{DOWNLOADED}, before enqueuing & A \code{DOWNLOADED} book without a message & \code{control}: empty queue, old \code{enqueued_at} & Enqueued again & \code{after-downloaded} \\
+04, 05 & \code{crawler} or \code{indexer} after taking messages & Books without a message: an \code{IQueue} has no acknowledgement & \code{control}: empty queue, old \code{enqueued_at} & Enqueued again & \code{after-dequeue} \\
+06 & \code{indexer} while writing a batch & A \code{WRITING} batch, \code{INDEXING} books, half-written postings & \code{control}, when the batch expires & \code{ABANDONED}; books back to the queue; postings deleted later & \code{during-batch-write} \\
+07 & \code{indexer} after publishing, before marking & A \code{PUBLISHED} batch with \code{INDEXING} books & \code{control} & Completes the publication & \code{after-publish} \\
+08 & \code{indexer} after marking, before notifying & A published batch without \code{BatchPublished} & \code{query}, on its refresh & Seen within 5\,s & \code{after-mark} \\
+09 & \code{crawler} stopped longer than its lease & A zombie worker that may still write & \code{control}, when the lease expires & Requeued; the zombie's writes fail on \code{claim_id}, and its rename only replaces a complete copy & \code{docker pause} for 10\,s \\
+10 & \code{indexer} stopped longer than its lease & A zombie indexer that keeps writing & Its own renewal fails & It stops writing; its publication fails, and \code{control} deletes its postings, also late ones & \code{docker pause} for 10\,s \\
+11 & \code{control} & At most books in a new state without their message & Its reconciliation, once back & Reconciles from MongoDB and requeues & \code{docker kill} while seeding \\
+12 & Hazelcast & Empty queues & \code{control}: empty queue, old \code{enqueued_at} & Requeues every waiting book & \code{docker restart} \\
+13 & MongoDB & No half-done transition: each one is a single write & Healthchecks; services answer \code{503} & Everything continues from the last state & \code{docker stop}, 10\,s \\
+14 & One \code{query} replica & Nothing: it does not write & nginx & The other replicas serve; it rebuilds its snapshot at startup & \code{docker kill} \\
+\bottomrule
+\end{tabularx}
+\end{table}

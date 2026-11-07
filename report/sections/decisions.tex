@@ -1,0 +1,185 @@
+\section{Design Decisions}
+\label{sec:decisions}
+
+\subsection{Coordination mechanism}
+
+We chose choreography over a broker for the normal path, MongoDB as the only arbiter of who owns each job, and a
+periodic reconciliation as the safety net (Section~\ref{sec:coordination}). Three reasons drove the choice:
+\begin{itemize}
+\item \textbf{No process in the data path.} A free worker takes a book as soon as it is queued, and replicas scale by
+  competing for the same queue. No central process calls every service for every book, so none can become the
+  bottleneck or the single point of failure of the pipeline.
+\item \textbf{Exactly one winner without transactions.} Messages can be lost or repeated, so they cannot decide
+  anything. A conditional single-document write gives exactly one winner per transition, without locks or
+  transactions, and it is valid across machines because it compares against MongoDB's clock.
+\item \textbf{Recovery from persistent state.} Every repair works from \code{book_states}, so a lost message, an expired
+  lease or a lost announcement is found and fixed by reading MongoDB. Hazelcast can restart with empty queues.
+\end{itemize}
+
+The design has costs, and we accepted them knowingly. It has more moving parts than an orchestrator: leases, the
+heartbeat and a six-step reconciliation. It runs two systems, Hazelcast and MongoDB, where polling MongoDB alone would
+work. Batching adds wait, because a book waits for its batch to fill or for 30\,s. And the safety net is slow on
+purpose: \code{TARANTINO_REQUEUE_SECONDS} is 120\,s, and it must stay above the batch timeout so that \code{control}
+never requeues books an indexer is still holding.
+
+\subsection{The five modes measured, and the winner}
+\label{sec:winner}
+
+The assignment allows any coordination mechanism, so we also built the four alternatives of Table~\ref{tab:modes} and
+measured all five in one campaign (Section~\ref{sec:modes}). The decision rule was written on 5~November, before the
+campaign ran:
+\begin{enumerate}
+\item Correctness is a gate: every applicable row of the failure matrix must recover with the same answers.
+\item A difference only counts when \code{pairs.csv} marks it as significant, that is, when the 95\,\% confidence
+  interval of the difference between two modes excludes zero.
+\item The criteria are then applied in this order: pipeline performance (throughput and time to publication),
+  visibility, cost (the CPU of the coordinator and of MongoDB, the containers and the code of the mode), robustness
+  (lost work, a broker restart, \code{control} down), and fit for Stage~3.
+\item The default stays \mode{hazelcast} in this delivery, and a mode the data favours is proposed for Stage~3.
+\end{enumerate}
+
+Table~\ref{tab:decision} applies the rule. Every mode passes the gate: all 165 recovery runs recovered, and
+\code{recovery-compare} found the same books and answers for each row in every mode.
+
+\begin{table}[ht]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Decision matrix of the five coordination modes, in the order of the decision rule. Pipeline figures are
+the means over 5 repetitions of \run{20261106-012054-coordination-variants-c1376c7}; recovery figures come from the
+165 recovery runs and \run{20261106-073911-recovery-delay-c1376c7}. ``N'' is the number of \code{crawler} and
+\code{indexer} replicas together, and ``*'' marks a significant difference against \mode{hazelcast}.}
+\label{tab:decision}
+\begin{tabularx}{\textwidth}{@{}L{2.45cm}YYYYY@{}}
+\toprule
+Criterion & \mode{hazelcast} & \mode{activemq} & \mode{activemq-persistent} & \mode{polling} & \mode{orchestrator} \\
+\midrule
+Gate: rows recovered & 14 of 14 & 14 of 14 & 14 of 14 & 11 of 11 & 13 of 13 \\
+\addlinespace
+Throughput, books/s, N = 1 / 2 / 3 & 28.5 / 46.7 / 58.6 & 28.4 / 45.5 / 57.5 & 28.1 / 43.3 / 55.0* & 27.5 / 47.9 / 55.5 & 27.7 / 44.7 / 34.6* \\
+Time to publication p50, s, N = 1 / 2 / 3 & 50.0 / 30.6 / 24.6 & 50.9 / 32.5 / 25.7 & 49.1 / 31.6 / 23.1* & 53.2* / 30.8 / 26.8* & 54.7* / 35.3* / 30.1* \\
+\addlinespace
+Visibility p50, ms & 38--45 & 39--48 & 38--48 & 2{,}279--2{,}712* & 168--211* \\
+\addlinespace
+Coordinator CPU, \% of a core, N = 1 / 3 & 3.6 / 8.3 & 5.4* / 12.8* & 7.8* / 16.6* & 3.6 / 7.0* & 10.8* / 12.7* \\
+MongoDB CPU, N = 3 & 224\,\% & 219\,\%* & 219\,\% & 247\,\%* & 140\,\%*, doing less work \\
+Coordination containers & 1, Hazelcast & 1, ActiveMQ & 1, ActiveMQ with a disk store & None & None \\
+Main code of the mode & 192 lines & 328 lines & 328 lines & 104 lines & 506 lines \\
+\addlinespace
+Lost work (rows 04, 05) & \code{control} requeues after 11.7--11.8\,s & \code{control} requeues after 11.7--11.8\,s & Broker redelivers; reclaimed in 3.8--5.0\,s & Nothing to lose & \code{control} redispatches after 9.7\,s \\
+Broker restart (row 12) & Queues lost; requeued after 12\,s with N = 1, 82--97\,s with N = 2--3 & Queues lost; requeued after 11.7\,s & Messages survive; reclaimed in 6.1\,s & No broker & No broker \\
+\code{control} down (row 11) & Pipeline goes on & Pipeline goes on & Pipeline goes on & Pipeline goes on & Pipeline stops \\
+\addlinespace
+Stage~3 fit (argued, not measured) & Native cluster with partition backups, in memory & Network of brokers or a shared store & A shared or replicated disk store; capped at 1{,}460 messages/s & MongoDB load grows with every worker & One dispatcher: a bottleneck and a single point of failure \\
+\midrule
+Verdict & \textbf{Winner} & Ties on performance, costs more & \textbf{Runner-up}: best recovery & Out on visibility & Out on performance \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Performance.} \mode{orchestrator} loses: 41\,\% less throughput with 3 replicas, because one thread dispatches
+every book one \code{POST} at a time, and 4.7--5.5\,s more time to publication at every N. \mode{polling} keeps the
+throughput but takes 2.2--3.2\,s longer to publish with 1 and 3 replicas. \mode{hazelcast} and \mode{activemq} never
+differ significantly. \mode{hazelcast} and \mode{activemq-persistent} only differ with 3 replicas, in opposite
+directions: \mode{hazelcast} publishes 6\,\% more books per second, and \mode{activemq-persistent} has a 1.6\,s (6\,\%)
+lower median time to publication. Its median is lower because persistent sends feed the crawlers more slowly than they
+take books. A book waits 1\,ms in \code{books-to-download} instead of 0.8\,s, and slightly less in
+\code{books-to-index}, so part of the gain is a later start of each book's clock, not faster work. The same throttling
+costs the 6\,\% of throughput. Performance therefore leaves three modes in a tie.
+
+\textbf{Visibility and cost.} \mode{hazelcast}, \mode{activemq} and \mode{activemq-persistent} make a batch searchable
+within 38--48\,ms, so visibility does not separate them. Cost does: \mode{hazelcast}'s coordinator uses significantly
+less CPU than both ActiveMQ modes at every N, 35\,\% less than \mode{activemq} and 50\,\% less than
+\mode{activemq-persistent} with 3 replicas. It also needs no disk store and has the least code of the three. The rule
+stops here: \textbf{\mode{hazelcast} wins}, and it remains the mode of Stage~2.
+
+\textbf{What the rule leaves to Stage~3.} Robustness, the criterion after cost, favours \mode{activemq-persistent}.
+It is the only mode whose lost work comes back without \code{control}: the broker redelivers what a dead consumer did
+not acknowledge, and the book is claimed again 3.8--6.1\,s after the failure, against 11.7\,s for a requeue by
+\code{control}. If robustness came before cost, \mode{activemq-persistent} would win. That is why its property, not its
+broker, goes into the Stage~3 plan (Section~\ref{sec:stage3}). \code{control} stays necessary in every mode, because it
+also releases expired leases and drives rebuilds, and persistence caps the broker at about 1{,}460 messages/s. At the
+500--670 books/s that ingestion reaches, with two messages per book, that cap is close.
+
+\subsection{Single-machine deployment}
+
+Everything runs on one host with Docker Compose, as the assignment requires. Addresses are Compose service names, the
+datalake is a local volume, and there is one MongoDB server and one broker. Ports, addresses, data paths, replica
+counts, thread counts and every timing are environment variables with working defaults, validated at startup.
+Replicas are added with \texttt{-{}-scale} and need no restart, because nginx resolves service names on every request
+through Docker's DNS. Only nginx publishes ports, and the front-end and operational ports are separate, so a front-end
+can never reach an administrative route.
+
+\subsection{API design}
+
+\begin{itemize}
+\item \textbf{One search endpoint} with optional filters and pagination, as the assignment asks, plus book details and
+  filter values for the front-end use cases.
+\item \textbf{Asynchronous state changes}: \code{202} with a \code{Location} to poll, or \code{200} if already done.
+  Handlers stay in the millisecond range, cannot exhaust the HTTP pool, and repeated or concurrent requests duplicate
+  nothing.
+\item \textbf{Consistent reads}: every search reads one immutable snapshot of published batches, so a request never
+  mixes two states of the index, and a rebuild switches the whole snapshot at once.
+\item \textbf{Problem Details for every error}, including nginx's, with a stable \code{code} and the failing
+  \code{parameter}, so a client handles errors without parsing text.
+\end{itemize}
+
+\subsection{Storage}
+
+The datalake keeps the Stage~1 \code{batch} layout, which won the Stage~1 comparison: $O(1)$ store and lookup with one
+directory per 1{,}000 ids. The inverted index stays in MongoDB, also chosen in Stage~1, but with one postings document
+per term and batch instead of one per term (Section~\ref{sec:indexer}). Metadata moves from SQLite to MongoDB: SQLite
+allows one writer at a time, which several indexer replicas cannot share, and MongoDB avoids running a third database
+for it. Book states also live in MongoDB, because conditional single-document writes are exactly what claims and leases
+need. Each generation of the index has its own collections, so a rebuild never disturbs what \code{query} serves.
+
+\subsection{Concurrency model and configuration}
+
+Replicas coordinate only through conditional writes and the broker, and threads inside a process share only immutable
+snapshots and \code{java.util.concurrent} structures, so no lock is ever taken. Table~\ref{tab:config} gives the
+configuration we keep and the measurement behind each setting.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Configuration decisions and the evidence behind them (Section~\ref{sec:benchmarks}).}
+\label{tab:config}
+\begin{tabularx}{\textwidth}{@{}L{3.0cm}L{3.1cm}Y@{}}
+\toprule
+Setting & Kept & Evidence \\
+\midrule
+Books per batch & 100; 250 with a larger heap & 250 gives 17\,\% more books/s than 100, but the indexer container peaks at 745--808\,MiB with \code{-Xmx512m}; 500 ran out of memory \\
+\code{indexer} replicas & As many as MongoDB allows & Indexing limits the pipeline; 2 and 3 replicas give $\times$1.70 and $\times$2.10, while MongoDB's CPU grows faster than the indexers' \\
+\code{crawler} replicas and workers & 1 replica, 8 to 16 workers & Replicas add nothing (521--548 against 504 books/s); 16 workers add 24\,\% over 8; one crawler already downloads about 18 times faster than one indexer publishes \\
+\code{query} replicas & 2 & The second replica adds 29\,\% requests/s and cuts latency by 22\,\%; the third adds nothing \\
+HTTP threads & Javalin's default, 8 to 250 & 128 threads add nothing over 32 and lose 4\,\% of the requests/s; 8 threads with 32 clients raise latency by 77\,\% \\
+Batch announcements & Topic listener plus a 5\,s refresh & A batch is visible in 44\,ms on average with the listener and 2.6\,s without it, at no measurable CPU cost \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Smaller decisions}
+
+Table~\ref{tab:small-decisions} lists the smaller decisions that shaped the code, each with the alternative it
+rejected.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Smaller decisions, with the alternative each one rejected.}
+\label{tab:small-decisions}
+\begin{tabularx}{\textwidth}{@{}L{3.6cm}YL{3.4cm}@{}}
+\toprule
+Decision & Why & Rejected \\
+\midrule
+Java~25 & Allowed by the course; virtual threads carry the lease heartbeats cheaply, and records model messages and snapshots & Java~17 of the example \\
+Jackson & Javalin's default mapper; one \code{ObjectMapper} for the API, MongoDB documents and broker messages & Gson of the example \\
+Generation pointer for rebuilds & Switching it is one atomic write & Renaming three collections, which is not atomic \\
+One conditional write per transition, on \code{$$NOW} & Single-document atomicity needs no transactions, and MongoDB's clock is the only clock & Read, decide in Java, write \\
+A lease is lost only by a renewal that does not match & A moment without MongoDB should not cost a batch & Losing the lease on any exception \\
+Every JVM exits on \code{OutOfMemoryError} & A dead thread behind a healthy \code{/health} is never recovered & Catching \code{Error} in the worker \\
+Ten-year Hazelcast connect timeout & The infinite one overflows when the clock steps back & $-1$ \\
+JMH with three forks and the protocol in annotations & The error covers differences between JVMs, and every way of launching keeps the protocol & One fork, protocol in a runner \\
+\bottomrule
+\end{tabularx}
+\end{table}
