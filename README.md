@@ -11,6 +11,8 @@ through Hazelcast by default or in one of three other modes, and everything runs
 - [SPEC.md](SPEC.md) holds every contract: collections, messages, states, conditional writes, the HTTP API,
   the search algorithm, the failure matrix and the benchmark runs.
 - [api/openapi.yaml](api/openapi.yaml) is the HTTP API in OpenAPI 3.1, derived from `SPEC.md` §6.
+- [report/QueryTarantino_Stage2_Report.pdf](report/QueryTarantino_Stage2_Report.pdf) is the Stage 2 report, built from
+  its LaTeX source in `report/` with `tectonic -X compile QueryTarantino_Stage2_Report.tex`.
 
 ## Status
 
@@ -219,6 +221,7 @@ scripts/
 benchmarks/
   README.md             what the runs show
   runs/<run_id>/        every benchmark and recovery run, versioned
+report/                 the Stage 2 report: LaTeX source, the rows it takes from the runs, and its PDF
 .github/                CI, CodeQL and the recovery workflow
 workload/
   book_ids.txt          corpus candidates, in order
