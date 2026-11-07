@@ -253,3 +253,68 @@ Clients & HTTP threads & Replicas & Mean latency (ms) & p95 (ms) & Requests/s \\
 \item \textbf{Answers stay correct.} Every request answered \code{200} except 170 \code{503}s, 168 of them with 64
   clients: 0.006\,\% of that configuration's 2{,}628{,}660 requests.
 \end{itemize}
+
+\subsection{Coordination cost}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Where a book's time goes in mode \mode{hazelcast}, by replicas of \code{crawler} and \code{indexer} together:
+the wait in \code{books-to-download} and in \code{books-to-index}, the work, and the time from enqueue to publication.
+Mean of 5 repetitions $\pm$ 95\,\% interval,
+from the transition logs. \mode{hazelcast} trials of \run{20261106-012054-coordination-variants-c1376c7}.}
+\label{tab:coordination}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+N & Wait for a crawler & Download & Wait for an indexer & Indexing & Enqueue to publication \\
+\midrule
+\tablerows{tables/coordcost.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Coordination costs far more time than the work}, as expected (Table~\ref{tab:coordination}): with one
+  replica a book waits 1.4\,s for a crawler to download it in 13\,ms.
+\item \textbf{More consumers on one queue help little.} The wait for a crawler halves with 2 replicas and does not fall
+  further with 3, while the download itself gets slower with every replica, 13, 27 and 44\,ms.
+\item \textbf{Indexing is the bottleneck of the pipeline.} The wait in \code{books-to-index} is 91\,\% of the time to
+  publication with one replica. It falls 42\,\% with 2 replicas and 57\,\% with 3; from 1 to 3 replicas that is more
+  than the 47\,\% of the download wait, against the hypothesis. Books wait for an indexer, not for their batch to fill: with one replica the p95 of that wait is
+  87\,s, far above the 30\,s a batch waits at most.
+\end{itemize}
+
+\subsection{Resource usage}
+
+\begin{table}[ht]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{CPU, in percent of one core as \code{docker stats} counts it, and memory during each phase, by replicas of
+\code{crawler} and \code{indexer}. ``Stack'' adds up every container; ``Host'' is the whole machine.
+\run{20261105-235758-resource-usage-c1376c7}.}
+\label{tab:resources}
+\begin{tabular}{@{}rlrrrrrr@{}}
+\toprule
+N & Phase & Crawlers' CPU & Indexers' CPU & MongoDB's CPU & Stack CPU & Stack memory (MiB) & Host CPU \\
+\midrule
+\tablerows{tables/resources.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Crawlers share a fixed rate.} Their total CPU grows with replicas, but each crawler uses less, 378, 256
+  and 179\,\%, instead of staying flat as expected: the same books per second are split among more crawlers, and the
+  24 hardware threads are never near saturation.
+\item \textbf{MongoDB follows the indexers.} During ingestion the crawlers use 7.6--8.3 times MongoDB's CPU; during
+  indexing MongoDB uses more CPU than the indexers and grows with them, from 78\,\% to 220\,\%, as expected.
+\item \textbf{Memory is bounded.} A crawler or indexer container reaches 497--683\,MiB at p99, above its
+  \code{-Xmx512m} in all but one configuration, because \code{docker stats} counts the whole JVM (heap, metaspace,
+  thread stacks and buffers), not the heap. No container grows with the load; \code{control} and \code{query} stay
+  below 270\,MiB.
+\item \textbf{The host pays for Docker.} The host uses 1.7--1.9 times the stack's CPU during ingestion and 1.2--1.4
+  times during indexing: the rest runs in Docker Desktop's VM and Windows.
+\end{itemize}
