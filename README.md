@@ -8,11 +8,12 @@ Search engine over [Project Gutenberg](https://www.gutenberg.org/) books in Java
 seeds and reconciles. The services keep the texts in a datalake and the source of truth in MongoDB, coordinate
 through Hazelcast by default or in one of three other modes, and everything runs on one machine with Docker Compose.
 
+- [QueryTarantino_Stage2_Report.pdf](QueryTarantino_Stage2_Report.pdf) is the Stage 2 report. Its LaTeX source,
+  [QueryTarantino_Stage2_Report.tex](QueryTarantino_Stage2_Report.tex), is one file that also holds the rows it takes from
+  the runs, and `tectonic -X compile QueryTarantino_Stage2_Report.tex` builds it from the root of the repository.
 - [SPEC.md](SPEC.md) holds every contract: collections, messages, states, conditional writes, the HTTP API,
   the search algorithm, the failure matrix and the benchmark runs.
 - [api/openapi.yaml](api/openapi.yaml) is the HTTP API in OpenAPI 3.1, derived from `SPEC.md` §6.
-- [report/QueryTarantino_Stage2_Report.pdf](report/QueryTarantino_Stage2_Report.pdf) is the Stage 2 report, built from
-  its LaTeX source in `report/` with `tectonic -X compile QueryTarantino_Stage2_Report.tex`.
 
 ## Status
 
@@ -200,6 +201,8 @@ TARANTINO_CACHE_SOURCE=http scripts/fill_cache.sh  # one HTTP request per book, 
 ## Repository
 
 ```text
+QueryTarantino_Stage2_Report.pdf  the Stage 2 report
+QueryTarantino_Stage2_Report.tex  its LaTeX source, with the rows it takes from the runs
 common/                 shared contracts: names, records, JSON, configuration, tokenizer, Mongo, Hazelcast, HTTP
 services/
   crawler/              Ingestion
@@ -221,7 +224,6 @@ scripts/
 benchmarks/
   README.md             what the runs show
   runs/<run_id>/        every benchmark and recovery run, versioned
-report/                 the Stage 2 report: LaTeX source, the rows it takes from the runs, and its PDF
 .github/                CI, CodeQL and the recovery workflow
 workload/
   book_ids.txt          corpus candidates, in order

@@ -102,7 +102,7 @@ How the design keeps replicas and threads from getting in each other's way:
 
 ```text
 stage_2/
-├── SPEC.md, README.md
+├── SPEC.md, README.md, QueryTarantino_Stage2_Report.tex and its PDF
 ├── pom.xml                  parent: modules and every version
 ├── docker-compose.yml, docker-compose.mirror.yml, Dockerfile, .dockerignore, .gitignore
 ├── docker-compose.activemq.yml, docker-compose.activemq-persistent.yml, docker-compose.polling.yml, docker-compose.orchestrator.yml
