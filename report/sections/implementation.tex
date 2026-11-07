@@ -220,3 +220,85 @@ the queues after a broker restart; (5) delete the postings of batches abandoned 
 ago, on every pass, so a zombie indexer's late writes are deleted too; and (6) drive a rebuild and drop old
 generations. A separate task deletes orphan \code{.tmp} files, and \code{GET /control/status} reports the generation,
 the books per state, both queues and the last reconciliation.
+
+\subsection{Coordination modes in code}
+
+The broker sits behind three ports in \code{common}: \code{Broker} (connection and health), \code{BookTasks} (a work
+queue) and \code{BatchAnnouncements} (the topic). Each service's factory picks the adapters from
+\code{TARANTINO_COORDINATION}, so the commands do not know which mode runs. Each mode adds little code of its own
+(non-blank lines of main code):
+\begin{itemize}
+\item \mode{hazelcast}: 192 lines in 7 classes, \code{IQueue} and \code{ITopic} adapters and a reconnecting client.
+\item \mode{activemq}: 328 lines in 3 classes, one JMS session and producer per queue handle, with prefetch 1 on
+  \code{books-to-download}. With persistence, delivery is persistent and the acknowledgement is called only when the
+  job returns, so a message held by a dead consumer goes to another one.
+\item \mode{polling}: 104 lines in 2 worker classes plus two sorted claims, ``Claim the next book'' and ``Claim the next
+  book for a batch'', which are \code{findOneAndUpdate}s ordered by \code{enqueued_at}.
+\item \mode{orchestrator}: 506 lines in 15 classes. \code{control} runs a tick every 200\,ms that dispatches the
+  oldest waiting books within a window of 512 downloads and 400 indexings in flight, one \code{POST} at a time, and
+  each worker replica keeps a bounded local queue behind its internal route.
+\end{itemize}
+
+\subsection{Deployment and startup}
+
+The whole system runs on one machine with Docker Compose: \code{mongo:7.0}, one Hazelcast~5.7 member in cluster
+\code{tarantino}, the four services built from one \code{Dockerfile}, and nginx. No service sets
+\code{container_name}, so \texttt{docker compose up -{}-scale crawler=3 -{}-scale indexer=3 -{}-scale query=2} works,
+while \code{control} always runs once. Only nginx publishes ports. It resolves the service names through Docker's DNS
+(\code{127.0.0.11}, \code{valid=5s}) with the upstream in a variable, so replicas added by \texttt{-{}-scale} receive
+requests without restarting it, and it retries another replica when one does not answer. Every service has a
+healthcheck on \code{/health} and never restarts on its own, so the recovery tests decide when a crashed service comes
+back. One shared block gives every service the same timing variables and \code{-Xmx512m -XX:+ExitOnOutOfMemoryError}.
+
+Two lessons from building it shaped the configuration:
+\begin{itemize}
+\item \textbf{A timeout that is not infinite.} The Hazelcast client first used the ``infinite'' cluster connect
+  timeout, $-1$, which Hazelcast stores as \code{Long.MAX_VALUE} and subtracts the elapsed time from. On a freshly
+  started VM the clock stepped back a few milliseconds between two attempts, the subtraction overflowed into a negative
+  wait, and the client shut down. \code{control} then died at startup whenever Hazelcast was not ready yet. The timeout
+  is now ten years: in practice it never gives up, and it cannot overflow.
+\item \textbf{A thread that dies quietly.} A batch keeps the term frequencies and postings of all its books in memory,
+  about 0.7\,MB per book. In a pilot with batches of 500 books and a 512\,MB heap, the indexing thread threw
+  \code{OutOfMemoryError} and died, but the JVM and its HTTP server did not. \code{/health} kept answering \code{UP}
+  while the batch's books stayed \code{INDEXING}. Since then every JVM runs with \code{-XX:+ExitOnOutOfMemoryError}, so
+  it exits and recovers like a crash, and batches stop at 250 books.
+\end{itemize}
+
+\subsection{Testing and continuous integration}
+\label{sec:testing}
+
+Tests follow the hexagonal layout: commands run on in-memory fakes, adapters on a real MongoDB in Testcontainers, and
+every conditional write is raced by two claimants at once. \code{TwoAtOnce} releases the same call from two threads
+through a barrier. For example, two indexers claiming the same books never share one, and of two publications of a
+batch only one matches. Publishing and abandoning at the lease boundary never both match, and two rebuild requests open
+one rebuild without an error. Commands are tested with a fake lease that is lost at a chosen step, and the tests check
+that the crash points are reached in order. Routes run on a real Javalin server with fake ports, checking status
+codes, \code{Location} headers, Problem Details and the exact snake\_case JSON.
+
+On 7 November 2026, \texttt{mvn clean verify} on \code{dev} (\code{37576c9}) ran 625 tests, all passing, in 81\,s
+(Table~\ref{tab:tests}). GitHub Actions requires five checks before anything merges into \code{dev} or \code{main}:
+the build with every test, failing if the MongoDB tests were skipped; the end-to-end API checks in every mode; the shell
+and workflow linters; CodeQL; and the whole failure matrix with 1, 2 and 3 replicas on the benchmark corpus, which runs
+on every pull request to \code{main} and on those to \code{dev} that change the recovery scripts.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Size of each module and its tests on \code{dev} at \code{37576c9}. Lines include blank lines.}
+\label{tab:tests}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Module & Main files & Main lines & Test lines & Tests \\
+\midrule
+\code{common} & 60 & 2{,}389 & 1{,}932 & 126 \\
+\code{crawler} & 31 & 1{,}315 & 2{,}227 & 91 \\
+\code{indexer} & 37 & 1{,}516 & 1{,}756 & 72 \\
+\code{query} & 20 & 1{,}049 & 1{,}046 & 47 \\
+\code{control} & 63 & 2{,}396 & 2{,}807 & 95 \\
+\code{bench} & 86 & 5{,}812 & 3{,}716 & 180 \\
+\code{checks} & 26 & 1{,}883 & 315 & 14 \\
+\midrule
+Total & 323 & 16{,}360 & 13{,}799 & 625 \\
+\bottomrule
+\end{tabular}
+\end{table}
