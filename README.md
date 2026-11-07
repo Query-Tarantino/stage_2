@@ -157,6 +157,7 @@ To summarise an existing run again, delete its `summary.csv` and run its command
 
 ```bash
 java -jar bench/target/bench-1.0-SNAPSHOT.jar coordination benchmarks/runs/<run_id>
+java -jar bench/target/bench-1.0-SNAPSHOT.jar ingest-workers benchmarks/runs/<run_id>
 java -jar bench/target/bench-1.0-SNAPSHOT.jar resources benchmarks/runs/<run_id>
 java -jar bench/target/bench-1.0-SNAPSHOT.jar charts benchmarks/runs/<run_id>
 ```

@@ -27,6 +27,8 @@ main() {
 
 summarise_run() {
     bench ingest-throughput "$run_dir"
+    bench ingest-workers "$run_dir"
+    bench resources "$run_dir"
 }
 
 print_hypotheses() {
