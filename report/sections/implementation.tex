@@ -113,7 +113,7 @@ current one, and ensures that generation's indexes before its first write to it.
 with a new \code{claim_id} and a lease, starts its heartbeat, and claims the books with one \code{updateMany} from
 \code{DOWNLOADED} to \code{INDEXING}. Only the books that this write moved are indexed; another replica may have claimed
 the rest. \code{HeaderParser} reads each header and the \code{Tokenizer} counts the terms of each body. A book whose
-body is missing goes to \code{FAILED} with \code{NOT_IN_DATALAKE}. The indexer then writes \code{metadata_g<w>} with
+header or body is missing goes to \code{FAILED} with \code{NOT_IN_DATALAKE}. The indexer then writes \code{metadata_g<w>} with
 one \code{bulkWrite} of upserts and \code{postings_g<w>} in \code{bulkWrite}s of 1{,}000 terms, publishes, marks the
 books \code{PUBLISHED} and announces the batch.
 
@@ -133,7 +133,7 @@ books \code{PUBLISHED} and announces the batch.
   2/{Read the write generation; ensure its indexes},
   3/{Open the batch: \code{WRITING}, \code{claim_id}, lease, heartbeat},
   4/{Claim its books: \code{DOWNLOADED} to \code{INDEXING}},
-  5/{Read and parse each book; a missing body fails the book},
+  5/{Read and parse each book; a missing file fails the book},
   6/{Write \code{metadata_g<w>}: one \code{bulkWrite} of upserts},
   7/{Write \code{postings_g<w>}: \code{bulkWrite}s of 1{,}000 terms},
   8/{Publish: one conditional \code{findOneAndUpdate}},
@@ -193,7 +193,8 @@ writes, and a message only after the write.
 
 \textbf{Crawler.} Each replica runs eight download workers on platform threads, and each worker takes one book at a
 time from \code{books-to-download}. A worker claims the book (\code{QUEUED} to \code{DOWNLOADING}, with its
-\code{claim_id}, a lease and one more attempt) and skips the download if the book's body is already in the datalake.
+\code{claim_id}, a lease and one more attempt) and skips the download if the book's header and body are already in the
+datalake.
 Otherwise it reads the text from the local mirror or over HTTP, splits it into header and body at the Gutenberg markers
 and writes each file to a unique \code{.tmp}, renamed with \code{ATOMIC_MOVE}, header first. ``Finish a download'' then
 marks it \code{DOWNLOADED}, and only after that write is the book enqueued in \code{books-to-index}. A failed download
@@ -275,8 +276,8 @@ one rebuild without an error. Commands are tested with a fake lease that is lost
 that the crash points are reached in order. Routes run on a real Javalin server with fake ports, checking status
 codes, \code{Location} headers, Problem Details and the exact snake\_case JSON.
 
-On 7 November 2026, \texttt{mvn clean verify} on \code{dev} (\code{37576c9}) ran 625 tests, all passing, in 81\,s
-(Table~\ref{tab:tests}). GitHub Actions requires five checks before anything merges into \code{dev} or \code{main}:
+On 7 November 2026, \texttt{mvn clean verify} on the delivered code (\code{29bd276}, the last commit that changes code)
+ran 636 tests, all passing, in 82\,s (Table~\ref{tab:tests}). GitHub Actions requires five checks before anything merges into \code{dev} or \code{main}:
 the build with every test, failing if the MongoDB tests were skipped; the end-to-end API checks in every mode; the shell
 and workflow linters; CodeQL; and the whole failure matrix with 1, 2 and 3 replicas on the benchmark corpus, which runs
 on every pull request to \code{main} and on those to \code{dev} that change the recovery scripts.
@@ -284,21 +285,21 @@ on every pull request to \code{main} and on those to \code{dev} that change the 
 \begin{table}[ht]
 \centering
 \small
-\caption{Size of each module and its tests on \code{dev} at \code{37576c9}. Lines include blank lines.}
+\caption{Size of each module and its tests at \code{29bd276}. Lines include blank lines.}
 \label{tab:tests}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
 Module & Main files & Main lines & Test lines & Tests \\
 \midrule
-\code{common} & 60 & 2{,}389 & 1{,}932 & 126 \\
-\code{crawler} & 31 & 1{,}315 & 2{,}227 & 91 \\
-\code{indexer} & 37 & 1{,}516 & 1{,}756 & 72 \\
-\code{query} & 20 & 1{,}049 & 1{,}046 & 47 \\
-\code{control} & 63 & 2{,}396 & 2{,}807 & 95 \\
+\code{common} & 61 & 2{,}466 & 2{,}080 & 132 \\
+\code{crawler} & 31 & 1{,}310 & 2{,}245 & 93 \\
+\code{indexer} & 37 & 1{,}531 & 1{,}794 & 75 \\
+\code{query} & 20 & 1{,}061 & 1{,}046 & 47 \\
+\code{control} & 63 & 2{,}392 & 2{,}804 & 95 \\
 \code{bench} & 86 & 5{,}812 & 3{,}716 & 180 \\
 \code{checks} & 26 & 1{,}883 & 315 & 14 \\
 \midrule
-Total & 323 & 16{,}360 & 13{,}799 & 625 \\
+Total & 324 & 16{,}455 & 14{,}000 & 636 \\
 \bottomrule
 \end{tabular}
 \end{table}
