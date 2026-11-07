@@ -1,0 +1,123 @@
+\section{Benchmarks and Results}
+\label{sec:benchmarks}
+
+\subsection{Setup and methodology}
+
+Every figure in this section comes from one official campaign on one machine (Table~\ref{tab:host}). The script
+\code{scripts/bench/all.sh} ran every experiment and the whole failure matrix in the five modes, in 187 steps and
+9\,h~45\,min, from a clean commit of \code{dev}. Only one step failed: \code{broker-latency}, because Git Bash rewrote
+the folder it passed to the container. Once the script passed a relative path, that step ran again alone, from a commit
+that only changed scripts. Appendix~\ref{app:runs} gives the run, command and raw data behind every table and figure.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Host and fixed conditions of every official run, as each \code{manifest.json} and \code{corpus.json} record
+them.}
+\label{tab:host}
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}Y@{}}
+\toprule
+Host & Intel Core Ultra 9 275HX, 24 hardware threads (8 P-cores and 16 E-cores), 31.4\,GiB, 1\,TB disk, Windows~11 \\
+Containers & Docker Desktop 29.9.2 with 24 CPUs and 15.3\,GiB; every service JVM with \code{-Xmx512m} \\
+Corpus & 2{,}800 books and 755{,}974 distinct terms from the local mirror, checked against \code{workload/corpus.sha256} before every run, so the network is never measured \\
+Campaign & \run{20261105-215348-campaign-c1376c7}, from \code{dev} at \code{c1376c7}, overnight on 5--6 November 2026 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{itemize}
+\item \textbf{One factor at a time.} Each experiment varies one factor around a baseline, and its script prints the
+  hypotheses to the run's \code{log.txt} before measuring.
+\item \textbf{Five interleaved repetitions.} Repetition 1 of every configuration runs first, then repetition 2, and so
+  on, so any drift over the night, such as heat, spreads over every configuration instead of falling on one.
+\item \textbf{Statistics.} Tables give the mean $\pm$ the half-width of its 95\,\% confidence interval over the
+  repetitions, with Student's $t$ for $n-1$ degrees of freedom. Percentiles pool the values of every repetition: books,
+  \code{docker stats} samples or requests.
+\item \textbf{Three levels of concurrency, kept apart.} Client concurrency is the closed-loop clients of the load
+  generator; threads are the workers or HTTP threads inside one process; replicas are processes. Each table states the
+  three, and each trial records them in \code{manifest.json}.
+\end{itemize}
+
+To fit the campaign into one night, it reused two runs from 3 and 4 November on the same machine, because
+\code{git diff} shows that the code they measure did not change. These are \code{search-latency} and the indexer's JMH.
+The coordination cost comes from the \mode{hazelcast} trials of \code{coordination-variants}, which follow the same
+procedure. Rows 09 to 12 of the failure matrix ran with one replica only outside \mode{hazelcast}, because their time is
+mostly processing the whole corpus, which \code{coordination-variants} already measures for every mode and replica
+count.
+
+\subsection{Microbenchmarks}
+
+JMH~\cite{jmh} runs in each service's \code{src/test/java} with 5 warmup and 10 measurement iterations, three forks and a fixed
+heap, so its error also covers differences between JVMs. Each bound in Table~\ref{tab:jmh} was stated before measuring
+and is checked with at least three sizes.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{JMH results, average time per operation $\pm$ JMH's 99.9\,\% error. Indexer:
+\run{20261103-204454-index-throughput-6925d4e}; crawler: \run{20261105-215351-ingest-throughput-c1376c7}; query:
+\run{20261104-140900-search-latency-8e1c1e8}.}
+\label{tab:jmh}
+\begin{tabularx}{\textwidth}{@{}L{3.0cm}L{3.0cm}rL{2.15cm}Y@{}}
+\toprule
+Benchmark & Input & Time & Per unit & Bound \\
+\midrule
+\multirow{3}{3.0cm}{\code{Tokenizer}, terms of a body} & Book 1080, 20\,KB body & 0.206 $\pm$ 0.004\,ms & 10.4\,ms/MB & \multirow{3}{=}{Linear in the body: holds} \\
+ & Book 84, 429\,KB & 4.83 $\pm$ 0.01\,ms & 11.3\,ms/MB & \\
+ & Book 2600, 3.34\,MB & 36.7 $\pm$ 0.1\,ms & 11.0\,ms/MB & \\
+\addlinespace
+\multirow{3}{3.0cm}{\code{HeaderParser}} & Book 1080 & 6.9 $\pm$ 0.9\,\textmu s & -- & \multirow{3}{=}{Constant: holds} \\
+ & Book 84 & 7.54 $\pm$ 0.09\,\textmu s & -- & \\
+ & Book 2600 & 7.09 $\pm$ 0.03\,\textmu s & -- & \\
+\addlinespace
+\multirow{4}{3.0cm}{Writing a batch to MongoDB} & 1 book & 19.8 $\pm$ 0.7\,ms & 19.8\,ms/book & \multirow{4}{=}{Cost per book falls with the batch: holds} \\
+ & 10 books & 338 $\pm$ 3\,ms & 33.8\,ms/book & \\
+ & 100 books & 2{,}806 $\pm$ 33\,ms & 28.1\,ms/book & \\
+ & 1{,}000 books & 12{,}535 $\pm$ 175\,ms & 12.5\,ms/book & \\
+\addlinespace
+\multirow{3}{3.0cm}{Crawler: split header and body} & Book 1080, 40\,KB & 102 $\pm$ 10\,\textmu s & -- & \multirow{3}{=}{Linear in the text} \\
+ & Book 84, 450\,KB & 1.62 $\pm$ 0.01\,ms & -- & \\
+ & Book 2600, 3.4\,MB & 12.3 $\pm$ 0.4\,ms & -- & \\
+\addlinespace
+\multirow{3}{3.0cm}{Query over 1{,}000 books} & TF-IDF ranking, 3 words & 60.2 $\pm$ 0.4\,\textmu s & -- & \multirow{3}{=}{About 1\,\% of a request end to end} \\
+ & Search without filters & 44.9 $\pm$ 0.2\,\textmu s & -- & \\
+ & Search with filters & 12.3 $\pm$ 0.1\,\textmu s & -- & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The tokenizer costs 10.4--11.3\,ms per MB across a 168-fold range of sizes, so it is linear, and the header parser
+takes about 7\,\textmu s whatever the book. Writing a batch costs less per book from 10 to 1{,}000 books, because books
+share terms and each term gets one postings document per batch. The single book is cheaper only because it is book 1,
+an 11\,KB body. Splitting a book in the crawler takes at most 12\,ms, and ranking takes 60\,\textmu s. None of these
+operations is what limits the pipeline, as the next sections show.
+
+\subsection{Ingestion throughput}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Books downloaded per second by \code{crawler} replicas and download workers per replica, over the whole window
+(first claim to last download) and the steady window (10\,\% to 90\,\% of the books).
+\run{20261105-215351-ingest-throughput-c1376c7}.}
+\label{tab:ingest}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+Replicas & Workers per replica & Whole window (books/s) & Steady 10--90\,\% (books/s) \\
+\midrule
+\tablerows{tables/ingest.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Workers help with a shrinking gain} (Table~\ref{tab:ingest}): +36\,\% from 4 to 8 and +24\,\% from 8 to
+  16. The curve bends but does not flatten by 16 workers, as the hypothesis expected.
+\item \textbf{Replicas do not help}, against the hypothesis: 2 and 3 replicas of 8 workers download as many books per
+  second as one, within their intervals.
+\item \textbf{CPU is not the limit.} During ingestion the host uses 956--1{,}281\,\% of the 2{,}400\,\% available
+  (Table~\ref{tab:resources}), and more crawlers raise their total CPU from 378\,\% to 537\,\% without more books per
+  second. Splitting a book takes at most 12\,ms, while each of 8 workers has 16\,ms per book at 504 books/s. The limit
+  is in what every crawler shares: the one \code{books-to-download} queue, the one MongoDB and the datalake volume.
+  These runs do not tell which of the three.
+\end{itemize}
