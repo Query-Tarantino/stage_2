@@ -142,7 +142,7 @@ stage_2/
 ### 2.4 Docker Compose
 
 - Services: `mongo`, `hazelcast`, `crawler`, `indexer`, `query`, `control` and `nginx`, plus `bench` under the `tools` profile, which only starts with `docker compose run`. None uses `container_name`, so that `docker compose up -d --scale crawler=3 --scale indexer=3 --scale query=2` works. `control` always has one replica.
-- Only nginx publishes ports on the host: 8080 and 8081. For debugging, use `docker compose exec`.
+- Only nginx publishes ports on the host: 8080, and 8081 only on `127.0.0.1`, because the operational routes have no authentication and anyone on the network could otherwise open rebuilds or ingest arbitrary ids. For debugging, use `docker compose exec`.
 - Pinned image versions, never `latest`: `mongo:7.0`, as in Stage 1; `hazelcast/hazelcast` with `HZ_CLUSTERNAME=tarantino`; `nginx`; and for the four services one shared `Dockerfile` on `eclipse-temurin:25-jre`, which copies the service jar and adds `curl` for the healthcheck, because the image does not ship it.
 - Addresses: `TARANTINO_MONGO_URI=mongodb://mongo:27017/tarantino` and `TARANTINO_HAZELCAST=hazelcast:5701`.
 - Volumes: the `datalake` volume at `/data/datalake` in `crawler`, `indexer` and `control`, with `TARANTINO_DATALAKE=/data/datalake`; `./workload`, read-only, at `/app/workload` in `indexer`, `query` and `control`, with `TARANTINO_WORKLOAD=/app/workload`. When the local mirror is used, `docker-compose.mirror.yml` mounts `benchmarks/mirror/` read-only in `crawler` and `control` and points `TARANTINO_MIRROR` to that path; without it, `crawler` downloads over HTTP.

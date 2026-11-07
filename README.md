@@ -73,7 +73,7 @@ Without `docker-compose.mirror.yml`, `crawler` downloads over HTTP from Gutenber
 
 | Setting | How |
 | --- | --- |
-| Entry ports | Only nginx publishes ports: 8080 sends `/search`, `/search/filters` and `/books/` to `query`, and 8081 sends `/ingest/`, `/index/` and `/control/` to their service; any other path gives `404` |
+| Entry ports | Only nginx publishes ports: 8080 sends `/search`, `/search/filters` and `/books/` to `query`, and 8081 sends `/ingest/`, `/index/` and `/control/` to their service; any other path gives `404`. 8081 has no authentication, so it only listens on `127.0.0.1` |
 | Service ports | `TARANTINO_PORT`: 7001 `crawler`, 7002 `indexer`, 7003 `query` and 7004 `control`, inside the Compose network, each with its `/health`: `docker compose exec query curl -s localhost:7003/health` |
 | Addresses | `TARANTINO_MONGO_URI` and `TARANTINO_HAZELCAST`, which `docker-compose.yml` points to `mongo` and `hazelcast` |
 | Data paths | `TARANTINO_DATALAKE` (the `datalake` volume at `/data/datalake`), `TARANTINO_WORKLOAD` (`./workload` at `/app/workload`) and `TARANTINO_MIRROR` (`benchmarks/mirror` at `/data/mirror` with `docker-compose.mirror.yml`) |
