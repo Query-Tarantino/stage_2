@@ -1,0 +1,95 @@
+\section{Conclusions and Future Improvements}
+\label{sec:conclusions}
+
+\subsection{What the measurements say}
+
+\textbf{Strengths.} The design is correct under every failure we could cause. All 165 recovery runs recover with the
+same answers whatever the mode and the replica count, and no book ever appeared twice. Coordination costs little: a
+message takes 0.1--0.2\,ms, and the broker uses at most 17\,\% of one core. Indexer and \code{query} replicas raise
+throughput on one host, $\times$2.10 with three indexers and +29\,\% with a second \code{query}. A book becomes
+searchable about 40\,ms after its batch is published. The contracts held: the API checks pass in every mode and
+with one or three \code{query} replicas, and every figure traces to a run.
+
+\textbf{Weaknesses.} Indexing is the bottleneck: one indexer publishes 28.5 books/s against about 500 downloaded, and
+its time goes into MongoDB writes. Crawler replicas add nothing beyond 500--670 books/s, because they share one queue,
+one database and one volume. \code{control} is a single process that every mode needs, since it alone releases leases
+and drives rebuilds. When the broker loses messages, \code{control} brings them back after
+\code{TARANTINO_REQUEUE_SECONDS}, slower than the redelivery of a persistent broker. One open question is why that
+requeue took 82--97\,s after a Hazelcast restart with 2 and 3 replicas, against 12\,s with one.
+
+\subsection{From one host to the Stage~3 cluster}
+\label{sec:stage3}
+
+The conditional writes already work across machines. Claims, leases and expirations compare with MongoDB's clock,
+never a host's, and no process holds a lock that another needs. What Stage~3 has to replace is everything named after
+the host (Table~\ref{tab:stage3}): Compose service names and nginx's resolver \code{127.0.0.11}, the local
+\code{datalake} volume, the single Hazelcast member and MongoDB server, and, in mode \mode{orchestrator}, the JVM's DNS
+cache through which \code{control} finds the \code{query} replicas.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Each measured limit, the single-host assumption behind it, and the change Stage~3 makes.}
+\label{tab:stage3}
+\begin{tabularx}{\textwidth}{@{}L{4.0cm}L{4.1cm}Y@{}}
+\toprule
+Measured limit & Single-host cause & Stage~3 change \\
+\midrule
+Indexing: 28.5 books/s per indexer, $\times$2.10 with 3, with MongoDB's CPU growing faster than the indexers' & Every indexer writes postings to one MongoDB server & Postings sharded by \code{term} across a sharded MongoDB, so indexers on several nodes write to different shards; the batch, its lease and its publication stay single-document writes \\
+Ingestion: 500--670 books/s whatever the replicas, with the CPU far from full & One queue on one Hazelcast member, one MongoDB, one datalake volume & A Hazelcast cluster with the queue partitioned by \code{book_id}, and a datalake on shared storage, or one per node with the book's node in \code{book_states} \\
+Search: one \code{query} replica saturates at about 4{,}400 requests/s, and a third adds nothing to two & Replicas share nginx, the one MongoDB and the host's CPUs with the load generator & \code{query} replicas on several nodes behind a load balancer, reading a MongoDB replica set; the snapshot already lets each replica answer on its own \\
+Recovery: lost messages wait for \code{control}'s requeue & \code{control} is one process, acceptable on one host & \code{control} on several nodes with one leader, elected through a lease document in MongoDB; lost work acknowledged after the job (below) \\
+Mode \mode{orchestrator}: 41\,\% less throughput with 3 replicas & One thread dispatches every book, one \code{POST} at a time & Not carried to Stage~3 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Communication and storage across machines.} Services keep talking only through the broker and MongoDB, so
+moving them to other nodes changes addresses, not code. Hazelcast becomes a cluster of three members, where each queue
+item has a synchronous backup on another member, so one member can fail without losing queued work. MongoDB becomes a
+replica set, with majority writes for every conditional write, so a failover never loses a claim. The datalake moves to
+storage that every node mounts.
+
+\textbf{Distribution of tasks and requests.} Crawlers and indexers keep competing for queues, which needs no
+coordination between them. Partitioning \code{books-to-download} and \code{books-to-index} by \code{book_id} removes
+the single queue owner that limits ingestion today. Search requests are spread by a load balancer, as nginx does now.
+
+\textbf{Consistency and unavailable nodes.} Publication stays one conditional write, and \code{query} keeps reading a
+snapshot of published batches, so a reader never sees a half-built index on any node. A node that disappears leaves
+leases that expire, and \code{control} releases them exactly as it does after a crash today: rows 01 to 10 of the
+failure matrix already exercise that path. A network partition cannot create two owners of a book, because ownership
+is a MongoDB document, not a broker message.
+
+\subsection{The winning mode in Stage~3}
+
+\mode{hazelcast} wins under the decision rule fixed before the campaign (Section~\ref{sec:winner}), so Stage~3 keeps it
+and does not migrate to another broker. The runner-up, \mode{activemq-persistent}, showed the one property worth
+taking: lost work comes back without \code{control}, in 3.8--6.1\,s instead of about 12\,s, because the message is
+acknowledged only after the job. Stage~3 adds that property to the Hazelcast design and measures it with the same
+rows and the same \code{recovery-delay} experiment:
+\begin{enumerate}
+\item Take each book inside a Hazelcast transaction that commits after the claim and the job, so a consumer that dies
+  returns its message to the queue. Hazelcast's transactional queue offers that rollback~\cite{hazelcast}, and the claim in MongoDB
+  still drops any duplicate it produces.
+\item Explain and fix the 82--97\,s requeue after a broker restart with several replicas (row 12).
+\item Elect the \code{control} leader through a lease in MongoDB, so reconciliation survives the loss of a node.
+\item Repeat \code{coordination-variants} for \mode{hazelcast} and \mode{activemq-persistent} on the cluster. If the
+  transactional queue does not close the gap in rows 04, 05 and 12, persistent ActiveMQ replaces Hazelcast as the
+  broker. The rest of the code stays the same, because both already sit behind the same ports.
+\end{enumerate}
+
+Smaller improvements follow from this report: batches of 250 books once the indexer has a larger heap, which gave
+17\,\% more throughput, and ``Open a rebuild'' computing its target inside its own write, which closes the rebuild race
+of Section~\ref{sec:indexer}.
+
+\subsection{Lessons}
+
+\begin{itemize}
+\item \textbf{Measure the alternatives.} Arguing against orchestration and polling was easy; measuring them showed
+  where each one actually loses, by how much, and what the runner-up does better.
+\item \textbf{Keep the truth in one place.} Treating every message as a hint and every transition as one conditional
+  write made 14 different failures recoverable by the same reconciliation.
+\item \textbf{Keep the evidence with the results.} Five interleaved repetitions, hypotheses written before measuring,
+  and a versioned run behind every figure made every number in this report checkable against its raw data, and we
+  checked them all before submitting it.
+\end{itemize}
