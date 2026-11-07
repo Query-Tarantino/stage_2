@@ -107,3 +107,144 @@ lost messages and reindexing in both queues (\spec{4.2}).}
 \item \textbf{Hazelcast} carries two work queues and one topic. It is not a source of truth: a lost or repeated message
   never corrupts state, because the claim in MongoDB decides who owns each book.
 \end{itemize}
+
+\subsection{The life of a book}
+
+Figure~\ref{fig:lifecycle} shows the states of a book and of a batch, and who writes each transition. Every arrow is
+one conditional write to one MongoDB document (Section~\ref{sec:conditional-writes}). A book becomes eligible for
+indexing only once its header and body are in the datalake, and it becomes searchable only when the batch that holds
+it is \code{PUBLISHED} in the current generation and \code{query} has refreshed its snapshot.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Stealth[length=4pt]},
+  state/.style={draw=inksecondary, rounded corners=6pt, fill=white, minimum width=2.25cm, minimum height=0.65cm, font=\footnotesize\ttfamily},
+  forward/.style={->, draw=inkprimary, line width=0.8pt},
+  back/.style={->, draw=inksecondary, line width=0.6pt, dashed},
+  fail/.style={->, draw=modeactivemq, line width=0.6pt},
+  lbl/.style={font=\scriptsize, text=inksecondary, align=center, inner sep=1.5pt},
+]
+\node[state] (queued) at (0,0) {QUEUED};
+\node[state] (downloading) at (3.5,0) {DOWNLOADING};
+\node[state] (downloaded) at (7.0,0) {DOWNLOADED};
+\node[state] (indexing) at (10.5,0) {INDEXING};
+\node[state, draw=modepersistent, line width=0.9pt] (published) at (13.9,0) {PUBLISHED};
+\node[state, draw=modeactivemq] (failed) at (7.0,-2.75) {FAILED};
+
+\draw[forward] (queued) -- node[lbl, above=0.36cm] {claim\\(crawler)} (downloading);
+\draw[forward] (downloading) -- node[lbl, above=0.36cm] {finish download\\(crawler)} (downloaded);
+\draw[forward] (downloaded) -- node[lbl, above=0.36cm] {claim for a batch\\(indexer)} (indexing);
+\draw[forward] (indexing) -- node[lbl, above=0.36cm] {publish batch\\(indexer)} (published);
+
+\draw[back] (published.north) .. controls +(0,2.1) and +(0,2.1) .. node[lbl, above] {reindex into a new generation (control)} (downloaded.north);
+\draw[back] (downloading.south west) .. controls +(-0.4,-0.9) and +(0.4,-0.9) .. node[lbl, below] {retryable error or\\expired lease (crawler, control)} (queued.south east);
+\draw[back] (indexing.south west) .. controls +(-0.4,-0.9) and +(0.4,-0.9) .. node[lbl, below] {batch abandoned\\(control)} (downloaded.south east);
+\draw[fail] (downloading.south east) -- node[lbl, right, pos=0.55] {no retries left} (failed.north west);
+\draw[fail] (indexing.south) |- node[lbl, right, pos=0.3] {missing in the datalake (indexer)} (failed.east);
+\draw[back] (failed.west) -| node[lbl, below, pos=0.27] {\code{POST /ingest} retries it} (queued.south);
+
+\begin{scope}[yshift=-4.6cm]
+\node[font=\footnotesize\bfseries, text=inksecondary, anchor=west] at (-1.12,0) {Batch};
+\node[state] (writing) at (3.5,0) {WRITING};
+\node[state, draw=modepersistent, line width=0.9pt] (bpublished) at (8.6,0) {PUBLISHED};
+\node[state, draw=modeactivemq] (abandoned) at (8.6,-1.25) {ABANDONED};
+\draw[forward] (writing) -- node[lbl, above=0.36cm] {publish with a live lease (indexer)} (bpublished);
+\draw[fail] (writing.south) |- node[lbl, below, pos=0.75] {lease expired (control)} (abandoned.west);
+\node[lbl, anchor=west, text width=4.9cm, align=left] at (9.95,-0.6) {Its books go back to \code{DOWNLOADED}, and its postings are deleted after \code{TARANTINO_GC_SECONDS}.};
+\end{scope}
+\end{tikzpicture}
+\caption{States of a book (\code{book_states.status}) and of a batch (\code{batches_g<n>.status}), with the service
+that writes each transition. Solid arrows are the normal path; dashed arrows are repairs. A \code{PUBLISHED} batch never
+changes again, and an \code{ABANDONED} one is never seen by \code{query}.}
+\label{fig:lifecycle}
+\end{figure}
+
+\subsection{Processes, replicas and threads}
+\label{sec:threads}
+
+A service is a logical responsibility, and each replica is a separate JVM process. Table~\ref{tab:threads} lists the
+replicas and threads of each process. Request handlers never run long jobs: they only validate, write state and
+enqueue, so the HTTP pool only waits on MongoDB and the broker. Within a process, threads share only an immutable
+snapshot or a \code{java.util.concurrent} structure, and the code takes no lock of its own. Replicas share nothing in
+memory: they meet only in MongoDB, through conditional writes, and in the broker.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Replicas and threads per process (\spec{2.2}). Javalin's HTTP pool grows from 8 to 250 threads unless
+\code{TARANTINO_HTTP_THREADS} caps it.}
+\label{tab:threads}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+Process & Replicas & Threads \\
+\midrule
+\code{crawler} & N, 1 by default & \code{TARANTINO_PARALLEL_DOWNLOADS} download workers (8 by default), one lease heartbeat per book on a virtual thread, HTTP pool \\
+\code{indexer} & N, 1 by default & One batch loop (\code{index-batches}), one lease heartbeat per open batch on a virtual thread, HTTP pool \\
+\code{query} & N, 1 by default & One snapshot thread, the only one that refreshes; the topic listener only asks it to; HTTP pool that only reads the snapshot \\
+\code{control} & Always 1 & One \code{reconciliation} thread for reconciliation and datalake cleanup, so they never overlap; one \code{orchestrator} thread in that mode; HTTP pool \\
+\code{mongo}, \code{hazelcast}, \code{nginx} & 1 each & Their own; nginx runs one worker per CPU \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The design keeps replicas and threads from interfering in four ways:
+\begin{itemize}
+\item \textbf{Duplicate work.} A message, an HTTP call or a poll is only a hint. The claim in MongoDB lets one worker
+  take a book or a batch, and a duplicate fails its claim and is dropped.
+\item \textbf{Conflicting writes.} Every state change is one conditional single-document write whose filter carries
+  the expected state and the \code{claim_id}. A worker that loses its lease writes nothing else, and a write that does
+  not match is never retried.
+\item \textbf{Thread exhaustion.} Handlers answer in milliseconds and never wait for a job. Worker threads are a fixed
+  number per replica, and a JVM that runs out of memory exits instead of losing one thread.
+\item \textbf{Contention.} Replicas compete for the single MongoDB, the broker and the datalake volume. Batches share a
+  per-batch cost among their books, postings go in \code{bulkWrite}s of 1{,}000 terms, and \code{query} reads an
+  immutable snapshot without locks. Section~\ref{sec:benchmarks} measures the contention that is left.
+\end{itemize}
+
+\subsection{Coordination mechanism}
+\label{sec:coordination}
+
+The coordination is a hybrid of two mechanisms of the assignment, choreography with a broker and time-based
+coordination, over one arbiter, MongoDB (Table~\ref{tab:hybrid}). The same pattern appears twice: an event for speed
+and a period in case the event is lost.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{The three parts of the default coordination and the responsibility of each.}
+\label{tab:hybrid}
+\begin{tabularx}{\textwidth}{@{}L{3.2cm}L{5.2cm}Y@{}}
+\toprule
+Mechanism & Where & Responsibility \\
+\midrule
+Choreography with a broker & \code{books-to-download} and \code{books-to-index} (Hazelcast \code{IQueue}); \code{published-batches} (\code{ITopic}) & Normal path: a free worker takes a book as soon as it is queued; \code{query} refreshes on each \code{BatchPublished} \\
+Time-based coordination & \code{control} reconciles every 30\,s; \code{query} refreshes every 5\,s & Safety net: expired leases, abandoned batches, lost messages and lost announcements, with \code{book_states} as the persistent marker \\
+Shared persistent state & MongoDB conditional writes (\spec{5.1}) & Arbiter: the claim acknowledges the message, so a duplicate fails and is dropped \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The same code runs in four other modes, selected with \code{TARANTINO_COORDINATION} and one Compose override per mode
+(Table~\ref{tab:modes}). Only two things change between modes: how work reaches the workers and how \code{query} learns
+of a batch. The datalake, MongoDB, the conditional writes, the index, the search and the front-end API stay the same,
+so the modes can be compared on equal terms (Section~\ref{sec:modes}).
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Coordination modes (\spec{11.1}). \mode{activemq-persistent} is \mode{activemq} with persistent delivery and
+acknowledgement after the job.}
+\label{tab:modes}
+\begin{tabularx}{\textwidth}{@{}L{2.55cm}L{3.1cm}L{3.15cm}L{2.9cm}Y@{}}
+\toprule
+Mode & Mechanism & Workers take work from & \code{query} learns of a batch & Lost work comes back by \\
+\midrule
+\mode{hazelcast} & Choreography over Hazelcast & \code{IQueue} & Topic listener and period & \code{control} requeue \\
+\mode{activemq} & The same over ActiveMQ Classic 6 & JMS queues & JMS topic and period & \code{control} requeue; broker redelivery with persistence \\
+\mode{polling} & Time-based, over shared state & A sorted claim in MongoDB & Period only & Nothing to requeue: waiting books are polled \\
+\mode{orchestrator} & Classical orchestration by \code{control} & \code{POST /internal/...} into a local queue & \code{control}'s call and period & \code{control} dispatching again \\
+\bottomrule
+\end{tabularx}
+\end{table}
