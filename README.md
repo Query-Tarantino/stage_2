@@ -45,7 +45,8 @@ mvn -pl services/indexer -am verify           # one module with what it needs
 ```
 
 Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` also runs the cases of
-`workload/conformance/` that still apply (`SPEC.md` §10).
+`workload/conformance/` that still apply (`SPEC.md` §10), and JaCoCo writes the line and branch coverage of each
+module to `target/site/jacoco/index.html`.
 
 GitHub Actions runs on every push `mvn clean verify`, failing if the MongoDB tests were skipped; the functional checks
 against the stack with the 20 sample books, in mode `hazelcast` with one `query` replica and then with three behind
