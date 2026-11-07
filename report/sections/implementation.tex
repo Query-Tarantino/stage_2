@@ -1,0 +1,98 @@
+\section{Microservice Implementation}
+\label{sec:implementation}
+
+The four services share one Maven build, one hexagonal layout and one module of contracts. Every state change is a
+single conditional write to MongoDB, so a crash at any point leaves work that \code{control} can redo. This section
+covers the shared parts, the indexer in depth as an example, and the other services in outline.
+
+\subsection{Code structure and technologies}
+
+The system is one multi-module Maven build in Java~25. It contains \code{common}, the four services, and two modules
+that are never deployed: \code{bench}, with the load generator and result processing, and \code{checks}, with the API
+checks. Every dependency and plugin version lives only in the parent \code{pom.xml} (Table~\ref{tab:stack}). Each
+service builds one executable jar and runs on its own, outside Compose too.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Technologies and versions.}
+\label{tab:stack}
+\begin{tabularx}{\textwidth}{@{}L{2.3cm}Y@{}}
+\toprule
+Piece & Choice \\
+\midrule
+HTTP & Javalin 6.7, one port per service (7001 to 7004) \\
+JSON & Jackson 2.22 with one shared \code{ObjectMapper}: snake\_case, ISO-8601 dates, unknown fields ignored. It is Javalin's default JSON mapper, which is why it replaces the Gson of the assignment's example \\
+Storage & MongoDB 7.0 with the synchronous Java driver 5.13; the datalake on a Docker volume \\
+Coordination & Hazelcast 5.7, one member and every service a client; ActiveMQ Classic 6.1.8 in mode \mode{activemq} \\
+Packaging & One shaded jar per service and one \code{Dockerfile} on \code{eclipse-temurin:25-jre}; Docker Compose and nginx \\
+Tests and benchmarks & JUnit 5.11, Testcontainers 2.0, JMH 1.37, XChart 3.8 for the benchmark charts \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Each service keeps the hexagonal layout of Stage~1. \code{model} holds records and pure logic, \code{ports} the
+interfaces that logic needs, \code{adapters} their MongoDB, broker, datalake and HTTP implementations, and
+\code{commands} the use cases. \code{model} and \code{commands} import no Javalin, MongoDB or broker classes, so they
+are tested with in-memory fakes. Each service's \code{Main} and factory wire the pieces through constructors, without
+an injection framework. Every service opens its HTTP port first, so \code{/health} answers \code{503} while it waits,
+and then retries MongoDB and the broker without limit. Startup order therefore does not matter.
+
+\subsection{Shared contracts in \texorpdfstring{\code{common}}{common}}
+
+Everything that two or more modules use has its literal name in \code{SPEC.md} and, in code, lives only in
+\code{common} (Table~\ref{tab:common}). Two services therefore cannot disagree on a collection, a field, a state or a
+message. \code{common} changes only in a pull request that all four members review. A write used by a single service,
+such as claiming a book or publishing a batch, stays in that service's MongoDB adapter.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{What \code{common} holds.}
+\label{tab:common}
+\begin{tabularx}{\textwidth}{@{}L{2.3cm}Y@{}}
+\toprule
+Area & Content \\
+\midrule
+Model & Book, batch and rebuild states, error and problem codes, and the two messages, \code{BookTask} and \code{BatchPublished} \\
+Configuration & \code{TarantinoConfig} reads every \code{TARANTINO_*} variable with its default and checks its invariants, such as heartbeat $\leq$ lease / 3; an invalid value stops the service naming the variable \\
+Terms & The Stage~1 \code{Tokenizer} and stopwords, used by the indexer to count terms and by \code{query} to read \code{q} and \code{author} \\
+Datalake & \code{DatalakePaths}, with the \code{batch} layout and the write to \code{<final>.<uuid>.tmp} renamed with \code{ATOMIC_MOVE} \\
+MongoDB & Collection and field names, the indexes, the writes ``Create the pointer'', ``Create the state'' and ``Complete a publication'', and the filter of the books that block a generation switch \\
+Messaging & The \code{Broker}, \code{BookTasks} and \code{BatchAnnouncements} interfaces, with their Hazelcast and ActiveMQ implementations and clients that connect in the background and keep retrying \\
+HTTP & Problem Details for every error, \code{/health}, and \code{BookIds.parse} for every \code{{book_id}} route \\
+Operations & \code{TransitionLog}, one line per state change, from which the benchmarks measure; \code{CrashPoints} for the recovery tests; and \code{LeaseHeartbeat} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Conditional writes and leases}
+\label{sec:conditional-writes}
+
+Every state change is one conditional write to a single MongoDB document. Its filter carries the state it expects and,
+while a job holds the work, its \code{claim_id}. No service reads a document, decides in Java and writes it back. Two
+replicas racing for the same book or batch can therefore never both win, and no transaction is needed.
+\spec{5.1} lists all 23 writes. This is the one that publishes a batch:
+
+\begin{lstlisting}
+batches_g<w>.findOneAndUpdate(
+  filter: {_id: B, status: "WRITING", claim_id: C,
+           $expr: {$gt: ["$lease_until", "$$NOW"]}},
+  update: [{$set: {status: "PUBLISHED", published_at: "$$NOW", book_ids: books}},
+           {$unset: "lease_until"}],
+  returnDocument: AFTER)
+\end{lstlisting}
+
+\begin{itemize}
+\item \textbf{Server time.} Leases and expirations are compared with MongoDB's \code{$$NOW} inside update pipelines~\cite{mongodb},
+  never with a process clock, so clock drift between containers or hosts cannot break a lease.
+\item \textbf{One write, the right result.} When the next step depends on how the document ended up, the write is a
+  \code{findOneAndUpdate} that returns it, never a write followed by a read. The published batch it returns becomes the
+  \code{BatchPublished} message.
+\item \textbf{The heartbeat.} A job that holds a lease starts a \code{LeaseHeartbeat}, which renews it every
+  \code{TARANTINO_HEARTBEAT_SECONDS} (20\,s for a 60\,s lease) on its own virtual thread. Only a renewal that does not
+  match loses the lease; one that throws, as when MongoDB does not answer for a moment, is retried on the next beat.
+  Before each of its writes the job checks whether the lease is lost, and once it is lost it writes nothing else.
+\item \textbf{Crashes.} If a process dies or MongoDB fails halfway, nothing is marked: the lease expires and
+  \code{control} redoes the work. A job never retries a write that did not match; it leaves the work to whoever won.
+\end{itemize}
