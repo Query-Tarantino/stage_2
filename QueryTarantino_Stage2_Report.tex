@@ -1745,24 +1745,26 @@ replicas costs at most 1.2\,s of search answers, because nginx sends the request
 \textbf{How lost work comes back.} \code{recovery-delay} reads the 29 runs of rows 04, 05 and 12, where a crash or a
 broker restart loses work after its message was taken, and measures for each book the time from the failure to its
 requeue and to its next claim (Table~\ref{tab:delay}). In \mode{hazelcast} and \mode{activemq}, \code{control} requeues
-10.8--12.7\,s after the failure, as expected. \mode{activemq-persistent} requeues nothing: the broker redelivers, and
-books are claimed again in 3.8--6.0\,s at the median. The orchestrator dispatches again after 9.5--10.1\,s, because its
-10\,s count from the book's last dispatch, which comes before the crash.
+the books of rows 04 and 05 11.7--11.8\,s after the failure at the median, and every one of them within
+10.8--11.8\,s, as expected. \mode{activemq-persistent} requeues nothing: the broker redelivers, and books are claimed
+again in 3.8--6.0\,s at the median. The orchestrator dispatches again 9.7\,s after the failure at the median, and every
+book within 9.5--10.1\,s, because its 10\,s count from the book's last dispatch, which comes before the crash.
 
-\textbf{Row 12 loses two kinds of messages.} Download messages come back like those of rows 04 and 05, 11.7--12.7\,s
-after the restart whatever N. Index messages wait 207, 97 and 82\,s with 1, 2 and 3 replicas, because \code{control}
-only requeues into an empty queue (\spec{5.3}, step~4). After the restart the crawlers keep enqueuing the books they
-download, so \code{books-to-index} only empties once the indexers, with the batches of 5 of the recovery tests, have
-taken every one of them. The transition lines of the three runs show it: the requeue comes in the first
-reconciliation after the indexers take the last message of the queue. The wait therefore follows indexing, and the
-more indexers the shorter it is.
+\textbf{Row 12 loses two kinds of messages.} Download messages come back like those of rows 04 and 05: the median
+requeue of each run is 11.7--12.7\,s after the restart, whatever N. Index messages wait a median of 207, 97 and 82\,s
+in the runs with 1, 2 and 3 replicas, because \code{control} only requeues into an empty queue (\spec{5.3}, step~4).
+After the restart the crawlers keep enqueuing the books they download, so \code{books-to-index} only empties once the
+indexers, with the batches of 5 of the recovery tests, have taken every one of them. The transition lines of the
+three runs show it: the requeue comes in the first reconciliation after the indexers take the last message of the
+queue. The wait therefore follows indexing, and the more indexers the shorter it is. In \mode{activemq-persistent}
+neither kind is lost, and books are claimed again 6.0 and 11.7\,s after the restart at the median.
 
 \begin{table}[ht]
 \centering
 \small
 \caption{Median seconds from the failure to a book's requeue (or new dispatch) and to its next claim, over the books
-of every run of the row; row 12 apart for the books that were waiting for a download and for an index.
-\run{20261106-073911-recovery-delay-c1376c7}.}
+of every run of the row, with the mean of the two middle values when their number is even; row 12 apart for the books
+that were waiting for a download and for an index. \run{20261106-073911-recovery-delay-c1376c7}.}
 \label{tab:delay}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{@{}lrrrr@{}}

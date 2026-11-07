@@ -288,7 +288,8 @@ the short leases of `scripts/recovery/recovery.env` (6 s) and run once per row, 
 `20261106-073911-recovery-delay-c1376c7`, from `./scripts/bench/recovery-delay.sh` over the 29 recovery runs of rows
 04, 05 and 12, where a crash or a broker restart loses work after its message was taken; raw data in
 `recovery-delay.csv`, one row per book. For each book, `requeue_delay` goes from the failure to its requeue or
-dispatch again, and `reclaim_delay` to its next claim. Rows 04, 05 and 12 do not apply in `polling`.
+dispatch again, and `reclaim_delay` to its next claim. Rows 04, 05 and 12 do not apply in `polling`. The table gives
+the median over the books of every run of the row, with the mean of the two middle values when their number is even.
 
 | Mode | Rows 04 and 05: requeue p50 (s) | Rows 04 and 05: reclaim p50 (s) | Row 12, download and index messages: requeue p50 (s) | Row 12, download and index messages: reclaim p50 (s) |
 | --- | --- | --- | --- | --- |
@@ -297,19 +298,20 @@ dispatch again, and `reclaim_delay` to its next claim. Rows 04, 05 and 12 do not
 | `activemq-persistent` | No requeue | 3.8 and 5.0 | No requeue | 6.0 and 11.7 |
 | `orchestrator` | 9.7 and 9.7 | 5.0 and 9.8 | – | – |
 
-- H1 holds in rows 04 and 05, where `control` requeues 10.8–11.8 s after the failure in `hazelcast` and `activemq`,
-  and for the download messages of row 12, requeued 11.7–12.7 s after the restart whatever N. It does not hold for the
-  index messages of row 12 in `hazelcast`, requeued after 207, 97 and 82 s with 1, 2 and 3 replicas, the `status`
-  column of `recovery-delay.csv` apart: `control` only requeues into an empty queue (SPEC §5.3, step 4), and after the
-  restart the crawlers keep filling `books-to-index` until the indexers, with batches of 5, have taken every book. In
-  each run the requeue comes in the first reconciliation after the indexers take the last message of the queue.
+- H1 holds in rows 04 and 05, where `control` requeues every book 10.8–11.8 s after the failure in `hazelcast` and
+  `activemq`, 11.7–11.8 s at the median, and for the download messages of row 12, whose median requeue in each run is
+  11.7–12.7 s after the restart, whatever N. It does not hold for the index messages of row 12 in `hazelcast`,
+  requeued after a median of 207, 97 and 82 s in the runs with 1, 2 and 3 replicas, the `status` column of
+  `recovery-delay.csv` apart: `control` only requeues into an empty queue (SPEC §5.3, step 4), and after the restart
+  the crawlers keep filling `books-to-index` until the indexers, with batches of 5, have taken every book. In each run
+  the requeue comes in the first reconciliation after the indexers take the last message of the queue.
 - H2 holds in rows 04 and 05, where a requeued book is claimed again within 0.6 s at p50, and not in row 12, where it
   takes 1.8 s in `activemq` and 11.6 s in `hazelcast`.
 - In `activemq-persistent` nothing is requeued: the broker redelivers what a dead consumer did not acknowledge, and
   the book is claimed again in 3.8–6.0 s at p50, as H3 expected, though the slowest books of rows 05 and 12 take 11 and
   19 s, above its 10 s.
-- H4 does not hold by a little: the orchestrator dispatches again 9.50–10.05 s after the failure, not 10–10.4 s, because
-  its 10 s count from the book's last dispatch, which comes before the crash.
+- H4 does not hold by a little: the orchestrator dispatches every book again 9.50–10.05 s after the failure, 9.7 s at
+  the median, not 10–10.4 s, because its 10 s count from the book's last dispatch, which comes before the crash.
 
 ## Where the bottlenecks are
 
