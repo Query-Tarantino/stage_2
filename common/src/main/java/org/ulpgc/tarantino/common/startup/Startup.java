@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.stream.Stream;
 
 /**
@@ -23,17 +24,34 @@ public final class Startup {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Startup.class);
     private static final Duration RETRY_PAUSE = Duration.ofSeconds(2);
+    private static final int FAILED_TO_START = 1;
 
     private Startup() {
     }
 
-    /** Opens the HTTP port, creates the generation pointer (SPEC §5.1) and waits for the broker, if there is one. */
+    /**
+     * Opens the HTTP port, creates the generation pointer (SPEC §5.1) and waits for the broker, if there is one. From here
+     * on, an exception that leaves the calling thread, the service's {@code main}, ends the process.
+     */
     public static void start(TarantinoConfig config, Connections connections, List<Dependency> serviceDependencies,
                              Consumer<Javalin> routes) {
+        exitIfThisThreadFails(Runtime.getRuntime()::halt);
         List<Dependency> dependencies = Stream.concat(connections.dependencies().stream(), serviceDependencies.stream()).toList();
         TarantinoServer.start(config, dependencies, routes);
         retry("create the generation pointer", () -> new IndexState(connections.database()).createPointer());
         connections.broker().ifPresent(broker -> waitFor(broker.name(), broker::connected));
+    }
+
+    /**
+     * Exits with code {@value #FAILED_TO_START} if the calling thread dies with an exception, such as a missing
+     * {@code stopwords.txt} after the port is open. The HTTP threads would otherwise keep the JVM alive with
+     * {@code /health} answering {@code UP} and no worker or reconciliation behind it (SPEC §2.4).
+     */
+    static void exitIfThisThreadFails(IntConsumer exit) {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, error) -> {
+            LOGGER.error("Could not start, so the service exits", error);
+            exit.accept(FAILED_TO_START);
+        });
     }
 
     /** Retries a startup step against Mongo until it works. */
