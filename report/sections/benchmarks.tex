@@ -121,3 +121,135 @@ Replicas & Workers per replica & Whole window (books/s) & Steady 10--90\,\% (boo
   is in what every crawler shares: the one \code{books-to-download} queue, the one MongoDB and the datalake volume.
   These runs do not tell which of the three.
 \end{itemize}
+
+\subsection{Indexing throughput and latency}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.7cm},
+  report,
+  width=7.6cm, height=5.2cm,
+  ymin=0,
+  ylabel={Books per second},
+  error bars/y dir=both, error bars/y explicit,
+]
+\nextgroupplot[
+  xmode=log, log basis x=10,
+  xtick={1,10,100,250}, xticklabels={1,10,100,250},
+  xmin=0.8, xmax=420,
+  xlabel={Books per batch, 1 replica},
+  ymax=40,
+  title={Batch size},
+]
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt},
+  nodes near coords, point meta=y, every node near coord/.style={font=\scriptsize, color=inkprimary, anchor=north west, /pgf/number format/fixed, /pgf/number format/fixed zerofill, /pgf/number format/precision=1}]
+  table[x=batch, y=mean, y error=ci, col sep=comma, restrict expr to domain={\thisrow{replicas}}{1:1}] {data/index.csv};
+\nextgroupplot[
+  xtick={1,2,3},
+  xmin=0.7, xmax=3.3,
+  xlabel={\code{indexer} replicas, batches of 100},
+  ymax=90,
+  title={Replicas},
+]
+\addplot[color=inkmuted, dashed, line width=0.8pt, mark=none, forget plot] coordinates {(1,28.51) (2,57.02) (3,85.53)};
+\node[font=\scriptsize, color=inksecondary, anchor=south east] at (axis cs:1.95,58) {linear scaling};
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt}]
+  table[x=replicas, y=mean, y error=ci, col sep=comma, restrict expr to domain={\thisrow{batch}}{100:100}] {data/index.csv};
+\node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:1.03,27) {28.5};
+\node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:2.03,46) {48.4, $\times$1.70};
+\node[font=\scriptsize, color=inkprimary, anchor=north east] at (axis cs:2.97,57) {59.8, $\times$2.10};
+\end{groupplot}
+\end{tikzpicture}
+\caption{Books indexed per second over a whole rebuild of the 2{,}800 books, mean and 95\,\% confidence interval of 5
+repetitions. Left: batch size with one replica. Right: replicas with batches of 100, against linear scaling from one
+replica. \run{20261105-220915-index-throughput-c1376c7}.}
+\label{fig:index}
+\end{figure}
+
+\begin{itemize}
+\item \textbf{Bigger batches pay off, then flatten} (Figure~\ref{fig:index}), as expected: $\times$2.3 from 1 to 10
+  books, $\times$2.3 from 10 to 100, and only +17\,\% from 100 to 250. Each batch pays a fixed cost (its lease,
+  publication and marking) that more books share.
+\item \textbf{Replicas help less than linearly}, as expected: $\times$1.70 with 2 and $\times$2.10 with 3, that is 85\,\%
+  and 70\,\% of linear.
+\item \textbf{Batches of 250 fit in a 512\,MB heap}, as expected: no indexer ran out of memory, and the container
+  peaked at 745--808\,MiB per trial with batches of 250, against 587--778\,MiB with batches of 100.
+\item \textbf{MongoDB is where the time goes.} JMH writes a batch of 100 books in 2.81\,s, which alone caps one
+  indexer at 36 books/s, close to the 28.5 measured end to end. Counting the terms of the largest book takes 37\,ms.
+  During indexing MongoDB's CPU grows faster than the indexers' (Table~\ref{tab:resources}).
+\end{itemize}
+
+\textbf{Indexing latency.} Over a whole rebuild, each book costs the inverse of the throughput: 0.18\,s with batches of
+1, 0.035\,s with 100 and 0.017\,s with three replicas of 100. A single book also waits for its batch: from its claim
+to its batch's publication it takes 3.45\,s with one replica and 4.93\,s with three (Table~\ref{tab:coordination}).
+
+\subsection{Search latency under concurrency}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.7cm},
+  report,
+  width=7.6cm, height=5.2cm,
+  xmode=log, log basis x=2,
+  xtick={1,8,32,64}, xticklabels={1,8,32,64},
+  xlabel={Closed-loop clients},
+  ymin=0,
+  error bars/y dir=both, error bars/y explicit,
+]
+\nextgroupplot[ylabel={Requests per second}, ymax=5000, title={Throughput}, yticklabel style={/pgf/number format/1000 sep={{,}}}]
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt}]
+  table[x=clients, y=rps, y error=rps_ci, col sep=comma, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {data/search.csv};
+\node[font=\scriptsize, color=inkprimary, anchor=south east] at (axis cs:1.15,700) {646};
+\node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:8.4,3550) {3{,}618};
+\node[font=\scriptsize, color=inkprimary, anchor=north] at (axis cs:45,4250) {4{,}374 and 4{,}381};
+\nextgroupplot[ylabel={Latency (ms)}, ymax=30, xmax=110, title={Latency}, legend style={at={(0.03,0.97)}, anchor=north west}]
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt}]
+  table[x=clients, y=mean_ms, y error=ci_ms, col sep=comma, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {data/search.csv};
+\addlegendentry{mean}
+\addplot[color=modeactivemq, mark=square*, mark size=2.2pt, dashed]
+  table[x=clients, y=p95_ms, col sep=comma, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {data/search.csv};
+\addlegendentry{p95}
+\node[font=\scriptsize, color=inkprimary, anchor=east] at (axis cs:60,27.2) {27.2};
+\node[font=\scriptsize, color=inkprimary, anchor=west] at (axis cs:66,14.5) {14.5};
+\end{groupplot}
+\end{tikzpicture}
+\caption{\code{GET /search} with one \code{query} replica and 32 HTTP threads, as the closed-loop clients grow. Mean and
+95\,\% confidence interval of 5 repetitions of 120\,s each, after 30\,s of warmup; the p95 is the mean of each
+repetition's p95. \run{20261104-140900-search-latency-8e1c1e8}.}
+\label{fig:search}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{\code{GET /search} by clients, HTTP threads and \code{query} replicas, cycling through
+\code{workload/queries.txt}; 18{,}496{,}487 requests in all. \run{20261104-140900-search-latency-8e1c1e8}.}
+\label{tab:search-latency}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+Clients & HTTP threads & Replicas & Mean latency (ms) & p95 (ms) & Requests/s \\
+\midrule
+\tablerows{tables/search.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{One replica saturates at about 4{,}400 requests/s} with 32 clients (Figure~\ref{fig:search}). From 32
+  to 64 clients the throughput stays the same and the latency doubles, which is Little's law~\cite{little} for a saturated server:
+  64 clients / 4{,}381 requests/s = 14.6\,ms, the measured 14.5\,ms.
+\item \textbf{Threads must cover the clients.} With 8 HTTP threads and 32 clients, requests queue and latency is
+  77\,\% higher than with 32 threads; 128 threads add nothing and lose 4\,\% of the requests/s
+  (Table~\ref{tab:search-latency}).
+\item \textbf{A second replica helps, a third does not.} Two replicas give +29\,\% requests/s and $-22$\,\% latency;
+  three give the same as two. With two replicas the limit is no longer the \code{query} JVM but what the replicas
+  share: nginx, MongoDB and the host's CPUs, which the load generator also uses.
+\item \textbf{The ranking is not the cost.} JMH ranks a three-word query in 60\,\textmu s, about 1\,\% of the 5--7\,ms
+  each request takes. The rest is reading postings and metadata from MongoDB, HTTP and JSON.
+\item \textbf{Answers stay correct.} Every request answered \code{200} except 170 \code{503}s, 168 of them with 64
+  clients: 0.006\,\% of that configuration's 2{,}628{,}660 requests.
+\end{itemize}
