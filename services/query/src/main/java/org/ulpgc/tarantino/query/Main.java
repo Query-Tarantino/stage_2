@@ -8,6 +8,7 @@ import org.ulpgc.tarantino.common.http.Dependency;
 import org.ulpgc.tarantino.common.http.Health;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.common.startup.Startup;
+import org.ulpgc.tarantino.common.startup.WorkerThreads;
 import org.ulpgc.tarantino.query.adapters.http.SnapshotRefreshRoute;
 import org.ulpgc.tarantino.query.commands.SnapshotRefresher;
 
@@ -25,10 +26,11 @@ public class Main {
         Connections connections = Connections.open(config);
         SnapshotRefresher snapshots = QueryFactory.snapshotRefresher(connections);
         ScheduledExecutorService refresher = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("snapshot").factory());
-        Runnable askForRefresh = () -> refresher.execute(snapshots::refreshOrKeep);
+        Runnable refresh = WorkerThreads.exitingIfItDies(snapshots::refreshOrKeep);
+        Runnable askForRefresh = () -> refresher.execute(refresh);
         Dependency snapshot = new Dependency(Health.SNAPSHOT, () -> snapshots.current().isPresent());
         Startup.start(config, connections, List.of(snapshot), routes(config, connections, snapshots, askForRefresh));
-        refreshOnOneThread(config, connections, snapshots, refresher, askForRefresh);
+        refreshOnOneThread(config, connections, refresh, refresher, askForRefresh);
     }
 
     /**
@@ -49,9 +51,9 @@ public class Main {
      * At startup, every TARANTINO_SNAPSHOT_SECONDS and, when the mode has a broker and TARANTINO_SNAPSHOT_ON_PUBLISH is
      * true, on each BatchPublished, which only asks the thread to refresh (SPEC §7 and §11.1).
      */
-    private static void refreshOnOneThread(TarantinoConfig config, Connections connections, SnapshotRefresher snapshots,
+    private static void refreshOnOneThread(TarantinoConfig config, Connections connections, Runnable refresh,
                                            ScheduledExecutorService refresher, Runnable askForRefresh) {
-        refresher.scheduleWithFixedDelay(snapshots::refreshOrKeep, 0, config.snapshot().toMillis(), TimeUnit.MILLISECONDS);
+        refresher.scheduleWithFixedDelay(refresh, 0, config.snapshot().toMillis(), TimeUnit.MILLISECONDS);
         connections.broker()
                 .filter(broker -> config.snapshotOnPublish())
                 .ifPresent(broker -> broker.announcements().listen(batch -> askForRefresh.run()));
