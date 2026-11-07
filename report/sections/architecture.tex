@@ -1,0 +1,109 @@
+\section{System Architecture}
+\label{sec:architecture}
+
+The system has three core services and one control process, all on a single host. They never call each other in the
+default mode: they exchange messages through Hazelcast and keep their data in the datalake and in MongoDB.
+Figure~\ref{fig:architecture} shows the whole deployment: the front-end boundary, the internal interactions, the
+replicas and threads of each process, and the shared storage.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Stealth[length=4pt]},
+  box/.style={draw=inksecondary, rounded corners=2pt, fill=white, align=center, inner sep=3pt},
+  service/.style={box, minimum width=3.05cm, minimum height=1.25cm},
+  queue/.style={draw=modehazelcast, rounded corners=1pt, fill=white, align=center, minimum width=2.25cm, minimum height=0.55cm, inner sep=2pt},
+  topic/.style={draw=modehazelcast, ellipse, fill=white, align=center, inner sep=1pt, minimum width=2.4cm, minimum height=0.6cm},
+  store/.style={draw=inksecondary, fill=white, rounded corners=1pt, align=left, inner sep=3pt, anchor=west},
+  frontend/.style={->, draw=modehazelcast!80!black, line width=1.1pt},
+  operation/.style={->, draw=inksecondary, line width=0.8pt},
+  message/.style={->, draw=modehazelcast, line width=0.8pt, dashed},
+  access/.style={draw=inkprimary!70, line width=0.5pt},
+  lbl/.style={font=\scriptsize, text=inksecondary, inner sep=1pt},
+]
+\fill[hostfill, rounded corners=4pt] (0,0) rectangle (15.6,9.55);
+\draw[inkmuted, rounded corners=4pt] (0,0) rectangle (15.6,9.55);
+\node[anchor=north west, font=\footnotesize\bfseries, text=inksecondary] at (0.15,9.5) {One host (Docker Compose)};
+
+\node[box, minimum width=13.6cm, minimum height=0.6cm] (nginx) at (7.8,8.55)
+  {\textbf{nginx} $\times$1 \quad 8080 front-end \quad 8081 operations \quad 8082 internal routes (mode \mode{orchestrator} only)};
+
+\node[box] (admin) at (5.65,10.75) {Scripts and admin};
+\node[box] (fe) at (12.4,10.75) {Front-end (browser)};
+\draw[operation] (admin.south) -- node[lbl, right, pos=0.3] {port 8081} (admin.south |- nginx.north);
+\draw[frontend] (fe.south) -- node[lbl, left, pos=0.3] {port 8080: the front-end API boundary} (fe.south |- nginx.north);
+
+\node[service] (control) at (1.95,6.55) {\textbf{control} $\times$1 \quad :7004\\reconciliation thread\\HTTP pool};
+\node[service] (crawler) at (5.65,6.55) {\textbf{crawler} $\times$N \quad :7001\\8 download threads\\HTTP pool};
+\node[service] (indexer) at (9.35,6.55) {\textbf{indexer} $\times$N \quad :7002\\1 batch thread\\HTTP pool};
+\node[service] (query) at (13.05,6.55) {\textbf{query} $\times$N \quad :7003\\1 snapshot thread\\HTTP pool, read only};
+
+\draw[operation] (control.north |- nginx.south) -- node[lbl, right] {/control} (control.north);
+\draw[operation] (crawler.north |- nginx.south) -- node[lbl, right] {/ingest} (crawler.north);
+\draw[operation] (indexer.north |- nginx.south) -- node[lbl, right] {/index} (indexer.north);
+\draw[frontend] (query.north |- nginx.south) -- node[lbl, left, align=right] {/search, /books,\\/search/filters} (query.north);
+
+\begin{scope}[on background layer]
+\fill[white, rounded corners=3pt] (2.45,3.7) rectangle (12.55,5.15);
+\draw[modehazelcast, rounded corners=3pt] (2.45,3.7) rectangle (12.55,5.15);
+\end{scope}
+\node[anchor=south east, font=\scriptsize\bfseries, text=modehazelcast] at (12.5,3.74) {Hazelcast $\times$1 \quad :5701};
+\node[queue] (b2d) at (3.8,4.55) {books-to-download};
+\node[queue] (b2i) at (7.5,4.55) {books-to-index};
+\node[topic] (topic) at (11.2,4.55) {published-batches};
+
+\draw[message] ($(control.south east)+(-0.25,0)$) -- node[lbl, right, pos=0.4] {seed} (b2d.north west);
+\draw[message] (b2d.north east) -- ($(crawler.south west)+(0.25,0)$);
+\draw[message] ($(crawler.south east)+(-0.25,0)$) -- node[lbl, right, pos=0.4] {BookTask} (b2i.north west);
+\draw[message] (b2i.north east) -- ($(indexer.south west)+(0.25,0)$);
+\draw[message] ($(indexer.south east)+(-0.25,0)$) -- node[lbl, right, pos=0.45, align=left] {Batch\\Published} (topic.north west);
+\draw[message] (topic.north east) -- ($(query.south west)+(0.25,0)$);
+
+\foreach \x in {2.25, 5.95, 9.65} {
+  \draw[access] (\x,5.92) -- (\x,1.25);
+  \fill[inkprimary!70] (\x,1.25) circle (1.3pt);
+}
+\draw[access] (13.05,5.92) -- (13.05,1.25);
+\fill[inkprimary!70] (13.05,1.25) circle (1.3pt);
+\draw[access, ->] (1.65,5.92) -- node[lbl, left, pos=0.84] {.tmp} (1.65,2.72);
+\draw[access, ->] (5.35,5.92) -- node[lbl, left, pos=0.84] {write} (5.35,2.72);
+\draw[access, <-] (9.05,5.92) -- node[lbl, left, pos=0.84] {read} (9.05,2.72);
+\node[store, fill=white, minimum width=10.15cm, minimum height=0.55cm] (datalake) at (0.55,2.45)
+  {\textbf{datalake volume}: header and body of each book, Stage~1 \code{batch} layout};
+\node[store, minimum width=14.5cm, minimum height=0.8cm] (mongo) at (0.55,0.85)
+  {\textbf{MongoDB} $\times$1 \quad :27017 \quad source of truth: \code{book_states}, \code{index_state},\\
+  \hphantom{\textbf{MongoDB} $\times$1 \quad :27017 \quad }\code{metadata_g<n>}, \code{postings_g<n>}, \code{batches_g<n>}};
+
+\end{tikzpicture}
+\caption{Deployment on the single Stage~2 host, in the default mode \mode{hazelcast}. Thick blue arrows are front-end
+requests through nginx port 8080, gray arrows are operational requests through port 8081, dashed arrows are Hazelcast
+messages and thin vertical lines are storage access; every service reads and writes MongoDB. ``$\times$N'' marks a
+service that scales with \texttt{docker compose up -{}-scale}, and each box lists the threads of one replica. Not
+drawn: \code{crawler} also re-enqueues retried downloads in \code{books-to-download}, and \code{control} re-enqueues
+lost messages and reindexing in both queues (\spec{4.2}).}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Services and shared storage}
+
+\begin{itemize}
+\item \textbf{\code{crawler} (Ingestion Service)} takes \code{BookTask} messages from \code{books-to-download}. It claims
+  each book in MongoDB, downloads it from Gutenberg or from the local mirror and stores its header and body in the
+  datalake with the Stage~1 \code{batch} layout. It marks the book \code{DOWNLOADED} and then enqueues it in
+  \code{books-to-index}.
+\item \textbf{\code{indexer} (Indexing Service)} groups \code{books-to-index} into batches of up to 100 books or 30\,s.
+  It extracts the metadata of each book and counts its terms. It writes metadata and postings into the collections of
+  the write generation and publishes the batch with one conditional write. Then it announces \code{BatchPublished}.
+\item \textbf{\code{query} (Search Service)} keeps an immutable snapshot of the published batches of the current
+  generation. It serves keyword search with author, language and year filters, TF-IDF ranking, book details and filter
+  values.
+\item \textbf{\code{control}} seeds the candidate books at startup and reconciles every 30\,s. It releases expired
+  leases, abandons expired batches, requeues lost messages, drives index rebuilds and deletes orphan \code{.tmp} files.
+  In the default mode it never drives a book step by step, so it is not an orchestrator.
+\item \textbf{MongoDB} is the only source of truth. It holds \code{book_states}, one document per book, and
+  \code{index_state}, which points to the generation \code{query} serves. Each generation of the index has three
+  collections, \code{metadata_g<n>}, \code{postings_g<n>} and \code{batches_g<n>}.
+\item \textbf{Hazelcast} carries two work queues and one topic. It is not a source of truth: a lost or repeated message
+  never corrupts state, because the claim in MongoDB decides who owns each book.
+\end{itemize}
