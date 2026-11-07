@@ -449,3 +449,98 @@ messages: Hazelcast 8{,}513--8{,}872 messages/s, non-persistent ActiveMQ 9{,}350
 ActiveMQ 1{,}454--1{,}475. \run{20261106-123534-broker-latency-b4667d8}.}
 \label{fig:broker}
 \end{figure}
+
+\subsection{Recovery}
+
+Each of the 165 recovery runs causes one failure of the matrix (Appendix~\ref{app:failures}) and measures the time
+until every book is \code{PUBLISHED}, found exactly once by \code{/search} and in a single published batch
+(Table~\ref{tab:recovery}). The runs use the short leases of \code{scripts/recovery/recovery.env} (6\,s) and run once
+per row, mode and replica count, so they have no confidence interval. \code{recovery-compare} checks that the runs of a
+row give the same books and search answers whatever the replicas and mode, and it passed for all 14 rows.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Seconds from the failure to correct answers. Rows 09--12 seed the whole mirror, so their time includes
+processing the 2{,}800 books; the others seed the 20 sample books. Runs \code{2026110[56]-...-recovery-<nn>[-<mode>]-r<N>-c1376c7},
+summarized by \run{20261106-073908-recovery-summary-c1376c7}.}
+\label{tab:recovery}
+\begin{tabularx}{\textwidth}{@{}lYrL{3.5cm}L{3.9cm}@{}}
+\toprule
+Rows & Failure & Corpus & \mode{hazelcast}, N = 1/2/3 & Other modes \\
+\midrule
+01--04 & \code{crawler} crash points & sample & 8.6--18.8 & 7.2--22.8 \\
+05--08 & \code{indexer} crash points & sample & 6.3--17.7 & 6.6--16.9 \\
+09 & \code{crawler} paused longer than its lease & mirror & 373 / 276 / 225 & 363--373, N = 1 \\
+10 & \code{indexer} paused longer than its lease & mirror & 382 / 278 / 241 & 368--441, N = 1 \\
+11 & \code{control} killed while seeding & mirror & 367 / 255 / 253 & 365--373, N = 1 \\
+12 & Broker restarted & mirror & 374 / 261 / 235 & 372 and 384, ActiveMQ modes, N = 1 \\
+13 & MongoDB stopped for 10\,s & sample & 16.6 / 15.9 / 14.8 & 14.7--22.6 \\
+14 & A \code{query} replica killed & sample & -- / 0.9 / 0.7 & 0.2--1.2 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Every row recovers in every mode where it applies, with the same answers. The crash points of \code{crawler} and
+\code{indexer} recover within 23\,s with the 20 sample books. Rows 09--12 take 225--441\,s, mostly ingesting and
+indexing the corpus, and that time falls with N as indexing gets faster. Killing one of two or three \code{query}
+replicas costs at most 1.2\,s of search answers, because nginx sends the requests to the others.
+
+\textbf{How lost work comes back.} \code{recovery-delay} reads the 29 runs of rows 04, 05 and 12, where a crash or a
+broker restart loses work after its message was taken, and measures for each book the time from the failure to its
+requeue and to its next claim (Table~\ref{tab:delay}). In \mode{hazelcast} and \mode{activemq}, \code{control} requeues
+10.8--11.8\,s after the failure, as expected. Row 12 of \mode{hazelcast} is the exception: with 2 and 3 replicas the
+median requeue takes 97 and 82\,s, against 12\,s with one, and these runs do not tell why. \mode{activemq-persistent}
+requeues nothing: the broker redelivers, and books are claimed again in 3.8--6.1\,s at the median. The orchestrator
+dispatches again after 9.5--10.1\,s, because its 10\,s count from the book's last dispatch, which comes before the crash.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Median seconds from the failure to a book's requeue (or new dispatch) and to its next claim, over the books
+of every run of the row. \run{20261106-073911-recovery-delay-c1376c7}.}
+\label{tab:delay}
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Mode & Rows 04 / 05: requeue & Rows 04 / 05: claim & Row 12: requeue & Row 12: claim \\
+\midrule
+\mode{hazelcast} & 11.8 / 11.7 & 11.5 / 5.6 & 82.4 & 12.3 \\
+\mode{activemq} & 11.8 / 11.7 & 10.8 / 8.5 & 11.7 & 13.5 \\
+\mode{activemq-persistent} & none & 3.8 / 5.0 & none & 6.1 \\
+\mode{orchestrator} & 9.7 / 9.7 & 5.0 / 9.8 & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Bottlenecks and the limits of this evidence}
+
+\begin{enumerate}
+\item \textbf{Indexing limits the pipeline.} One indexer publishes 28.5 books/s, while one crawler downloads about 500.
+  Books therefore wait 20--47\,s in \code{books-to-index}, and an indexer spends its time writing postings to the one
+  MongoDB.
+\item \textbf{Ingestion stops at 500--670 books/s} with 8 or more workers, whatever the replicas, with at most 53\,\% of
+  the host's CPU in use. The shared queue, MongoDB and the datalake volume limit it.
+\item \textbf{Search saturates one \code{query} replica at about 4{,}400 requests/s.} A second replica adds 29\,\%,
+  and a third adds nothing.
+\item \textbf{Coordination is not a bottleneck in any mode.} A message takes 0.1--0.2\,ms, and the broker or
+  \code{control} uses less than 17\,\% of a core. The mode changes how soon a book is searchable: about 40\,ms with a
+  listener, 170--210\,ms with the orchestrator, and 2.3--2.7\,s with polling.
+\end{enumerate}
+
+These results describe one host. Every replica shares its CPUs, its disk, and the one MongoDB and broker, so a speedup
+here shows how the design uses one machine, not how it will scale across several. The evidence has other limits too:
+\begin{itemize}
+\item \code{search-latency} and the indexer's JMH come from 3 and 4 November, reused because their code did not change.
+\item After the campaign, \code{dev} changed one class of \code{control} (\code{65095a7}): the orchestrator now asks
+  \code{query} to refresh once per tick with new batches, not once per batch. Only the visibility of mode
+  \mode{orchestrator} can differ from what was measured at \code{c1376c7}.
+\item The campaign left an idle ActiveMQ container running during the recovery runs of \mode{polling} and
+  \mode{orchestrator}. No service of those modes connects to it, and the scripts bring every mode down since
+  \code{b4667d8}.
+\item Docker Desktop on Windows adds a VM: the host uses 1.2--1.9 times the CPU of the containers. \code{docker stats}
+  reports a container's whole memory, not the JVM heap.
+\item An ingestion phase lasts about 5\,s, about 10 \code{docker stats} samples per repetition, so its CPU means are
+  coarse. Recovery runs have one sample per row, mode and replica count, and in the four alternative modes rows 09--12
+  only ran with one replica.
+\end{itemize}
