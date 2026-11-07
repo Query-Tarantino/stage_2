@@ -316,7 +316,7 @@ The rebuild (`index_state.rebuild.status`) only has `RUNNING`, written by `POST 
 | `INVALID_PARAMETER` | 400 | A malformed or out-of-range parameter or id |
 | `BOOK_NOT_FOUND` | 404 | The book is not in `book_states` or, in `query`, not in the snapshot |
 | `NOT_DOWNLOADED` | 409 | `POST /index/update` for a book that is not downloaded |
-| `DEPENDENCY_UNAVAILABLE` | 503 | Mongo or Hazelcast do not answer, `query` has no snapshot yet, `control` has no generation pointer yet or nginx finds no replica (§6.6) |
+| `DEPENDENCY_UNAVAILABLE` | 503 | Mongo or Hazelcast do not answer, `query` has no snapshot yet, the generation pointer does not exist yet or nginx finds no replica (§6.6) |
 
 ### 4.6 Datalake
 
