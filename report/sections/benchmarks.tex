@@ -152,6 +152,7 @@ Replicas & Workers per replica & Whole window (books/s) & Steady 10--90\,\% (boo
   xlabel={\code{indexer} replicas, batches of 100},
   ymax=90,
   title={Replicas},
+  clip=false,
 ]
 \addplot[color=inkmuted, dashed, line width=0.8pt, mark=none, forget plot] coordinates {(1,28.51) (2,57.02) (3,85.53)};
 \node[font=\scriptsize, color=inksecondary, anchor=south east] at (axis cs:1.95,58) {linear scaling};
@@ -159,7 +160,7 @@ Replicas & Workers per replica & Whole window (books/s) & Steady 10--90\,\% (boo
   table[x=replicas, y=mean, y error=ci, col sep=comma, restrict expr to domain={\thisrow{batch}}{100:100}] {data/index.csv};
 \node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:1.03,27) {28.5};
 \node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:2.03,46) {48.4, $\times$1.70};
-\node[font=\scriptsize, color=inkprimary, anchor=north east] at (axis cs:2.97,57) {59.8, $\times$2.10};
+\node[font=\scriptsize, color=inkprimary, anchor=north] at (axis cs:3,56.8) {59.8, $\times$2.10};
 \end{groupplot}
 \end{tikzpicture}
 \caption{Books indexed per second over a whole rebuild of the 2{,}800 books, mean and 95\,\% confidence interval of 5
@@ -198,6 +199,7 @@ to its batch's publication it takes 3.45\,s with one replica and 4.93\,s with th
   xtick={1,8,32,64}, xticklabels={1,8,32,64},
   xlabel={Closed-loop clients},
   ymin=0,
+  clip=false,
   error bars/y dir=both, error bars/y explicit,
 ]
 \nextgroupplot[ylabel={Requests per second}, ymax=5000, title={Throughput}, yticklabel style={/pgf/number format/1000 sep={{,}}}]
@@ -205,7 +207,7 @@ to its batch's publication it takes 3.45\,s with one replica and 4.93\,s with th
   table[x=clients, y=rps, y error=rps_ci, col sep=comma, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {data/search.csv};
 \node[font=\scriptsize, color=inkprimary, anchor=south east] at (axis cs:1.15,700) {646};
 \node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:8.4,3550) {3{,}618};
-\node[font=\scriptsize, color=inkprimary, anchor=north] at (axis cs:45,4250) {4{,}374 and 4{,}381};
+\node[font=\scriptsize, color=inkprimary, anchor=south east] at (axis cs:64,4520) {4{,}374 and 4{,}381};
 \nextgroupplot[ylabel={Latency (ms)}, ymax=30, xmax=110, title={Latency}, legend style={at={(0.03,0.97)}, anchor=north west}]
 \addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt}]
   table[x=clients, y=mean_ms, y error=ci_ms, col sep=comma, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {data/search.csv};

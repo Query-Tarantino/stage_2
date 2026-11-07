@@ -22,8 +22,10 @@ replicas and threads of each process, and the shared storage.
   access/.style={draw=inkprimary!70, line width=0.5pt},
   lbl/.style={font=\scriptsize, text=inksecondary, inner sep=1pt},
 ]
+\begin{scope}[on background layer]
 \fill[hostfill, rounded corners=4pt] (0,0) rectangle (15.6,9.55);
 \draw[inkmuted, rounded corners=4pt] (0,0) rectangle (15.6,9.55);
+\end{scope}
 \node[anchor=north west, font=\footnotesize\bfseries, text=inksecondary] at (0.15,9.5) {One host (Docker Compose)};
 
 \node[box, minimum width=13.6cm, minimum height=0.6cm] (nginx) at (7.8,8.55)
@@ -55,9 +57,9 @@ replicas and threads of each process, and the shared storage.
 
 \draw[message] ($(control.south east)+(-0.25,0)$) -- node[lbl, right, pos=0.4] {seed} (b2d.north west);
 \draw[message] (b2d.north east) -- ($(crawler.south west)+(0.25,0)$);
-\draw[message] ($(crawler.south east)+(-0.25,0)$) -- node[lbl, right, pos=0.4] {BookTask} (b2i.north west);
+\draw[message] ($(crawler.south east)+(-0.25,0)$) -- node[lbl, right=2pt, pos=0.4] {BookTask} (b2i.north west);
 \draw[message] (b2i.north east) -- ($(indexer.south west)+(0.25,0)$);
-\draw[message] ($(indexer.south east)+(-0.25,0)$) -- node[lbl, right, pos=0.45, align=left] {Batch\\Published} (topic.north west);
+\draw[message] ($(indexer.south east)+(-0.25,0)$) -- node[lbl, right=4pt, pos=0.45, align=left] {Batch\\Published} (topic.north west);
 \draw[message] (topic.north east) -- ($(query.south west)+(0.25,0)$);
 
 \foreach \x in {2.25, 5.95, 9.65} {
@@ -244,7 +246,7 @@ Mode & Mechanism & Workers take work from & \code{query} learns of a batch & Los
 \mode{hazelcast} & Choreography over Hazelcast & \code{IQueue} & Topic listener and period & \code{control} requeue \\
 \mode{activemq} & The same over ActiveMQ Classic 6 & JMS queues & JMS topic and period & \code{control} requeue; broker redelivery with persistence \\
 \mode{polling} & Time-based, over shared state & A sorted claim in MongoDB & Period only & Nothing to requeue: waiting books are polled \\
-\mode{orchestrator} & Classical orchestration by \code{control} & \code{POST /internal/...} into a local queue & \code{control}'s call and period & \code{control} dispatching again \\
+\mode{orchestrator} & Classical orchestration by \code{control} & An internal \code{POST} into a local queue & \code{control}'s call and period & \code{control} dispatching again \\
 \bottomrule
 \end{tabularx}
 \end{table}
