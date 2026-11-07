@@ -555,9 +555,9 @@ GET /search?q=pride%20prejudice&author=austen&language=en&offset=0&limit=20
               "language": "en", "year": 1998}]}
 \end{lstlisting}
 
-\code{year} is the year a book was released on Project Gutenberg, read from the \code{Release date:} line of its
-header (\spec{4.3}), so Pride and Prejudice answers 1998, not the 1813 of its first edition that the assignment's
-example shows. \code{GET /books/{book_id}} adds \code{original_year} when the header has an
+The \code{year} of a result is the year the book was released on Project Gutenberg, read from the
+\code{Release date:} line of its header (\spec{4.3}), so Pride and Prejudice answers 1998, not the 1813 of its first
+edition that the assignment's example shows. \code{GET /books/{book_id}} adds \code{original_year} when the header has an
 \code{Original publication:} line.
 
 Table~\ref{tab:search} gives the rules of each parameter. Parameters are validated in the order of the table, and the
