@@ -146,21 +146,23 @@ The `hazelcast` trials of `20261106-012054-coordination-variants-c1376c7`, from
   with one replica. It falls 42 % with 2 replicas and 57 % with 3. Books wait for an indexer, not for their batch to
   fill: with one replica the p95 of that wait is 87 s, far above the 30 s a batch waits at most to fill.
 
-## Resources: CPU and memory per service, of the whole stack and of the host
+## Resources: CPU and memory per replica, per service, of the whole stack and of the host
 
 `20261105-235758-resource-usage-c1376c7`, from `./scripts/bench/resource-usage.sh` with 1, 2 and 3 replicas of
 `crawler` and `indexer` together; raw data in `stats.csv`, one `docker stats` row per container and refresh,
 `host.csv` for the whole host and `logs/<trial>/` for the phase windows. CPU is in percent of one core, as
-`docker stats` counts it.
+`docker stats` counts it. One replica is one crawler during ingestion or one indexer during indexing, a container that
+runs one JVM, with its memory as mean / p99 (`cpu_per_replica` and `memory_per_replica` in `summary.csv`); the
+replicas' CPU adds all of them up.
 
-| Replicas | Phase | Crawlers' CPU | Indexers' CPU | Mongo's CPU | Stack CPU | Stack memory | Host CPU |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Ingestion | 378 ± 94 % | – | 50 ± 9 % | 505 ± 105 % | 1,199 ± 122 MiB | 956 ± 85 % |
-| 2 | Ingestion | 512 ± 74 % | – | 62 ± 11 % | 680 ± 109 % | 1,398 ± 125 MiB | 1,163 ± 155 % |
-| 3 | Ingestion | 537 ± 53 % | – | 65 ± 4 % | 717 ± 32 % | 1,723 ± 73 MiB | 1,281 ± 71 % |
-| 1 | Indexing | – | 64 ± 2 % | 78 ± 0.4 % | 147 ± 2 % | 2,264 ± 199 MiB | 208 ± 7 % |
-| 2 | Indexing | – | 119 ± 10 % | 150 ± 3 % | 277 ± 7 % | 2,967 ± 148 MiB | 346 ± 12 % |
-| 3 | Indexing | – | 176 ± 11 % | 220 ± 3 % | 406 ± 10 % | 3,930 ± 134 MiB | 494 ± 11 % |
+| Replicas | Phase | One replica's CPU | One replica's memory | Replicas' CPU | Mongo's CPU | Stack CPU | Stack memory | Host CPU | Host memory |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Ingestion | 378 ± 94 % | 413 / 625 MiB | 378 ± 94 % | 50 ± 9 % | 505 ± 105 % | 1,199 ± 122 MiB | 956 ± 85 % | 19.5 ± 1.3 GiB |
+| 2 | Ingestion | 256 ± 37 % | 332 / 529 MiB | 512 ± 74 % | 62 ± 11 % | 680 ± 109 % | 1,398 ± 125 MiB | 1,163 ± 155 % | 19.0 ± 1.1 GiB |
+| 3 | Ingestion | 179 ± 18 % | 334 / 497 MiB | 537 ± 53 % | 65 ± 4 % | 717 ± 32 % | 1,723 ± 73 MiB | 1,281 ± 71 % | 19.7 ± 0.7 GiB |
+| 1 | Indexing | 64 ± 2 % | 470 / 683 MiB | 64 ± 2 % | 78 ± 0.4 % | 147 ± 2 % | 2,264 ± 199 MiB | 208 ± 7 % | 19.0 ± 0.6 GiB |
+| 2 | Indexing | 59 ± 5 % | 452 / 633 MiB | 119 ± 10 % | 150 ± 3 % | 277 ± 7 % | 2,967 ± 148 MiB | 346 ± 12 % | 19.6 ± 0.6 GiB |
+| 3 | Indexing | 59 ± 4 % | 446 / 662 MiB | 176 ± 11 % | 220 ± 3 % | 406 ± 10 % | 3,930 ± 134 MiB | 494 ± 11 % | 20.7 ± 0.5 GiB |
 
 - The crawlers' total CPU grows with replicas, as H1 expected, but each crawler uses less, 378 → 256 → 179 %, instead
   of staying flat: the same books per second (see Ingestion) are split among more crawlers, and the 24 hardware
@@ -171,8 +173,8 @@ The `hazelcast` trials of `20261106-012054-coordination-variants-c1376c7`, from
   `-Xmx512m` in all but one configuration, because `docker stats` counts the whole JVM (heap, metaspace, thread stacks and buffers), not the heap.
   `control` and `query` stay below 270 MiB.
 - The host uses 1.7–1.9 times the stack's CPU during ingestion and 1.2–1.4 times during indexing: the rest runs outside
-  the containers, in Docker Desktop's VM and Windows. Its used memory averages 19,432–21,213 MiB of
-  31.4 GiB, of which the stack is 1.2–3.9 GiB.
+  the containers, in Docker Desktop's VM and Windows. Its used memory averages 19.0–20.7 GiB of 31.4 GiB, of which
+  the stack is 1.2–3.8 GiB.
 - An ingestion window lasts about 5 s, about 10 `docker stats` refreshes per repetition, and the first refresh catches
   the stack still starting, which is why the stack CPU mean during ingestion is below its median (505 % against
   531 % with one replica).

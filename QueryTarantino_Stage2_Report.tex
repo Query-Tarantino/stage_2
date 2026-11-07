@@ -1550,21 +1550,24 @@ N & Wait for a crawler & Download & Wait for an indexer & Indexing & Enqueue to 
 \begin{table}[ht]
 \centering
 \scriptsize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3.5pt}
 \caption{CPU, in percent of one core as \code{docker stats} counts it, and memory during each phase, by replicas of
-\code{crawler} and \code{indexer}. ``Stack'' adds up every container; ``Host'' is the whole machine.
-\run{20261105-235758-resource-usage-c1376c7}.}
+\code{crawler} and \code{indexer}. ``One replica'' is one crawler during ingestion or one indexer during indexing, a
+container that runs one JVM, with its memory as mean / p99; ``Replicas'' adds up the CPU of all of them, ``Stack''
+every container, and ``Host'' is the whole machine, with 31.4\,GiB. \run{20261105-235758-resource-usage-c1376c7}.}
 \label{tab:resources}
-\begin{tabular}{@{}rlrrrrrr@{}}
+\begin{tabular}{@{}rlrrrrrrrr@{}}
 \toprule
-N & Phase & Crawlers' CPU & Indexers' CPU & MongoDB's CPU & Stack CPU & Stack memory (MiB) & Host CPU \\
+& & \multicolumn{2}{c}{One replica} & Replicas & MongoDB & \multicolumn{2}{c}{Stack} & \multicolumn{2}{c}{Host} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-5}\cmidrule(lr){6-6}\cmidrule(lr){7-8}\cmidrule(l){9-10}
+N & Phase & CPU (\%) & Memory (MiB) & CPU (\%) & CPU (\%) & CPU (\%) & Memory (MiB) & CPU (\%) & Memory (GiB) \\
 \midrule
-1 & Ingestion & 378 $\pm$ 94\,\% & -- & 50 $\pm$ 9\,\% & 505 $\pm$ 105\,\% & 1{,}199 $\pm$ 122 & 956 $\pm$ 85\,\% \\
-2 & Ingestion & 512 $\pm$ 74\,\% & -- & 62 $\pm$ 11\,\% & 680 $\pm$ 109\,\% & 1{,}398 $\pm$ 125 & 1{,}163 $\pm$ 155\,\% \\
-3 & Ingestion & 537 $\pm$ 53\,\% & -- & 65 $\pm$ 4\,\% & 717 $\pm$ 32\,\% & 1{,}723 $\pm$ 73 & 1{,}281 $\pm$ 71\,\% \\
-1 & Indexing & -- & 64 $\pm$ 2\,\% & 77.9 $\pm$ 0.4\,\% & 147 $\pm$ 2\,\% & 2{,}264 $\pm$ 199 & 208 $\pm$ 7\,\% \\
-2 & Indexing & -- & 119 $\pm$ 10\,\% & 150 $\pm$ 3\,\% & 277 $\pm$ 7\,\% & 2{,}967 $\pm$ 148 & 346 $\pm$ 12\,\% \\
-3 & Indexing & -- & 176 $\pm$ 11\,\% & 220 $\pm$ 3\,\% & 406 $\pm$ 10\,\% & 3{,}930 $\pm$ 134 & 494 $\pm$ 11\,\% \\
+1 & Ingestion & 378 $\pm$ 94 & 413 / 625 & 378 $\pm$ 94 & 50 $\pm$ 9 & 505 $\pm$ 105 & 1{,}199 $\pm$ 122 & 956 $\pm$ 85 & 19.5 $\pm$ 1.3 \\
+2 & Ingestion & 256 $\pm$ 37 & 332 / 529 & 512 $\pm$ 74 & 62 $\pm$ 11 & 680 $\pm$ 109 & 1{,}398 $\pm$ 125 & 1{,}163 $\pm$ 155 & 19.0 $\pm$ 1.1 \\
+3 & Ingestion & 179 $\pm$ 18 & 334 / 497 & 537 $\pm$ 53 & 65 $\pm$ 4 & 717 $\pm$ 32 & 1{,}723 $\pm$ 73 & 1{,}281 $\pm$ 71 & 19.7 $\pm$ 0.7 \\
+1 & Indexing & 64 $\pm$ 2 & 470 / 683 & 64 $\pm$ 2 & 77.9 $\pm$ 0.4 & 147 $\pm$ 2 & 2{,}264 $\pm$ 199 & 208 $\pm$ 7 & 19.0 $\pm$ 0.6 \\
+2 & Indexing & 59 $\pm$ 5 & 452 / 633 & 119 $\pm$ 10 & 150 $\pm$ 3 & 277 $\pm$ 7 & 2{,}967 $\pm$ 148 & 346 $\pm$ 12 & 19.6 $\pm$ 0.6 \\
+3 & Indexing & 59 $\pm$ 4 & 446 / 662 & 176 $\pm$ 11 & 220 $\pm$ 3 & 406 $\pm$ 10 & 3{,}930 $\pm$ 134 & 494 $\pm$ 11 & 20.7 $\pm$ 0.5 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1580,7 +1583,8 @@ N & Phase & Crawlers' CPU & Indexers' CPU & MongoDB's CPU & Stack CPU & Stack me
   thread stacks and buffers), not the heap. No container grows with the load; \code{control} and \code{query} stay
   below 270\,MiB.
 \item \textbf{The host pays for Docker.} The host uses 1.7--1.9 times the stack's CPU during ingestion and 1.2--1.4
-  times during indexing: the rest runs in Docker Desktop's VM and Windows.
+  times during indexing: the rest runs in Docker Desktop's VM and Windows. Its used memory stays at 19.0--20.7\,GiB in
+  every phase, while the stack's grows from 1.2 to 3.8\,GiB.
 \end{itemize}
 
 \subsection{Coordination mechanisms compared}
