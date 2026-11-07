@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.10 · November 5, 2026
+Version 1.11 · November 7, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -151,7 +151,7 @@ stage_2/
 - `query` gets `TARANTINO_CORS_ORIGIN: ${TARANTINO_CORS_ORIGIN:-*}`.
 - `bench` runs `bench/target/bench-1.0-SNAPSHOT.jar` on `eclipse-temurin:25-jre`, with `./workload` read-only at `/app/workload` and `./benchmarks/runs` at `/app/benchmarks/runs`. It reaches Mongo through `TARANTINO_MONGO_URI` and nginx at `http://nginx:8080` and `http://nginx:8081`. Scripts launch it with `docker compose run --rm bench <command>`.
 - Healthchecks: each service, `curl -fsS http://localhost:<port>/health`; `mongo`, `mongosh --quiet --eval "db.adminCommand('ping')"`.
-- Startup: each service opens its HTTP port first and retries the connection to Mongo and Hazelcast without limit. Until it connects, `/health` answers `503` and it consumes no queues, so startup order does not matter.
+- Startup: each service opens its HTTP port first and retries the connection to Mongo and Hazelcast without limit. Until it connects, `/health` answers `503` and it consumes no queues, so startup order does not matter. If anything else fails while it starts, such as reading `stopwords.txt` or the candidates, it exits with code 1 instead of answering `UP` with no worker behind it.
 - Services do not restart on their own (`restart: "no"`): the recovery tests decide when each one comes back.
 - The other coordination modes (§11) start with an override after `docker-compose.yml` and `docker-compose.mirror.yml`: `docker-compose.activemq.yml`, `docker-compose.activemq-persistent.yml` (always after the first), `docker-compose.polling.yml` and `docker-compose.orchestrator.yml`. Each sets `TARANTINO_COORDINATION` in the four services and `deploy: {replicas: 0}` in `hazelcast`.
 - The `activemq` service runs `apache/activemq-classic` under the `activemq` profile, so it only starts with `COMPOSE_PROFILES=activemq`, in both `activemq` modes. Like `hazelcast`, it publishes no ports and has no healthcheck.
@@ -322,7 +322,7 @@ The rebuild (`index_state.rebuild.status`) only has `RUNNING`, written by `POST 
 
 - Stage 1 `batch` layout: `<TARANTINO_DATALAKE>/<book_id / 1000>/<book_id>.header.txt` and `<book_id>.body.txt`, with integer division. Book 1342 goes in `datalake/1/` and book 84 in `datalake/0/`. The paths come from `DatalakePaths`, in `common`.
 - Each file is written to `<final name>.<uuid>.tmp`, in the same directory, and renamed with `Files.move(tmp, final, ATOMIC_MOVE)`, which on Linux replaces any existing file. For example, `datalake/1/1342.body.txt.3f2b8c1e-9a4d-4c2e-8f1a-6b7d5e9c0a12.tmp`. Header first and body second, as in Stage 1.
-- A book is in the datalake when its final header and body exist; since the body is written last, checking the body is enough. A header without a body does not count and is overwritten on retry.
+- A book is in the datalake when its final header and body exist, and `crawler` and `indexer` check both. Since the body is written last, a header without a body is a download that did not finish: it does not count and is overwritten on retry. A body without its header only happens if something outside the services deletes the header: the indexer fails the book with `NOT_IN_DATALAKE` and `POST /ingest` downloads it again.
 - A `.tmp` only exists while it is being written, because the whole book is downloaded into memory before saving. That is why a `.tmp` whose `mtime` is older than `TARANTINO_TMP_MAX_AGE_SECONDS` is an orphan.
 - Only `control` deletes, every `TARANTINO_CLEANUP_SECONDS`, and only those `.tmp` files. `crawler` never deletes anything, and `indexer` only reads.
 - No datalake path is ever exposed through the API.
@@ -640,7 +640,7 @@ nginx's own errors use the same format. An unknown path on 8080 or 8081 gives `4
 
 - Whatever changes state answers `202` and is checked later at its `Location`, or `200` if it was already done. An accepted book has finished when its state is `PUBLISHED`, and has failed when it is `FAILED`, with the reason in `last_error`.
 - Outside a rebuild, a book shows up in `/search` when each `query` replica refreshes after its batch is published: at once on `BatchPublished`, and at most `TARANTINO_SNAPSHOT_SECONDS` later if the message is lost. Its state is not in step with that: it can read `INDEXING` while the book is already searchable, until the indexer marks it or, after a crash, `control` completes the publication (§8), and it can read `PUBLISHED` up to `TARANTINO_SNAPSHOT_SECONDS` before a replica shows it. So a client, and the checks, wait for `PUBLISHED` at the `Location` and then give `/search` up to `TARANTINO_SNAPSHOT_SECONDS`. During a rebuild, new books wait for the switch (§5.4).
-- Handlers never wait for long jobs: they answer in milliseconds. A client can use a 5 s timeout and, on a `503`, retry after `Retry-After`.
+- Handlers never wait for long jobs: they answer in milliseconds. If MongoDB does not answer, its clients give up selecting a server after 2 s and the handler answers `503`, so a client can use a 5 s timeout and, on a `503`, retry after `Retry-After`.
 - Repeating a `POST` duplicates nothing: state lives in Mongo and every transition is conditional.
 - `query` allows CORS from `TARANTINO_CORS_ORIGIN`; nginx adds no headers.
 
@@ -810,7 +810,7 @@ With `TARANTINO_SNAPSHOT_ON_PUBLISH=false`, `query` registers no listener in any
 - The URL is `failover:(tcp://activemq:61616)?timeout=1000`: a send while the broker is down fails after 1 s, and the handlers answer `503`. Each process opens one connection on a background thread that retries every 2 s; until it starts, the broker reports itself not connected and every queue handle throws.
 - Each `BookTasks` handle owns a session and a producer, and creates its consumer on its first `poll` or `drain`, with `consumer.prefetchSize=1` on `books-to-download` and `TARANTINO_INDEX_BATCH` on `books-to-index`. `published-batches` is a non-durable topic with one listener per `query` replica.
 - With `TARANTINO_ACTIVEMQ_PERSISTENT=false`: non-persistent delivery and automatic acknowledgement, the guarantees of an `IQueue`. With `true`: persistent delivery and client acknowledgement, called when the job returns, so a message not acknowledged when its consumer dies goes to another consumer.
-- Queue sizes come from the statistics plugin, `ActiveMQ.Statistics.Destination.<queue>`.
+- Queue sizes come from the statistics plugin, `ActiveMQ.Statistics.Destination.<queue>`, which answers on a temporary queue that is deleted after each read, because a temporary queue otherwise lives as long as its connection.
 
 ### 11.3 `polling`
 
