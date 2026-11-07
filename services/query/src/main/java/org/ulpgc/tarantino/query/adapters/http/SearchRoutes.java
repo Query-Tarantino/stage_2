@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.query.adapters.http;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.javalin.http.Header;
 import io.javalin.http.HttpStatus;
 import org.ulpgc.tarantino.common.http.BookIds;
 import org.ulpgc.tarantino.common.http.ProblemException;
@@ -20,6 +21,13 @@ import java.util.Set;
 /** Javalin HTTP routes for /search, /books/{book_id} and /search/filters (SPEC §6.3, §6.4). */
 public class SearchRoutes {
 
+    private static final String SEARCH_PATH = "/search";
+    private static final String BOOK_PATH = "/books/{" + BookIds.PARAMETER + "}";
+    private static final String FILTERS_PATH = "/search/filters";
+    private static final String ALLOWED_METHODS = "GET, OPTIONS";
+    private static final String ANY_HEADER = "*";
+    private static final String ANY_ORIGIN = "*";
+
     private final SnapshotRefresher snapshots;
     private final SearchCommand search;
     private final MetadataReader metadata;
@@ -27,7 +35,7 @@ public class SearchRoutes {
     private final String corsOrigin;
 
     public SearchRoutes(SnapshotRefresher snapshots, SearchCommand search) {
-        this(snapshots, search, (generation, bookIds) -> List.of(), new Tokenizer(Set.of()), "*");
+        this(snapshots, search, (generation, bookIds) -> List.of(), new Tokenizer(Set.of()), ANY_ORIGIN);
     }
 
     public SearchRoutes(
@@ -45,21 +53,21 @@ public class SearchRoutes {
 
     public void register(Javalin app) {
         if (corsOrigin != null && !corsOrigin.isBlank()) {
-            app.before(context -> context.header("Access-Control-Allow-Origin", corsOrigin));
+            app.before(context -> context.header(Header.ACCESS_CONTROL_ALLOW_ORIGIN, corsOrigin));
         }
-        app.get("/search", this::search);
-        app.get("/books/{book_id}", this::book);
-        app.get("/search/filters", this::filters);
-        app.options("/search", this::options);
-        app.options("/books/{book_id}", this::options);
-        app.options("/search/filters", this::options);
+        app.get(SEARCH_PATH, this::search);
+        app.get(BOOK_PATH, this::book);
+        app.get(FILTERS_PATH, this::filters);
+        app.options(SEARCH_PATH, this::options);
+        app.options(BOOK_PATH, this::options);
+        app.options(FILTERS_PATH, this::options);
     }
 
     private void options(Context context) {
         if (corsOrigin != null && !corsOrigin.isBlank()) {
-            context.header("Access-Control-Allow-Origin", corsOrigin);
-            context.header("Access-Control-Allow-Methods", "GET, OPTIONS");
-            context.header("Access-Control-Allow-Headers", "*");
+            context.header(Header.ACCESS_CONTROL_ALLOW_ORIGIN, corsOrigin);
+            context.header(Header.ACCESS_CONTROL_ALLOW_METHODS, ALLOWED_METHODS);
+            context.header(Header.ACCESS_CONTROL_ALLOW_HEADERS, ANY_HEADER);
         }
         context.status(HttpStatus.OK);
     }
@@ -78,7 +86,7 @@ public class SearchRoutes {
     }
 
     private void book(Context context) {
-        int bookId = BookIds.parse(context.pathParam("book_id"));
+        int bookId = BookIds.parse(context.pathParam(BookIds.PARAMETER));
         Snapshot snapshot = snapshot();
         if (!snapshot.bookIds().contains(bookId)) {
             throw new ProblemException(
