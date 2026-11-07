@@ -31,10 +31,14 @@ public class Main {
         refreshOnOneThread(config, connections, snapshots, refresher, askForRefresh);
     }
 
-    /** The search routes and, in mode {@code orchestrator}, the internal refresh route (SPEC §11.4). */
+    /**
+     * The search routes and, in mode {@code orchestrator}, the internal refresh route (SPEC §11.4). The search routes read
+     * {@code stopwords.txt} only once {@link Startup#start} registers them, so a missing file stops the service with code 1
+     * instead of leaving a JVM without its port (SPEC §2.4).
+     */
     private static Consumer<Javalin> routes(TarantinoConfig config, Connections connections, SnapshotRefresher snapshots,
                                             Runnable askForRefresh) {
-        Consumer<Javalin> search = QueryFactory.searchRoutes(config, connections, snapshots)::register;
+        Consumer<Javalin> search = app -> QueryFactory.searchRoutes(config, connections, snapshots).register(app);
         if (config.coordination() != Coordination.ORCHESTRATOR) {
             return search;
         }
