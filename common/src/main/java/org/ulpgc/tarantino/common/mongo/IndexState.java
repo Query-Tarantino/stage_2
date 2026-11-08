@@ -41,7 +41,7 @@ public class IndexState {
     public int currentGeneration() {
         return document(MongoCollections.CURRENT)
                 .map(pointer -> pointer.getInteger(GENERATION))
-                .orElseThrow(() -> new IllegalStateException("There is no generation pointer yet"));
+                .orElseThrow(NoGenerationPointerException::new);
     }
 
     /** The generation to write: the target of a {@code RUNNING} rebuild, and the current one otherwise (SPEC §5.4). */

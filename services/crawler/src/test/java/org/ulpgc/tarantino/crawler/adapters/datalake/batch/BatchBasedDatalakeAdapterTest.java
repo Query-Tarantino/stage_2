@@ -6,6 +6,8 @@ import org.ulpgc.tarantino.crawler.model.book.BookText;
 import org.ulpgc.tarantino.crawler.model.book.StoredPaths;
 import org.ulpgc.tarantino.crawler.ports.DatalakeStorage;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
@@ -31,5 +33,13 @@ class BatchBasedDatalakeAdapterTest {
 
         assertEquals(Optional.of(stored), datalake.pathsOf(5));
         assertTrue(datalake.pathsOf(6).isEmpty());
+    }
+
+    @Test
+    void doesNotCountABookWhoseHeaderIsMissing() throws IOException {
+        DatalakeStorage datalake = new BatchBasedDatalakeAdapter(root);
+        Files.delete(datalake.save(new BookText(5, "header", "body")).header());
+
+        assertTrue(datalake.pathsOf(5).isEmpty());
     }
 }

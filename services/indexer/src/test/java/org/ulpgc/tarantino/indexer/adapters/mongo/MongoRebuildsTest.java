@@ -67,6 +67,18 @@ class MongoRebuildsTest {
         assertEquals(new Rebuild(2, 3, RebuildStatus.RUNNING), new MongoRebuilds(database()).open());
     }
 
+    @Test
+    void opensTheGenerationAfterTheLastTargetWhenThePointerWasReadBeforeItsSwitch() {
+        Date switchedAt = new Date();
+        new IndexState(database()).createPointer();
+        indexState().insertOne(new Document(MongoFields.ID, MongoCollections.REBUILD)
+                .append(MongoFields.TARGET_GENERATION, 2).append(MongoFields.STATUS, RebuildStatus.DONE.name())
+                .append(MongoFields.REQUESTED_AT, switchedAt).append(MongoFields.SWITCHED_AT, switchedAt));
+
+        assertEquals(new Rebuild(2, 3, RebuildStatus.RUNNING), new MongoRebuilds(database()).open());
+        assertEquals(3, rebuildDocument().getInteger(MongoFields.TARGET_GENERATION));
+    }
+
     private Document rebuildDocument() {
         return indexState().find(Filters.eq(MongoFields.ID, MongoCollections.REBUILD)).first();
     }

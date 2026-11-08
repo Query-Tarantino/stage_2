@@ -8,6 +8,7 @@ import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.common.mongo.MongoIndexes;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.common.startup.Startup;
+import org.ulpgc.tarantino.common.startup.WorkerThreads;
 import org.ulpgc.tarantino.control.commands.CleanDatalakeCommand;
 import org.ulpgc.tarantino.control.commands.OrchestrateCommand;
 import org.ulpgc.tarantino.control.commands.ReconcileCommand;
@@ -43,7 +44,8 @@ public class Main {
     /** One tick every TARANTINO_ORCHESTRATOR_TICK_MILLIS on the thread orchestrator (SPEC §11.4). */
     private static void orchestrateOnItsOwnThread(TarantinoConfig config, OrchestrateCommand orchestrate) {
         ScheduledExecutorService orchestrator = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("orchestrator").factory());
-        orchestrator.scheduleWithFixedDelay(orchestrate::tick, 0, config.orchestratorTick().toMillis(), TimeUnit.MILLISECONDS);
+        orchestrator.scheduleWithFixedDelay(WorkerThreads.exitingIfItDies(orchestrate::tick), 0, config.orchestratorTick().toMillis(),
+                TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -52,8 +54,10 @@ public class Main {
      */
     private static void scheduleOnOneThread(TarantinoConfig config, ReconcileCommand reconcile, CleanDatalakeCommand cleanDatalake) {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("reconciliation").factory());
-        scheduler.scheduleWithFixedDelay(reconcile::execute, 0, config.reconcile().toMillis(), TimeUnit.MILLISECONDS);
-        scheduler.scheduleWithFixedDelay(cleanDatalake::execute, 0, config.cleanup().toMillis(), TimeUnit.MILLISECONDS);
+        scheduler.scheduleWithFixedDelay(WorkerThreads.exitingIfItDies(reconcile::execute), 0, config.reconcile().toMillis(),
+                TimeUnit.MILLISECONDS);
+        scheduler.scheduleWithFixedDelay(WorkerThreads.exitingIfItDies(cleanDatalake::execute), 0, config.cleanup().toMillis(),
+                TimeUnit.MILLISECONDS);
     }
 
     private static void seed(Connections connections, List<Integer> candidates) {

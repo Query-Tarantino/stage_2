@@ -12,7 +12,8 @@ import java.nio.file.Path;
 /**
  * Reads books from a local copy of Project Gutenberg's generated collection, made in bulk with rsync
  * (SPEC §4.7), instead of one HTTP request per book. Same files, same failures (§4.5): a missing book is
- * NOT_FOUND and any other I/O error NETWORK_ERROR.
+ * NOT_FOUND and any other I/O error NETWORK_ERROR. Bytes that are not UTF-8 become U+FFFD, as the HTTP
+ * download decodes them, instead of failing the book.
  */
 public class LocalMirrorDownloader implements BookDownloader {
 
@@ -29,7 +30,7 @@ public class LocalMirrorDownloader implements BookDownloader {
             throw new DownloadException(BookErrorCode.NOT_FOUND, "Book " + bookId + " not found in the mirror " + mirror);
         }
         try {
-            return Files.readString(file, StandardCharsets.UTF_8);
+            return new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new DownloadException(BookErrorCode.NETWORK_ERROR, "Could not read book " + bookId + " from the mirror: " + e);
         }

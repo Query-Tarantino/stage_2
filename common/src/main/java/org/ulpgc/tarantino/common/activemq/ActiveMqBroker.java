@@ -74,7 +74,8 @@ public final class ActiveMqBroker implements Broker {
     /**
      * The {@code size} the statistics plugin answers for the queue, on a session of its own; a {@code QueueBrowser} would
      * stop at {@code maxBrowsePageSize}. A producer on the queue first makes sure the broker has it, because the plugin
-     * does not answer for a queue it does not know.
+     * does not answer for a queue it does not know. The reply queue is deleted afterwards: a temporary queue lives as long
+     * as its connection, which lasts the whole process, so the broker would otherwise keep one for every call.
      */
     @Override
     public int size(String queue) {
@@ -82,13 +83,23 @@ public final class ActiveMqBroker implements Broker {
              MessageProducer ensureQueue = session.createProducer(session.createQueue(queue));
              MessageProducer request = session.createProducer(session.createQueue(STATISTICS_PREFIX + queue))) {
             TemporaryQueue replies = session.createTemporaryQueue();
-            MessageConsumer statistics = session.createConsumer(replies);
+            try {
+                return askForSize(queue, session, request, replies);
+            } finally {
+                replies.delete();
+            }
+        } catch (JMSException e) {
+            throw ActiveMqBookTasks.unavailable(e);
+        }
+    }
+
+    /** Asks the statistics plugin and closes the consumer before returning, because a consumed temporary queue cannot be deleted. */
+    private static int askForSize(String queue, Session session, MessageProducer request, TemporaryQueue replies) throws JMSException {
+        try (MessageConsumer statistics = session.createConsumer(replies)) {
             Message question = session.createMessage();
             question.setJMSReplyTo(replies);
             request.send(question);
             return size(queue, (MapMessage) statistics.receive(STATISTICS_TIMEOUT.toMillis()));
-        } catch (JMSException e) {
-            throw ActiveMqBookTasks.unavailable(e);
         }
     }
 

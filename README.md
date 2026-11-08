@@ -8,11 +8,51 @@ Search engine over [Project Gutenberg](https://www.gutenberg.org/) books in Java
 seeds and reconciles. The services keep the texts in a datalake and the source of truth in MongoDB, coordinate
 through Hazelcast by default or in one of three other modes, and everything runs on one machine with Docker Compose.
 
+- [QueryTarantino_Stage2_Report.pdf](QueryTarantino_Stage2_Report.pdf) is the Stage 2 report. Its LaTeX source,
+  [QueryTarantino_Stage2_Report.tex](QueryTarantino_Stage2_Report.tex), is one file that also holds the rows it takes from
+  the runs, and `tectonic -X compile QueryTarantino_Stage2_Report.tex` builds it from the root of the repository.
 - [SPEC.md](SPEC.md) holds every contract: collections, messages, states, conditional writes, the HTTP API,
   the search algorithm, the failure matrix and the benchmark runs.
 - [api/openapi.yaml](api/openapi.yaml) is the HTTP API in OpenAPI 3.1, derived from `SPEC.md` §6.
-- [report/QueryTarantino_Stage2_Report.pdf](report/QueryTarantino_Stage2_Report.pdf) is the Stage 2 report, built from
-  its LaTeX source in `report/` with `tectonic -X compile QueryTarantino_Stage2_Report.tex`.
+
+## Structure
+
+The folders of this repository at run time, in the default mode `hazelcast`: `control` seeds the book ids of
+`workload/`, `crawler` downloads them into the datalake, `indexer` publishes them in batches and `query` searches them
+behind nginx. The four services share `common/` and one image built from the `Dockerfile`, and MongoDB is the source of
+truth. `SPEC.md` §2.1 has the full diagram, with every message, port and thread, and §11 what the other modes change.
+
+```mermaid
+flowchart TB
+  FE["Front-end"]
+  OPS["checks/, scripts/ and admin"]
+  WL["workload/<br/>book ids to seed"]
+  GB["Gutenberg's mirror<br/>or benchmarks/mirror/"]
+  BN["bench/<br/>recovery checks and results"]
+  RUNS["benchmarks/runs/"]
+  subgraph HOST["One host: docker-compose.yml"]
+    NG["nginx<br/>nginx/nginx.conf"]
+    CT["control ×1<br/>services/control"]
+    QD[["books-to-download<br/>Hazelcast queue"]]
+    CR["crawler ×N<br/>services/crawler"]
+    QI[["books-to-index<br/>Hazelcast queue"]]
+    IX["indexer ×N<br/>services/indexer"]
+    TP(("published-batches<br/>Hazelcast topic"))
+    Q["query ×N<br/>services/query"]
+    DL[("datalake volume")]
+    M[("MongoDB<br/>source of truth")]
+  end
+  FE -->|":8080"| NG
+  OPS -->|":8080 and :8081"| NG
+  NG --> Q
+  NG --> CT & CR & IX
+  WL --> CT
+  CT --> QD --> CR --> QI --> IX --> TP --> Q
+  GB --> CR
+  CR --> DL --> IX
+  CT & CR & IX & Q <--> M
+  OPS -.-> BN --> RUNS
+```
 
 ## Status
 
@@ -44,7 +84,8 @@ mvn -pl services/indexer -am verify           # one module with what it needs
 ```
 
 Without Docker, the Testcontainers tests are skipped, not failed. `mvn verify` also runs the cases of
-`workload/conformance/` that still apply (`SPEC.md` §10).
+`workload/conformance/` that still apply (`SPEC.md` §10), and JaCoCo writes the line and branch coverage of each
+module to `target/site/jacoco/index.html`.
 
 GitHub Actions runs on every push `mvn clean verify`, failing if the MongoDB tests were skipped; the functional checks
 against the stack with the 20 sample books, in mode `hazelcast` with one `query` replica and then with three behind
@@ -73,7 +114,7 @@ Without `docker-compose.mirror.yml`, `crawler` downloads over HTTP from Gutenber
 
 | Setting | How |
 | --- | --- |
-| Entry ports | Only nginx publishes ports: 8080 sends `/search`, `/search/filters` and `/books/` to `query`, and 8081 sends `/ingest/`, `/index/` and `/control/` to their service; any other path gives `404` |
+| Entry ports | Only nginx publishes ports: 8080 sends `/search`, `/search/filters` and `/books/` to `query`, and 8081 sends `/ingest/`, `/index/` and `/control/` to their service; any other path gives `404`. 8081 has no authentication, so it only listens on `127.0.0.1` |
 | Service ports | `TARANTINO_PORT`: 7001 `crawler`, 7002 `indexer`, 7003 `query` and 7004 `control`, inside the Compose network, each with its `/health`: `docker compose exec query curl -s localhost:7003/health` |
 | Addresses | `TARANTINO_MONGO_URI` and `TARANTINO_HAZELCAST`, which `docker-compose.yml` points to `mongo` and `hazelcast` |
 | Data paths | `TARANTINO_DATALAKE` (the `datalake` volume at `/data/datalake`), `TARANTINO_WORKLOAD` (`./workload` at `/app/workload`) and `TARANTINO_MIRROR` (`benchmarks/mirror` at `/data/mirror` with `docker-compose.mirror.yml`) |
@@ -155,6 +196,7 @@ To summarise an existing run again, delete its `summary.csv` and run its command
 
 ```bash
 java -jar bench/target/bench-1.0-SNAPSHOT.jar coordination benchmarks/runs/<run_id>
+java -jar bench/target/bench-1.0-SNAPSHOT.jar ingest-workers benchmarks/runs/<run_id>
 java -jar bench/target/bench-1.0-SNAPSHOT.jar resources benchmarks/runs/<run_id>
 java -jar bench/target/bench-1.0-SNAPSHOT.jar charts benchmarks/runs/<run_id>
 ```
@@ -200,6 +242,8 @@ TARANTINO_CACHE_SOURCE=http scripts/fill_cache.sh  # one HTTP request per book, 
 ## Repository
 
 ```text
+QueryTarantino_Stage2_Report.pdf  the Stage 2 report
+QueryTarantino_Stage2_Report.tex  its LaTeX source, with the rows it takes from the runs
 common/                 shared contracts: names, records, JSON, configuration, tokenizer, Mongo, Hazelcast, HTTP
 services/
   crawler/              Ingestion
@@ -221,7 +265,6 @@ scripts/
 benchmarks/
   README.md             what the runs show
   runs/<run_id>/        every benchmark and recovery run, versioned
-report/                 the Stage 2 report: LaTeX source, the rows it takes from the runs, and its PDF
 .github/                CI, CodeQL and the recovery workflow
 workload/
   book_ids.txt          corpus candidates, in order

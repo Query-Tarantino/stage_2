@@ -4,10 +4,8 @@ import io.javalin.Javalin;
 import org.ulpgc.tarantino.common.config.Coordination;
 import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.http.InternalTasks;
-import org.ulpgc.tarantino.common.messaging.BookTasks;
 import org.ulpgc.tarantino.common.messaging.Broker;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
-import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.LeaseHeartbeat;
@@ -95,14 +93,9 @@ public final class IndexerFactory {
 
     /** In mode {@code polling} nothing is enqueued: a {@code DOWNLOADED} book is polled (SPEC §11.3). */
     private static BooksToIndex booksToIndex(Connections connections) {
-        return connections.broker().<BooksToIndex>map(broker -> task -> offerOnOwnHandle(broker, task)).orElse(task -> {
-        });
-    }
-
-    private static void offerOnOwnHandle(Broker broker, BookTask task) {
-        try (BookTasks indexing = broker.queue(MessagingContracts.BOOKS_TO_INDEX)) {
-            indexing.offer(task);
-        }
+        return connections.broker().<BooksToIndex>map(broker -> task -> broker.offer(MessagingContracts.BOOKS_TO_INDEX, task))
+                .orElse(task -> {
+                });
     }
 
     public static DatalakeReader datalakeReader(TarantinoConfig config) {

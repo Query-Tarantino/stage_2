@@ -5,6 +5,7 @@ import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.common.mongo.MongoIndexes;
 import org.ulpgc.tarantino.common.startup.Connections;
 import org.ulpgc.tarantino.common.startup.Startup;
+import org.ulpgc.tarantino.common.startup.WorkerThreads;
 import org.ulpgc.tarantino.indexer.adapters.local.LocalIndexQueue;
 
 import java.util.List;
@@ -18,6 +19,6 @@ public class Main {
         LocalIndexQueue localIndex = new LocalIndexQueue(config.localIndexCapacity());
         Startup.start(config, connections, List.of(), IndexerFactory.routes(config, connections, localIndex));
         Startup.retry("create the book state indexes", () -> MongoIndexes.ensureStateIndexes(connections.database()));
-        Thread.ofPlatform().name("index-batches").start(IndexerFactory.indexWorker(config, connections, localIndex));
+        WorkerThreads.start("index-batches", IndexerFactory.indexWorker(config, connections, localIndex));
     }
 }

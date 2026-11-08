@@ -1,0 +1,2190 @@
+\documentclass[11pt,a4paper]{article}
+
+\PassOptionsToPackage{hyphens,obeyspaces,spaces}{url}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric,backgrounds}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\usepackage{listings}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{enumitem}
+\usepackage[section]{placeins}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{inkprimary}{HTML}{0B0B0B}
+\definecolor{inksecondary}{HTML}{52514E}
+\definecolor{inkmuted}{HTML}{8A8984}
+\definecolor{gridline}{HTML}{E4E3DF}
+\definecolor{hostfill}{HTML}{F6F5F2}
+\definecolor{modehazelcast}{HTML}{2A78D6}
+\definecolor{modeactivemq}{HTML}{EB6834}
+\definecolor{modepersistent}{HTML}{1BAF7A}
+\definecolor{modepolling}{HTML}{EDA100}
+\definecolor{modeorchestrator}{HTML}{E87BA4}
+
+\newcommand{\code}[1]{\nolinkurl{#1}}
+\newcommand{\mode}[1]{\code{#1}}
+\newcommand{\run}[1]{\nolinkurl{#1}}
+\newcommand{\spec}[1]{\code{SPEC.md}~\S#1}
+\newcommand{\repourl}{\url{https://github.com/Query-Tarantino/stage_2}}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framesep=3pt,
+  rulecolor=\color{black!25},
+  aboveskip=6pt,
+  belowskip=4pt,
+  showstringspaces=false,
+  breaklines=true,
+}
+
+\pgfplotsset{
+  report/.style={
+    width=7.4cm,
+    height=5.4cm,
+    axis lines*=left,
+    axis line style={inkmuted},
+    tick style={inkmuted},
+    major tick length=2pt,
+    ymajorgrids,
+    grid style={gridline},
+    tick label style={font=\footnotesize, color=inksecondary},
+    label style={font=\footnotesize, color=inkprimary},
+    title style={font=\small, color=inkprimary},
+    legend style={font=\footnotesize, draw=none, fill=none, text=inkprimary},
+    legend cell align=left,
+    every axis plot/.append style={line width=1.1pt},
+  },
+  modeline/.style={mark size=2.4pt, error bars/y dir=both, error bars/y explicit, error bars/error bar style={line width=0.7pt}, error bars/error mark options={rotate=90, mark size=2pt, line width=0.7pt}},
+}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\arraystretch}{1.12}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\hypersetup{
+  pdftitle={Search Engine Project: Stage 2. Building a Service-Oriented Architecture},
+  pdfauthor={Query Tarantino: Abel Castro Villar, Hugo Gonz\'alez Fern\'andez, Javier Mart\'in Rodr\'iguez, M\'aximo Prosperi Reynoso},
+}
+
+\pgfplotstableread[col sep=comma]{
+batch,replicas,mean,ci
+1,1,5.52,0.05
+10,1,12.52,0.21
+100,1,28.51,0.85
+250,1,33.28,1.84
+100,2,48.38,3.58
+100,3,59.75,2.21
+}\indexresults
+\pgfplotstableread[col sep=comma]{
+clients,threads,replicas,mean_ms,ci_ms,p95_ms,rps,rps_ci
+1,32,1,1.53977,0.01864,2.7328,646.26,7.79
+8,32,1,2.2016999999999998,0.05982,3.8706,3618.06,99.33
+32,32,1,7.28746,0.04395,14.4876,4374.39,26.49
+64,32,1,14.49621,0.16188999999999998,27.228,4380.54,50.16
+32,8,1,12.88946,1.25831,19.272599999999997,2493.26,254.23
+32,128,1,7.55948,0.06493,15.093399999999999,4217.34,35.8
+32,32,2,5.66047,0.022600000000000002,10.1446,5625.08,24.34
+32,32,3,5.82144,0.04284,10.499799999999999,5471.37,39.41
+}\searchresults
+\pgfplotstableread[col sep=comma]{
+replicas,hz,hzci,amq,amqci,amqp,amqpci,poll,pollci,orch,orchci
+1,28.530,1.040,28.450,0.450,28.080,0.210,27.520,0.190,27.740,0.420
+2,46.730,4.300,45.470,4.480,43.310,2.220,47.890,0.740,44.700,3.090
+3,58.560,2.270,57.470,5.600,55.050,2.200,55.530,2.820,34.630,1.480
+}\modesthroughput
+\pgfplotstableread[col sep=comma]{
+replicas,hz,hzci,amq,amqci,amqp,amqpci,poll,pollci,orch,orchci
+1,51.436,1.867,52.212,0.985,50.276,0.439,54.449,0.254,55.918,0.904
+2,31.942,3.113,33.493,3.355,32.401,2.015,32.062,0.592,36.203,2.138
+3,25.622,0.911,26.837,2.406,24.205,0.789,28.206,1.431,31.910,2.871
+}\modespublication
+\pgfplotstableread[col sep=comma]{
+consumers,hz,hzci,amq,amqci,amqp,amqpci
+1,8872.1,583.0,9349.7,45.1,1474.7,35.2
+3,8513.0,860.0,18338.0,2439.9,1456.6,10.8
+8,8866.0,384.6,25904.5,3829.8,1454.0,17.8
+}\brokerresults
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\large\bfseries Big Data - Bachelor's Degree in Data Science and Engineering\par}
+\vspace{0.3cm}
+{\large Universidad de Las Palmas de Gran Canaria\par}
+\vspace{0.3cm}
+{Academic Year 2026-2027\par}
+
+\vspace{2.6cm}
+{\fontsize{26}{32}\selectfont Search Engine Project: Stage 2\par}
+\vspace{0.4cm}
+{\Large Building a Service-Oriented Architecture\par}
+
+\vspace{2.6cm}
+{\large\textbf{Group Name:} Query Tarantino\par}
+\vspace{0.6cm}
+{\textbf{GitHub Repository:}\par}
+\vspace{0.15cm}
+{\repourl\par}
+
+\vspace{2.4cm}
+{\large\textbf{Team Members:}\par}
+\vspace{0.4cm}
+\begin{tabular}{@{}l@{\hspace{1.6cm}}l@{}}
+\textbf{Abel Castro Villar} & ID: 78593645T \\
+\textbf{Hugo González Fernández} & ID: 54587350R \\
+\textbf{Javier Martín Rodríguez} & ID: 43386897L \\
+\textbf{Máximo Prosperi Reynoso} & ID: 42252471E \\
+\end{tabular}
+
+\vfill
+{November 2026\par}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+
+\tableofcontents
+\newpage
+
+\section*{Executive Summary}
+\addcontentsline{toc}{section}{Executive Summary}
+
+Query Tarantino turns the Stage~1 data layer into four Java~25 services that run on one host with Docker Compose.
+\code{crawler} downloads Project Gutenberg books into the datalake, \code{indexer} publishes them in batches to MongoDB,
+\code{query} answers keyword search with author, language and year filters, and \code{control} seeds the work and
+repairs what failures leave behind. The services coordinate by choreography over Hazelcast queues; MongoDB is the only
+source of truth, every state change is one conditional write, and a book becomes searchable only through a published
+batch. The same code runs in four other coordination modes, and one overnight campaign measured all five on one
+machine with 24 hardware threads. Table~\ref{tab:summary} answers the questions of the assignment with it.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{The questions of the assignment and what the campaign measured, in the default mode \mode{hazelcast}.}
+\label{tab:summary}
+\begin{tabularx}{\textwidth}{@{}L{3.9cm}YL{1.45cm}@{}}
+\toprule
+Question & Answer & Section \\
+\midrule
+Books ingested and indexed per second & One crawler downloads 504 books/s with 8 workers and one indexer publishes 28.5 with batches of 100, so indexing limits the pipeline & \ref{sec:ingest}, \ref{sec:index} \\
+Search response time under concurrent load & 7.3\,ms on average and 14.5\,ms at p95 with 32 clients; one \code{query} replica saturates at about 4{,}400 requests/s & \ref{sec:search} \\
+CPU and memory as the load grows & MongoDB's CPU follows the indexers, 78--220\,\% of a core; the host never runs out of CPU, and no container's memory grows with the load & \ref{sec:resources} \\
+Clients, threads and replicas & Three indexers index $\times$2.10 faster and a second \code{query} replica answers 29\,\% more; crawler replicas add nothing, because their workers wait on shared file I/O & \ref{sec:ingest}--\ref{sec:search} \\
+Overhead of the coordination & A message takes 0.1--0.2\,ms and the broker uses under 17\,\% of a core; books wait for a free worker, not for the broker & \ref{sec:coordcost}, \ref{sec:modes} \\
+Limits of one host, and Stage~3 & One MongoDB, one broker and one disk; Stage~3 shards the postings, spreads the datalake over the nodes and runs Hazelcast and \code{control} on several nodes & \ref{sec:limits}, \ref{sec:stage3} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+All 165 recovery runs of the campaign recover with the same books and search answers in every mode and with 1, 2 and 3
+replicas, and continuous integration validates every API response against \code{api/openapi.yaml} in every mode. Under
+the decision rule fixed before the campaign, \mode{hazelcast} wins: it ties ActiveMQ on performance and visibility with
+the least coordinator CPU. The runner-up, persistent ActiveMQ, brings lost work back without \code{control}, a property
+Stage~3 adds to the Hazelcast design (Section~\ref{sec:winner}).
+
+\newpage
+
+\section{Introduction and Objectives}
+\label{sec:introduction}
+
+Stage~1~\cite{stage1} built the data layer of our search engine over Project Gutenberg: a datalake with the \code{batch} layout
+and an inverted index in MongoDB, chosen after benchmarking three languages and several structures. Stage~2~\cite{assignment} turns that
+data layer into cooperating services. Each service runs as its own process, they share explicit contracts, and an
+explicit mechanism coordinates them. Everything runs on one machine, and replicas and threads are part of the design
+from the start. The goal is a system whose limits we can measure on that machine and whose design we can carry to the
+Stage~3 cluster.
+
+We set six objectives and met all of them:
+
+\begin{enumerate}
+\item \textbf{Four services and one module of contracts.} \code{crawler} (Ingestion), \code{indexer} (Indexing),
+  \code{query} (Search) and \code{control} (seeding and reconciliation) are written in Java~25 with Javalin and
+  Jackson. They share \code{common}, which is the only place where the code names a collection, a message, a state or a
+  variable. MongoDB is the source of truth, the datalake is a Docker volume, and nginx is the only entry point.
+\item \textbf{An explicit, failure-proof coordination mechanism.} Work travels as messages on Hazelcast queues, MongoDB
+  decides who owns each job, and \code{control} periodically repairs whatever a crash leaves behind. A book becomes
+  searchable only through a published batch, and it never appears in two published batches of the same generation.
+\item \textbf{Documented and validated APIs.} The front-end, operational, health and internal interfaces are kept as
+  separate inventories in \code{api/openapi.yaml} (OpenAPI~3.1, version~1.11). The non-HTTP contracts are in
+  \code{SPEC.md}. An automated checker validates every response against the specification in continuous integration,
+  in every coordination mode.
+\item \textbf{Recovery from every failure we could cause.} The failure matrix has 14 rows, each with its own script. All
+  165 recovery runs of the official campaign recover, and every row gives the same books and search answers with 1, 2
+  and 3 replicas and in every mode where it applies.
+\item \textbf{Alternatives measured, not only argued.} The same system can coordinate in four other ways behind one
+  variable: ActiveMQ with and without persistence, polling of shared state, and classical orchestration. One campaign
+  on one machine compared all five against each other.
+\item \textbf{Benchmarks that can be traced.} JMH microbenchmarks and nine integration experiments ran with five
+  interleaved repetitions and 95\,\% confidence intervals. Every figure in this report names the run it comes from,
+  and that run keeps its command, commit, configuration and raw data in the repository (Appendix~\ref{app:runs}).
+\end{enumerate}
+
+Table~\ref{tab:team} shows how the team split the work. Each member owned one piece and reviewed another member's pull
+requests, and changes to the shared contracts required all four. The work advanced through seven phases, F0 to F6,
+and each phase had a gate: the walking skeleton had to show a new book in \code{/search}, and F3 required the whole
+failure matrix to pass. The history of \code{dev} shows the contribution of each member.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Pieces owned by each member. Each owner wrote the code, scripts and runs of their piece.}
+\label{tab:team}
+\begin{tabularx}{\textwidth}{@{}lY@{}}
+\toprule
+Member & Piece \\
+\midrule
+Hugo González Fernández (A) & \code{crawler} (Ingestion), Docker Compose and the shared \code{Dockerfile}; \code{ingest-throughput} \\
+Máximo Prosperi Reynoso (B) & \code{indexer} (Indexing and batch publication); \code{index-throughput}; the four alternative coordination modes, their experiments and the campaign script \\
+Abel Castro Villar (C) & \code{query} (Search), nginx, \code{api/openapi.yaml} and the \code{checks} module; the load generator and \code{search-latency} \\
+Javier Martín Rodríguez (D) & \code{control} (seeding and reconciliation), the failure matrix and its 14 recovery scripts, result processing in \code{bench}; \code{coordination-cost}, \code{resource-usage}, and the official campaign on his machine \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\section{System Architecture}
+\label{sec:architecture}
+
+The system has three core services and one control process, all on a single host. They never call each other in the
+default mode: they exchange messages through Hazelcast and keep their data in the datalake and in MongoDB.
+Figure~\ref{fig:architecture} shows the whole deployment: the front-end boundary, the internal interactions, the
+replicas and threads of each process, and the shared storage.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Stealth[length=4pt]},
+  box/.style={draw=inksecondary, rounded corners=2pt, fill=white, align=center, inner sep=3pt},
+  service/.style={box, minimum width=3.05cm, minimum height=1.25cm},
+  queue/.style={draw=modehazelcast, rounded corners=1pt, fill=white, align=center, minimum width=2.25cm, minimum height=0.55cm, inner sep=2pt},
+  topic/.style={draw=modehazelcast, ellipse, fill=white, align=center, inner sep=1pt, minimum width=2.4cm, minimum height=0.6cm},
+  store/.style={draw=inksecondary, fill=white, rounded corners=1pt, align=left, inner sep=3pt, anchor=west},
+  frontend/.style={->, draw=modehazelcast!80!black, line width=1.1pt},
+  operation/.style={->, draw=inksecondary, line width=0.8pt},
+  message/.style={->, draw=modehazelcast, line width=0.8pt, dashed},
+  access/.style={draw=inkprimary!70, line width=0.5pt},
+  lbl/.style={font=\scriptsize, text=inksecondary, inner sep=1pt},
+]
+\begin{scope}[on background layer]
+\fill[hostfill, rounded corners=4pt] (0,0) rectangle (15.6,9.55);
+\draw[inkmuted, rounded corners=4pt] (0,0) rectangle (15.6,9.55);
+\end{scope}
+\node[anchor=north west, font=\footnotesize\bfseries, text=inksecondary] at (0.15,9.5) {One host (Docker Compose)};
+
+\node[box, minimum width=13.6cm, minimum height=0.6cm] (nginx) at (7.8,8.55)
+  {\textbf{nginx} $\times$1 \quad 8080 front-end \quad 8081 operations \quad 8082 internal routes (mode \mode{orchestrator} only)};
+
+\node[box] (admin) at (5.65,10.75) {Scripts and admin};
+\node[box] (fe) at (12.4,10.75) {Front-end (browser)};
+\draw[operation] (admin.south) -- node[lbl, right, pos=0.3] {port 8081} (admin.south |- nginx.north);
+\draw[frontend] (fe.south) -- node[lbl, left, pos=0.3] {port 8080: the front-end API boundary} (fe.south |- nginx.north);
+
+\node[service] (control) at (1.95,6.55) {\textbf{control} $\times$1 \quad :7004\\reconciliation thread\\HTTP pool};
+\node[service] (crawler) at (5.65,6.55) {\textbf{crawler} $\times$N \quad :7001\\8 download threads\\HTTP pool};
+\node[service] (indexer) at (9.35,6.55) {\textbf{indexer} $\times$N \quad :7002\\1 batch thread\\HTTP pool};
+\node[service] (query) at (13.05,6.55) {\textbf{query} $\times$N \quad :7003\\1 snapshot thread\\HTTP pool, read only};
+
+\draw[operation] (control.north |- nginx.south) -- node[lbl, right] {/control} (control.north);
+\draw[operation] (crawler.north |- nginx.south) -- node[lbl, right] {/ingest} (crawler.north);
+\draw[operation] (indexer.north |- nginx.south) -- node[lbl, right] {/index} (indexer.north);
+\draw[frontend] (query.north |- nginx.south) -- node[lbl, left, align=right] {/search, /books,\\/search/filters} (query.north);
+
+\begin{scope}[on background layer]
+\fill[white, rounded corners=3pt] (2.45,3.7) rectangle (12.55,5.15);
+\draw[modehazelcast, rounded corners=3pt] (2.45,3.7) rectangle (12.55,5.15);
+\end{scope}
+\node[anchor=south east, font=\scriptsize\bfseries, text=modehazelcast] at (12.5,3.74) {Hazelcast $\times$1 \quad :5701};
+\node[queue] (b2d) at (3.8,4.55) {books-to-download};
+\node[queue] (b2i) at (7.5,4.55) {books-to-index};
+\node[topic] (topic) at (11.2,4.55) {published-batches};
+
+\draw[message] ($(control.south east)+(-0.25,0)$) -- node[lbl, right, pos=0.4] {seed} (b2d.north west);
+\draw[message] (b2d.north east) -- ($(crawler.south west)+(0.25,0)$);
+\draw[message] ($(crawler.south east)+(-0.25,0)$) -- node[lbl, right=2pt, pos=0.4] {BookTask} (b2i.north west);
+\draw[message] (b2i.north east) -- ($(indexer.south west)+(0.25,0)$);
+\draw[message] ($(indexer.south east)+(-0.25,0)$) -- node[lbl, right=4pt, pos=0.45, align=left] {Batch\\Published} (topic.north west);
+\draw[message] (topic.north east) -- ($(query.south west)+(0.25,0)$);
+
+\foreach \x in {2.25, 5.95, 9.65} {
+  \draw[access] (\x,5.92) -- (\x,1.25);
+  \fill[inkprimary!70] (\x,1.25) circle (1.3pt);
+}
+\draw[access] (13.05,5.92) -- (13.05,1.25);
+\fill[inkprimary!70] (13.05,1.25) circle (1.3pt);
+\draw[access, ->] (1.65,5.92) -- node[lbl, left, pos=0.84] {.tmp} (1.65,2.72);
+\draw[access, ->] (5.35,5.92) -- node[lbl, left, pos=0.84] {write} (5.35,2.72);
+\draw[access, <-] (9.05,5.92) -- node[lbl, left, pos=0.84] {read} (9.05,2.72);
+\node[store, fill=white, minimum width=10.15cm, minimum height=0.55cm] (datalake) at (0.55,2.45)
+  {\textbf{datalake volume}: header and body of each book, Stage~1 \code{batch} layout};
+\node[store, minimum width=14.5cm, minimum height=0.8cm] (mongo) at (0.55,0.85)
+  {\textbf{MongoDB} $\times$1 \quad :27017 \quad source of truth: \code{book_states}, \code{index_state},\\
+  \hphantom{\textbf{MongoDB} $\times$1 \quad :27017 \quad }\code{metadata_g<n>}, \code{postings_g<n>}, \code{batches_g<n>}};
+
+\end{tikzpicture}
+\caption{Deployment on the single Stage~2 host, in the default mode \mode{hazelcast}. Thick blue arrows are front-end
+requests through nginx port 8080, gray arrows are operational requests through port 8081, dashed arrows are Hazelcast
+messages and thin vertical lines are storage access; every service reads and writes MongoDB. ``$\times$N'' marks a
+service that scales with \texttt{docker compose up -{}-scale}, and each box lists the threads of one replica. Not
+drawn: \code{crawler} also re-enqueues retried downloads in \code{books-to-download}, and \code{control} re-enqueues
+lost messages and reindexing in both queues (\spec{4.2}).}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Services and shared storage}
+
+\begin{itemize}
+\item \textbf{\code{crawler} (Ingestion Service)} takes \code{BookTask} messages from \code{books-to-download}. It claims
+  each book in MongoDB, downloads it from Gutenberg or from the local mirror and stores its header and body in the
+  datalake with the Stage~1 \code{batch} layout. It marks the book \code{DOWNLOADED} and then enqueues it in
+  \code{books-to-index}.
+\item \textbf{\code{indexer} (Indexing Service)} groups \code{books-to-index} into batches of up to 100 books or 30\,s.
+  It extracts the metadata of each book and counts its terms. It writes metadata and postings into the collections of
+  the write generation and publishes the batch with one conditional write. Then it announces \code{BatchPublished}.
+\item \textbf{\code{query} (Search Service)} keeps an immutable snapshot of the published batches of the current
+  generation. It serves keyword search with author, language and year filters, TF-IDF ranking, book details and filter
+  values.
+\item \textbf{\code{control}} seeds the candidate books at startup and reconciles every 30\,s. It releases expired
+  leases, abandons expired batches, requeues lost messages, drives index rebuilds and deletes orphan \code{.tmp} files.
+  In the default mode it never drives a book step by step, so it is not an orchestrator.
+\item \textbf{MongoDB} is the only source of truth. It holds \code{book_states}, one document per book, and
+  \code{index_state}, which points to the generation \code{query} serves. Each generation of the index has three
+  collections, \code{metadata_g<n>}, \code{postings_g<n>} and \code{batches_g<n>}.
+\item \textbf{Hazelcast} carries two work queues and one topic. It is not a source of truth: a lost or repeated message
+  never corrupts state, because the claim in MongoDB decides who owns each book.
+\end{itemize}
+
+\subsection{The life of a book}
+
+Figure~\ref{fig:lifecycle} shows the states of a book and of a batch, and who writes each transition. Every arrow is
+one conditional write to one MongoDB document (Section~\ref{sec:conditional-writes}). A book becomes eligible for
+indexing only once its header and body are in the datalake, and it becomes searchable only when the batch that holds
+it is \code{PUBLISHED} in the current generation and \code{query} has refreshed its snapshot.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Stealth[length=4pt]},
+  state/.style={draw=inksecondary, rounded corners=6pt, fill=white, minimum width=2.25cm, minimum height=0.65cm, font=\footnotesize\ttfamily},
+  forward/.style={->, draw=inkprimary, line width=0.8pt},
+  back/.style={->, draw=inksecondary, line width=0.6pt, dashed},
+  fail/.style={->, draw=modeactivemq, line width=0.6pt},
+  lbl/.style={font=\scriptsize, text=inksecondary, align=center, inner sep=1.5pt},
+]
+\node[state] (queued) at (0,0) {QUEUED};
+\node[state] (downloading) at (3.5,0) {DOWNLOADING};
+\node[state] (downloaded) at (7.0,0) {DOWNLOADED};
+\node[state] (indexing) at (10.5,0) {INDEXING};
+\node[state, draw=modepersistent, line width=0.9pt] (published) at (13.9,0) {PUBLISHED};
+\node[state, draw=modeactivemq] (failed) at (7.0,-2.75) {FAILED};
+
+\draw[forward] (queued) -- node[lbl, above=0.36cm] {claim\\(crawler)} (downloading);
+\draw[forward] (downloading) -- node[lbl, above=0.36cm] {finish download\\(crawler)} (downloaded);
+\draw[forward] (downloaded) -- node[lbl, above=0.36cm] {claim for a batch\\(indexer)} (indexing);
+\draw[forward] (indexing) -- node[lbl, above=0.36cm] {publish batch\\(indexer)} (published);
+
+\draw[back] (published.north) .. controls +(0,2.1) and +(0,2.1) .. node[lbl, above] {reindex into a new generation (control)} (downloaded.north);
+\draw[back] (downloading.south west) .. controls +(-0.4,-0.9) and +(0.4,-0.9) .. node[lbl, below] {retryable error or\\expired lease (crawler, control)} (queued.south east);
+\draw[back] (indexing.south west) .. controls +(-0.4,-0.9) and +(0.4,-0.9) .. node[lbl, below] {batch abandoned\\(control)} (downloaded.south east);
+\draw[fail] (downloading.south east) -- node[lbl, right, pos=0.55] {no retries left} (failed.north west);
+\draw[fail] (indexing.south) |- node[lbl, right, pos=0.3] {missing in the datalake (indexer)} (failed.east);
+\draw[back] (failed.west) -| node[lbl, below, pos=0.27] {\code{POST /ingest} retries it} (queued.south);
+
+\begin{scope}[yshift=-4.6cm]
+\node[font=\footnotesize\bfseries, text=inksecondary, anchor=west] at (-1.12,0) {Batch};
+\node[state] (writing) at (3.5,0) {WRITING};
+\node[state, draw=modepersistent, line width=0.9pt] (bpublished) at (8.6,0) {PUBLISHED};
+\node[state, draw=modeactivemq] (abandoned) at (8.6,-1.25) {ABANDONED};
+\draw[forward] (writing) -- node[lbl, above=0.36cm] {publish with a live lease (indexer)} (bpublished);
+\draw[fail] (writing.south) |- node[lbl, below, pos=0.75] {lease expired (control)} (abandoned.west);
+\node[lbl, anchor=west, text width=4.9cm, align=left] at (9.95,-0.6) {Its books go back to \code{DOWNLOADED}, and its postings are deleted after \code{TARANTINO_GC_SECONDS}.};
+\end{scope}
+\end{tikzpicture}
+\caption{States of a book (\code{book_states.status}) and of a batch (\code{batches_g<n>.status}), with the service
+that writes each transition. Solid arrows are the normal path; dashed arrows are repairs. A \code{PUBLISHED} batch never
+changes again, and an \code{ABANDONED} one is never seen by \code{query}.}
+\label{fig:lifecycle}
+\end{figure}
+
+\subsection{Processes, replicas and threads}
+\label{sec:threads}
+
+A service is a logical responsibility, and each replica is a separate JVM process. Table~\ref{tab:threads} lists the
+replicas and threads of each process. Request handlers never run long jobs: they only validate, write state and
+enqueue, so the HTTP pool only waits on MongoDB and the broker. Within a process, threads share only an immutable
+snapshot or a \code{java.util.concurrent} structure, and the code takes no lock of its own. Replicas share nothing in
+memory: they meet only in MongoDB, through conditional writes, and in the broker.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Replicas and threads per process (\spec{2.2}). Javalin's HTTP pool grows from 8 to 250 threads unless
+\code{TARANTINO_HTTP_THREADS} caps it.}
+\label{tab:threads}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+Process & Replicas & Threads \\
+\midrule
+\code{crawler} & N, 1 by default & \code{TARANTINO_PARALLEL_DOWNLOADS} download workers (8 by default), one lease heartbeat per book on a virtual thread, HTTP pool \\
+\code{indexer} & N, 1 by default & One batch loop (\code{index-batches}), one lease heartbeat per open batch on a virtual thread, HTTP pool \\
+\code{query} & N, 1 by default & One snapshot thread, the only one that refreshes; the topic listener only asks it to; HTTP pool that only reads the snapshot \\
+\code{control} & Always 1 & One \code{reconciliation} thread for reconciliation and datalake cleanup, so they never overlap; one \code{orchestrator} thread in that mode; HTTP pool \\
+\code{mongo}, \code{hazelcast}, \code{nginx} & 1 each & Their own; nginx runs one worker per CPU \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The design keeps replicas and threads from interfering in four ways:
+\begin{itemize}
+\item \textbf{Duplicate work.} A message, an HTTP call or a poll is only a hint. The claim in MongoDB lets one worker
+  take a book or a batch, and a duplicate fails its claim and is dropped.
+\item \textbf{Conflicting writes.} Every state change is one conditional single-document write whose filter carries
+  the expected state and the \code{claim_id}. A worker that loses its lease writes nothing else, and a write that does
+  not match is never retried.
+\item \textbf{Thread exhaustion.} Handlers answer in milliseconds and never wait for a job. Worker threads are a fixed
+  number per replica, and a service exits instead of losing one: when a worker thread or a periodic task dies, or its
+  JVM runs out of memory.
+\item \textbf{Contention.} Replicas compete for the single MongoDB, the broker and the datalake volume. Batches share a
+  per-batch cost among their books, postings go in \code{bulkWrite}s of 1{,}000 terms, and \code{query} reads an
+  immutable snapshot without locks. Section~\ref{sec:benchmarks} measures the contention that is left.
+\end{itemize}
+
+\subsection{Coordination mechanism}
+\label{sec:coordination}
+
+The coordination is a hybrid of two mechanisms of the assignment, choreography with a broker and time-based
+coordination, over one arbiter, MongoDB (Table~\ref{tab:hybrid}). The same pattern appears twice: an event for speed
+and a period in case the event is lost.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{The three parts of the default coordination and the responsibility of each.}
+\label{tab:hybrid}
+\begin{tabularx}{\textwidth}{@{}L{3.2cm}L{5.2cm}Y@{}}
+\toprule
+Mechanism & Where & Responsibility \\
+\midrule
+Choreography with a broker & \code{books-to-download} and \code{books-to-index} (Hazelcast \code{IQueue}); \code{published-batches} (\code{ITopic}) & Normal path: a free worker takes a book as soon as it is queued; \code{query} refreshes on each \code{BatchPublished} \\
+Time-based coordination & \code{control} reconciles every 30\,s; \code{query} refreshes every 5\,s & Safety net: expired leases, abandoned batches, lost messages and lost announcements, with \code{book_states} as the persistent marker \\
+Shared persistent state & MongoDB conditional writes (\spec{5.1}) & Arbiter: the claim acknowledges the message, so a duplicate fails and is dropped \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The same code runs in four other modes, selected with \code{TARANTINO_COORDINATION} and one Compose override per mode
+(Table~\ref{tab:modes}). Only two things change between modes: how work reaches the workers and how \code{query} learns
+of a batch. The datalake, MongoDB, the conditional writes, the index, the search and the front-end API stay the same,
+so the modes can be compared on equal terms (Section~\ref{sec:modes}).
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Coordination modes (\spec{11.1}). \mode{activemq-persistent} is \mode{activemq} with persistent delivery and
+acknowledgement after the job.}
+\label{tab:modes}
+\begin{tabularx}{\textwidth}{@{}L{2.55cm}L{3.1cm}L{3.15cm}L{2.9cm}Y@{}}
+\toprule
+Mode & Mechanism & Workers take work from & \code{query} learns of a batch & Lost work comes back by \\
+\midrule
+\mode{hazelcast} & Choreography over Hazelcast & \code{IQueue} & Topic listener and period & \code{control} requeue \\
+\mode{activemq} & The same over ActiveMQ Classic 6 & JMS queues & JMS topic and period & \code{control} requeue; broker redelivery with persistence \\
+\mode{polling} & Time-based, over shared state & A sorted claim in MongoDB & Period only & Nothing to requeue: waiting books are polled \\
+\mode{orchestrator} & Classical orchestration by \code{control} & An internal \code{POST} into a local queue & \code{control}'s call and period & \code{control} dispatching again \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\section{API Design and Contracts}
+\label{sec:api}
+
+The API has four separate inventories: front-end, operational, health and internal. Each one has a different consumer
+and a different nginx port (Table~\ref{tab:inventory}). The full specification is \code{api/openapi.yaml}, in
+OpenAPI~3.1~\cite{openapi}. Its \code{info.version} follows the version of \code{SPEC.md}, now 1.11, and its tags are the four
+inventories. Appendix~\ref{app:endpoints} lists every operation with its responses.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Endpoint inventories. The front-end only sees port 8080, and only \code{query} serves it.}
+\label{tab:inventory}
+\begin{tabularx}{\textwidth}{@{}L{2.1cm}L{4.65cm}L{2.15cm}Y@{}}
+\toprule
+Inventory & Operations & Provider & Consumer \\
+\midrule
+Front-end, port 8080 & \code{GET /search}, \code{GET /books/{book_id}}, \code{GET /search/filters} & \code{query} replicas behind nginx & Front-end, and the \code{checks} and the load generator acting as one \\
+Operational, port 8081 & \code{POST /ingest/{book_id}}, \code{GET /ingest/status/{book_id}}, \code{GET /ingest/list} & \code{crawler} & Admin and load scripts, \code{checks} \\
+ & \code{POST /index/update/{book_id}}, \code{GET /index/status/{book_id}}, \code{POST /index/rebuild}, \code{GET /index/status} & \code{indexer} & Admin, benchmark scripts \\
+ & \code{GET /control/status} & \code{control} & Admin, \code{bench wait} \\
+Health, no nginx & \code{GET /health} on each service port & Every service & Compose healthchecks \\
+Internal, port 8082 & \code{POST /internal/download}, \code{POST /internal/index}, \code{POST /internal/snapshot/refresh} & \code{crawler}, \code{indexer}, each \code{query} & \code{control}, in mode \mode{orchestrator} only \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Front-end interface}
+
+The front-end needs three use cases: searching with optional filters and pages, showing one book, and offering the
+filter values. Search is one endpoint with optional parameters, not one route per filter.
+
+\begin{lstlisting}
+GET /search?q=pride%20prejudice&author=austen&language=en&offset=0&limit=20
+200 OK
+{"query": "pride prejudice", "filters": {"author": "austen", "language": "en"},
+ "total": 1, "offset": 0, "limit": 20,
+ "results": [{"book_id": 1342, "title": "Pride and Prejudice", "author": "Jane Austen",
+              "language": "en", "year": 1998}]}
+\end{lstlisting}
+
+The \code{year} of a result is the year the book was released on Project Gutenberg, read from the
+\code{Release date:} line of its header (\spec{4.3}), so Pride and Prejudice answers 1998, not the 1813 of its first
+edition that the assignment's example shows. \code{GET /books/{book_id}} adds \code{original_year} when the header has an
+\code{Original publication:} line.
+
+Table~\ref{tab:search} gives the rules of each parameter. Parameters are validated in the order of the table, and the
+first one that fails gives \code{400} with Problem Details naming it in \code{parameter}. A valid query that matches
+nothing answers \code{200} with \code{total: 0} and an empty list. \code{total} counts every match after the filters,
+while \code{results} holds only the requested page.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Parameters and semantics of \code{GET /search} (\spec{6.3}).}
+\label{tab:search}
+\begin{tabularx}{\textwidth}{@{}L{2.2cm}Y@{}}
+\toprule
+Parameter & Rule \\
+\midrule
+\code{q} & Required. Tokenized with the same tokenizer as the index, and a book must contain every word. Missing or blank: \code{400 MISSING_PARAMETER}; only stopwords: \code{200} with no results \\
+\code{author} & Every word of the author, through the same tokenizer, must be among the book's \code{author_terms}: \code{austen} finds ``Jane Austen'' \\
+\code{language} & ISO~639-1 code, two lowercase letters. A book with several languages matches any of them; an unknown code gives an empty \code{200} \\
+\code{year} & Four digits, equal to the Gutenberg release year of the book \\
+\code{offset}, \code{limit} & 0 and 20 by default; \code{offset} $\geq 0$, \code{limit} from 1 to 100 \\
+Order & Descending TF-IDF, the sum of $(1 + \ln tf) \cdot \ln(N/df)$ over the query words; ties by ascending \code{book_id} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\code{GET /books/{book_id}} returns the fields of a search result plus every language and the original year. It answers
+\code{404} for a book that is not in the published snapshot, even if it is being indexed. \code{GET /search/filters}
+returns the languages with their book counts, the range of years and the number of searchable books, computed once per
+snapshot. All three routes answer \code{503} until \code{query} holds its first snapshot. \code{query} allows CORS from
+\code{TARANTINO_CORS_ORIGIN} (\code{*} by default), so a browser front-end served from another origin can call
+port 8080 directly.
+
+\subsection{Operational interface and completion semantics}
+\label{sec:async}
+
+Every request that changes state answers \code{202 Accepted} with the book's current state and a \code{Location}
+header that points to it, or \code{200} if the work was already done. The caller polls that \code{Location}: an
+accepted book has finished when its state is \code{PUBLISHED}, and has failed when it is \code{FAILED}, with the reason
+in \code{last_error}. Handlers never download or index, so they answer in milliseconds, and a client can use a 5\,s
+timeout. This replaces the synchronous \code{POST /ingest} of the assignment's example, which would hold a request
+thread for a whole download.
+
+\begin{itemize}
+\item \code{POST /ingest/{book_id}} creates the book's state and enqueues it. For a book that is already queued or
+  downloading, it answers \code{202} without enqueuing it again; for a \code{FAILED} book, it retries it.
+\item \code{POST /index/update/{book_id}} enqueues a \code{DOWNLOADED} book. It answers \code{409 NOT_DOWNLOADED} for a
+  book that is not in the datalake yet, \code{202} without a new message for one that is already \code{INDEXING}, and
+  \code{200} for a \code{PUBLISHED} one.
+\item \code{POST /index/rebuild} opens a rebuild of the next generation, and \code{GET /index/status} reports its
+  progress in \code{books_pending}. A second request while one runs answers \code{202} with the running rebuild.
+\item \code{GET /index/status} and \code{GET /control/status} report the generation, the books per state, the batches
+  published, the size of the index, both queues and the last reconciliation.
+\end{itemize}
+
+Repeating any \code{POST} duplicates nothing, whether in sequence or concurrently. The state lives in MongoDB, and each
+transition is a conditional write that only one caller can win.
+
+\subsection{Internal contracts}
+\label{sec:internal}
+
+In the default mode the services make no HTTP calls to each other: Hazelcast replaces the internal calls of an
+orchestrated design. The broker contract is documented like an endpoint (Table~\ref{tab:messages}). Both messages are
+JSON with the same \code{ObjectMapper} as the API, so the broker never needs the Java classes.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Non-HTTP contract of mode \mode{hazelcast} (\spec{4.2}). Mode \mode{activemq} uses the same names as JMS
+destinations.}
+\label{tab:messages}
+\begin{tabularx}{\textwidth}{@{}L{2.55cm}L{2.65cm}L{4.15cm}Y@{}}
+\toprule
+Destination & Message & Produced by & Consumed by \\
+\midrule
+\code{books-to-download}, queue & \code{BookTask} & \code{control} (seeding, lost messages, expired downloads), \code{POST /ingest}, \code{crawler} retries & \code{crawler} workers, one book each \\
+\code{books-to-index}, queue & \code{BookTask} & \code{crawler} after a download, \code{POST /index/update}, \code{control} (lost messages, released books, reindexing) & \code{indexer}, a batch at a time with \code{drainTo} \\
+\code{published-batches}, topic & \code{BatchPublished} & \code{indexer}, after publishing a batch & Every \code{query} replica \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{lstlisting}
+BookTask        {"book_id": 1342, "enqueued_at": "2026-10-21T10:05:00Z"}
+BatchPublished  {"batch_id": "6716f0c2a1b2c3d4e5f60718", "generation": 1,
+                 "book_count": 100, "published_at": "2026-10-21T10:06:00Z"}
+\end{lstlisting}
+
+The acknowledgement and retry rules follow from one principle: a message is a hint, and MongoDB decides. A consumer
+acknowledges a message by claiming the book with a conditional write. If the claim does not match, the message was a
+duplicate or stale, and it is dropped. No ordering is assumed. An \code{IQueue} has no acknowledgement, so a message
+taken by a consumer that dies before its claim is lost. \code{control} detects that case when the queue is empty while
+a book has waited longer than \code{TARANTINO_REQUEUE_SECONDS}, and enqueues the book again. A lost
+\code{BatchPublished} only delays visibility, because each \code{query} replica also re-reads the published batches
+every 5\,s.
+
+In mode \mode{orchestrator}, \code{control} dispatches each book with \code{POST /internal/download} or
+\code{POST /internal/index}, through nginx's internal port 8082. The call only offers the task to a bounded local queue
+of the replica. It answers \code{202} if the task went in, \code{400} for an invalid body, and \code{503} with
+\code{Retry-After: 1} when the queue is full, and nginx then hands the call to the next replica. \code{control} stops
+dispatching a stage at the first \code{503} and dispatches again any book that has not been claimed after
+\code{TARANTINO_REQUEUE_SECONDS}. It announces each new batch to every \code{query} replica with
+\code{POST /internal/snapshot/refresh}.
+
+\subsection{Errors}
+
+Every error is Problem Details (RFC~9457~\cite{rfc9457}) with \code{application/problem+json}, produced by one handler
+in \code{common}. nginx formats its own errors the same way, including the \code{503} it returns when no replica
+answers. Table~\ref{tab:errors} lists the codes. Every \code{503} carries \code{Retry-After: 5}, and an unexpected
+exception gives \code{500} in the same format.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Error codes of the API.}
+\label{tab:errors}
+\begin{tabularx}{\textwidth}{@{}L{4.4cm}L{1.0cm}Y@{}}
+\toprule
+\code{code} & HTTP & When \\
+\midrule
+\code{MISSING_PARAMETER} & 400 & \code{q} is missing or blank \\
+\code{INVALID_PARAMETER} & 400 & A malformed or out-of-range parameter or \code{book_id}, named in \code{parameter} \\
+\code{BOOK_NOT_FOUND} & 404 & The book has no state or, in \code{query}, is not in the snapshot \\
+\code{NOT_DOWNLOADED} & 409 & \code{POST /index/update} for a book that is not downloaded \\
+\code{DEPENDENCY_UNAVAILABLE} & 503 & MongoDB or the broker do not answer, \code{query} has no snapshot yet, or nginx finds no replica \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Validation evidence}
+\label{sec:checks}
+
+The \code{checks} module runs against the live stack and validates every response, status, header and body against
+the schemas of \code{api/openapi.yaml}. It also compares answers with \code{checks/expected.json}, generated from the
+20 sample books. It covers everything the assignment asks for:
+\begin{itemize}
+\item 14 search cases: one word (13 matches), two words, author, language (\code{en}, \code{de}, \code{fr} and an
+  unknown code), year, all filters combined, two pages of size one, an offset past the end, stopwords only and a query
+  with no matches;
+\item parameter validation in the order of Table~\ref{tab:search}, and Problem Details for unknown paths and methods;
+\item book details, filter values, every operational endpoint, \code{/health} on each service port, and the
+  idempotency of repeated \code{POST}s;
+\item in mode \mode{orchestrator}, the internal routes, called from inside the \code{control} container.
+\end{itemize}
+It runs with one command after starting the stack, \code{java -jar checks/target/checks-1.0-SNAPSHOT.jar}.
+Continuous integration runs it in mode \mode{hazelcast} with one \code{query} replica and again with three, and once in
+each other mode. Replicas and modes must give the same answers. The README lists the commands and the expected
+results.
+\section{Microservice Implementation}
+\label{sec:implementation}
+
+The four services share one Maven build, one hexagonal layout and one module of contracts. Every state change is a
+single conditional write to MongoDB, so a crash at any point leaves work that \code{control} can redo. This section
+covers the shared parts, the indexer in depth as an example, and the other services in outline.
+
+\subsection{Code structure and technologies}
+
+The system is one multi-module Maven build in Java~25. It contains \code{common}, the four services, and two modules
+that are never deployed: \code{bench}, with the load generator and result processing, and \code{checks}, with the API
+checks. Every dependency and plugin version lives only in the parent \code{pom.xml} (Table~\ref{tab:stack}). Each
+service builds one executable jar and runs on its own, outside Compose too.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Technologies and versions.}
+\label{tab:stack}
+\begin{tabularx}{\textwidth}{@{}L{2.3cm}Y@{}}
+\toprule
+Piece & Choice \\
+\midrule
+HTTP & Javalin 6.7, one port per service (7001 to 7004) \\
+JSON & Jackson 2.22 with one shared \code{ObjectMapper}: snake\_case, ISO-8601 dates, unknown fields ignored. It is Javalin's default JSON mapper, which is why it replaces the Gson of the assignment's example \\
+Storage & MongoDB 7.0 with the synchronous Java driver 5.13; the datalake on a Docker volume \\
+Coordination & Hazelcast 5.7, one member and every service a client; ActiveMQ Classic 6.1.8 in mode \mode{activemq} \\
+Packaging & One shaded jar per service and one \code{Dockerfile} on \code{eclipse-temurin:25-jre}; Docker Compose and nginx \\
+Tests and benchmarks & JUnit 5.11, Testcontainers 2.0, JMH 1.37, XChart 3.8 for the benchmark charts \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Each service keeps the hexagonal layout of Stage~1. \code{model} holds records and pure logic, \code{ports} the
+interfaces that logic needs, \code{adapters} their MongoDB, broker, datalake and HTTP implementations, and
+\code{commands} the use cases. \code{model} and \code{commands} import no Javalin, MongoDB or broker classes, so they
+are tested with in-memory fakes. Each service's \code{Main} and factory wire the pieces through constructors, without
+an injection framework. Every service opens its HTTP port first, so \code{/health} answers \code{503} while it waits,
+and then retries MongoDB and the broker without limit. Startup order therefore does not matter.
+
+\subsection{Shared contracts in \texorpdfstring{\code{common}}{common}}
+
+Everything that two or more modules use has its literal name in \code{SPEC.md} and, in code, lives only in
+\code{common} (Table~\ref{tab:common}). Two services therefore cannot disagree on a collection, a field, a state or a
+message. \code{common} changes only in a pull request that all four members review. A write used by a single service,
+such as claiming a book or publishing a batch, stays in that service's MongoDB adapter.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{What \code{common} holds.}
+\label{tab:common}
+\begin{tabularx}{\textwidth}{@{}L{2.3cm}Y@{}}
+\toprule
+Area & Content \\
+\midrule
+Model & Book, batch and rebuild states, error and problem codes, and the two messages, \code{BookTask} and \code{BatchPublished} \\
+Configuration & \code{TarantinoConfig} reads every \code{TARANTINO_*} variable with its default and checks its invariants, such as heartbeat $\leq$ lease / 3; an invalid value stops the service naming the variable \\
+Terms & The Stage~1 \code{Tokenizer} and stopwords, used by the indexer to count terms and by \code{query} to read \code{q} and \code{author} \\
+Datalake & \code{DatalakePaths}, with the \code{batch} layout and the write to \code{<final>.<uuid>.tmp} renamed with \code{ATOMIC_MOVE} \\
+MongoDB & Collection and field names, the indexes, the writes ``Create the pointer'', ``Create the state'' and ``Complete a publication'', and the filter of the books that block a generation switch \\
+Messaging & The \code{Broker}, \code{BookTasks} and \code{BatchAnnouncements} interfaces, with their Hazelcast and ActiveMQ implementations and clients that connect in the background and keep retrying \\
+HTTP & Problem Details for every error, \code{/health}, and \code{BookIds.parse} for every \code{{book_id}} route \\
+Operations & \code{TransitionLog}, one line per state change, from which the benchmarks measure; \code{CrashPoints} for the recovery tests; and \code{LeaseHeartbeat} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Conditional writes and leases}
+\label{sec:conditional-writes}
+
+Every state change is one conditional write to a single MongoDB document. Its filter carries the state it expects and,
+while a job holds the work, its \code{claim_id}. No service reads a document, decides in Java and writes it back. Two
+replicas racing for the same book or batch can therefore never both win, and no transaction is needed.
+\spec{5.1} lists all 23 writes. This is the one that publishes a batch:
+
+\begin{lstlisting}
+batches_g<w>.findOneAndUpdate(
+  filter: {_id: B, status: "WRITING", claim_id: C,
+           $expr: {$gt: ["$lease_until", "$$NOW"]}},
+  update: [{$set: {status: "PUBLISHED", published_at: "$$NOW", book_ids: books}},
+           {$unset: "lease_until"}],
+  returnDocument: AFTER)
+\end{lstlisting}
+
+\begin{itemize}
+\item \textbf{Server time.} Leases and expirations are compared with MongoDB's \code{$$NOW} inside update pipelines~\cite{mongodb},
+  never with a process clock, so clock drift between containers or hosts cannot break a lease.
+\item \textbf{One write, the right result.} When the next step depends on how the document ended up, the write is a
+  \code{findOneAndUpdate} that returns it, never a write followed by a read. The published batch it returns becomes the
+  \code{BatchPublished} message.
+\item \textbf{The heartbeat.} A job that holds a lease starts a \code{LeaseHeartbeat}, which renews it every
+  \code{TARANTINO_HEARTBEAT_SECONDS} (20\,s for a 60\,s lease) on its own virtual thread. Only a renewal that does not
+  match loses the lease; one that throws, as when MongoDB does not answer for a moment, is retried on the next beat.
+  Before each of its writes the job checks whether the lease is lost, and once it is lost it writes nothing else.
+\item \textbf{Crashes.} If a process dies or MongoDB fails halfway, nothing is marked: the lease expires and
+  \code{control} redoes the work. A job never retries a write that did not match; it leaves the work to whoever won.
+\end{itemize}
+
+\subsection{The indexer}
+\label{sec:indexer}
+
+The indexer turns downloaded books into metadata and postings and makes them searchable one batch at a time. Nothing a
+batch writes is visible until a single write publishes it. Figure~\ref{fig:batch} shows one batch.
+
+\textbf{Gathering a batch.} \code{BatchCollector} waits for a first message on \code{books-to-index} and then drains the
+queue until it has \code{TARANTINO_INDEX_BATCH} books (100) or \code{TARANTINO_BATCH_TIMEOUT_SECONDS} (30\,s) have
+passed since that first message. A book repeated in several messages is kept once, with its earliest
+\code{enqueued_at}, so the benchmarks can measure its queue wait.
+
+\textbf{Writing it.} The indexer reads the write generation, which is the target of a running rebuild or else the
+current one, and ensures that generation's indexes before its first write to it. It opens the batch as \code{WRITING}
+with a new \code{claim_id} and a lease, starts its heartbeat, and claims the books with one \code{updateMany} from
+\code{DOWNLOADED} to \code{INDEXING}. Only the books that this write moved are indexed; another replica may have claimed
+the rest. \code{HeaderParser} reads each header and the \code{Tokenizer} counts the terms of each body. A book whose
+header or body is missing goes to \code{FAILED} with \code{NOT_IN_DATALAKE}. The indexer then writes \code{metadata_g<w>} with
+one \code{bulkWrite} of upserts and \code{postings_g<w>} in \code{bulkWrite}s of 1{,}000 terms, publishes, marks the
+books \code{PUBLISHED} and announces the batch.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  stepnode/.style={circle, draw=inkprimary, fill=white, minimum size=0.46cm, inner sep=0pt, font=\scriptsize\bfseries},
+  steptext/.style={anchor=west, text width=9.0cm, inner sep=1pt, text=inkprimary},
+  lease/.style={anchor=west, draw=modehazelcast, fill=modehazelcast!8, rounded corners=1pt, inner sep=2pt, font=\scriptsize, text=modehazelcast!80!black},
+  crash/.style={anchor=west, draw=modeactivemq, fill=modeactivemq!8, rounded corners=1pt, inner sep=2pt, font=\scriptsize\ttfamily, text=modeactivemq!85!black},
+]
+\def\gap{0.6}
+\draw[inkmuted, line width=0.8pt] (0,0) -- (0,{-8*\gap});
+\foreach \i/\text in {
+  1/{Drain \code{books-to-index}: up to 100 books or 30\,s},
+  2/{Read the write generation; ensure its indexes},
+  3/{Open the batch: \code{WRITING}, \code{claim_id}, lease, heartbeat},
+  4/{Claim its books: \code{DOWNLOADED} to \code{INDEXING}},
+  5/{Read and parse each book; a missing file fails the book},
+  6/{Write \code{metadata_g<w>}: one \code{bulkWrite} of upserts},
+  7/{Write \code{postings_g<w>}: \code{bulkWrite}s of 1{,}000 terms},
+  8/{Publish: one conditional \code{findOneAndUpdate}},
+  9/{Mark the books \code{PUBLISHED}; send \code{BatchPublished}}} {
+  \node[stepnode] at (0,{-(\i-1)*\gap}) {\i};
+  \node[steptext] at (0.4,{-(\i-1)*\gap}) {\text};
+}
+\foreach \i/\text in {5/{lease checked}, 6/{lease checked}, 7/{lease checked}, 8/{lease in the filter}} {
+  \node[lease] at (9.55,{-(\i-1)*\gap}) {\text};
+}
+\node[crash] at (12.75,{-0.5*\gap}) {after-dequeue};
+\node[crash] at (12.75,{-6*\gap}) {during-batch-write};
+\node[crash] at (12.75,{-7.5*\gap}) {after-publish};
+\node[crash] at (12.75,{-8.25*\gap}) {after-mark};
+\node[anchor=south west, font=\scriptsize\bfseries, text=modehazelcast!80!black] at (9.55,{0.25}) {Lease checks};
+\node[anchor=south west, font=\scriptsize\bfseries, text=modeactivemq!85!black] at (12.75,{0.25}) {Crash points};
+\end{tikzpicture}
+\caption{One batch in the indexer: nine steps, the lease checks (blue), made before each write of steps 5 to 7 and inside the
+publication filter, and the four crash points of the recovery tests (red), placed where each one stops the service. \code{during-batch-write} stops after the first
+postings \code{bulkWrite}, so the batch is really half-written, and \code{after-mark} stops before
+\code{BatchPublished} is sent. If the lease is lost at any check, the batch stops and is never published; if no book is
+left after step 5, the batch is left to expire. In both cases \code{control} abandons it and sends its books back to the
+queue.}
+\label{fig:batch}
+\end{figure}
+
+\textbf{One posting per term and batch.} Stage~1 kept one document per word and added books with \code{$addToSet}.
+Here each batch writes its own document per term, with the batch's books in ascending order and each term frequency at
+the same position. Three properties follow. A half-written batch is invisible, because \code{query} only reads
+postings whose \code{batch_id} is in its snapshot of published batches. Replicas never write the same document, so
+frequent words cause no contention and no document grows towards MongoDB's 16\,MB limit. And upserts make a repeated
+write harmless. The cost moves to reading: a term has one document per batch that contains it, so the batch size trades
+indexing throughput against the number of documents a search reads.
+
+\textbf{Metadata.} \code{HeaderParser} keeps the title and author of Stage~1 and adds the fields of the search
+filters. \code{year} is the year of the \code{Release date:} line, never the eBook number on the same line, which can
+also have four digits. \code{original_year} comes from \code{Original publication:} when the header has it, which only
+24 of the 2{,}800 corpus headers do. \code{languages} holds ISO~639-1 codes in header order, and \code{author_terms} the
+author's words through the same \code{Tokenizer}.
+
+\textbf{Rebuild.} Each generation of the index lives in its own \code{metadata_g<n>}, \code{postings_g<n>} and
+\code{batches_g<n>}, and \code{index_state.current} says which one \code{query} serves. During a rebuild the indexer
+writes into the target generation while \code{query} keeps serving the old one. \code{control} sends every book back to
+be indexed and switches the pointer with one write once no book blocks the switch. Renaming three collections would
+not be atomic; switching a pointer is.
+
+\textbf{Rebuild race, closed after the campaign.} \code{POST /index/rebuild} read the current generation and then
+opened the rebuild, while \code{control} switches the generation and then finishes the rebuild: two writes on each
+side. A request that fell between \code{control}'s two writes answered \code{202} but built no new generation. Since
+\code{SPEC.md} 1.11, ``Open a rebuild'' takes its target from the previous rebuild's target inside its own write, so
+that request opens the next generation.
+
+\subsection{Crawler, query and control}
+
+The other three services follow the same pattern: a claim, a lease renewed by \code{LeaseHeartbeat}, conditional
+writes, and a message only after the write.
+
+\textbf{Crawler.} Each replica runs eight download workers on platform threads, and each worker takes one book at a
+time from \code{books-to-download}. A worker claims the book (\code{QUEUED} to \code{DOWNLOADING}, with its
+\code{claim_id}, a lease and one more attempt) and skips the download if the book's header and body are already in the
+datalake.
+Otherwise it reads the text from the local mirror or over HTTP, splits it into header and body at the Gutenberg markers
+and writes each file to a unique \code{.tmp}, renamed with \code{ATOMIC_MOVE}, header first. ``Finish a download'' then
+marks it \code{DOWNLOADED}, and only after that write is the book enqueued in \code{books-to-index}. A failed download
+goes back to \code{QUEUED} while attempts are left if the error may pass (\code{NETWORK_ERROR},
+\code{STORAGE_ERROR}), and straight to \code{FAILED} if it cannot (\code{NOT_FOUND}, \code{MISSING_MARKERS}). When
+Gutenberg's mirror answers \code{429} or \code{503}, every download of the replica waits what \code{Retry-After} asks,
+or 1, 2, 4, 8 and 16\,s.
+
+\textbf{Query.} \code{query} keeps an immutable snapshot of the published batches of the current generation behind an
+\code{AtomicReference}. One thread refreshes it at startup, on each \code{BatchPublished} and every 5\,s, comparing
+batches by \code{_id}, never by publication time. A search reads the snapshot once and tokenizes \code{q}. With
+filters, it first asks \code{metadata_g<n>} for the books matching \code{author_terms}, \code{languages} and
+\code{year}. It then reads only the postings of the snapshot's batches, intersects the terms starting with the rarest,
+scores each book with the sum of $(1 + \ln tf) \cdot \ln(N/df)$, breaks ties by \code{book_id} and reads the metadata of
+the page in one query. Every request therefore sees one consistent published state, and no lock is taken on the read
+path.
+
+\textbf{Control.} At startup \code{control} creates the state of every candidate and enqueues only the books it
+created, so a restart never seeds twice. Then it reconciles every \code{TARANTINO_RECONCILE_SECONDS}, in six idempotent
+steps: (1) release expired downloads; (2) abandon the \code{WRITING} batches whose lease expired, in every generation;
+(3) settle each \code{INDEXING} book by its batch, releasing it if the batch is abandoned and completing its publication
+if the batch is published; (4) requeue the books whose message was lost, when their queue is empty, which also refills
+the queues after a broker restart; (5) delete the postings of batches abandoned more than \code{TARANTINO_GC_SECONDS}
+ago, on every pass, so a zombie indexer's late writes are deleted too; and (6) drive a rebuild and drop old
+generations. A separate task deletes orphan \code{.tmp} files, and \code{GET /control/status} reports the generation,
+the books per state, both queues and the last reconciliation.
+
+\subsection{Coordination modes in code}
+
+The broker sits behind three ports in \code{common}: \code{Broker} (connection and health), \code{BookTasks} (a work
+queue) and \code{BatchAnnouncements} (the topic). Each service's factory picks the adapters from
+\code{TARANTINO_COORDINATION}, so the commands do not know which mode runs. Each mode adds little code of its own
+(non-blank lines of main code):
+\begin{itemize}
+\item \mode{hazelcast}: 192 lines in 7 classes, \code{IQueue} and \code{ITopic} adapters and a reconnecting client.
+\item \mode{activemq}: 328 lines in 3 classes, one JMS session and producer per queue handle, with prefetch 1 on
+  \code{books-to-download}. With persistence, delivery is persistent and the acknowledgement is called only when the
+  job returns, so a message held by a dead consumer goes to another one.
+\item \mode{polling}: 104 lines in 2 worker classes plus two sorted claims, ``Claim the next book'' and ``Claim the next
+  book for a batch'', which are \code{findOneAndUpdate}s ordered by \code{enqueued_at}.
+\item \mode{orchestrator}: 506 lines in 15 classes. \code{control} runs a tick every 200\,ms that dispatches the
+  oldest waiting books within a window of 512 downloads and 400 indexings in flight, one \code{POST} at a time, and
+  each worker replica keeps a bounded local queue behind its internal route.
+\end{itemize}
+
+\subsection{Deployment and startup}
+
+The whole system runs on one machine with Docker Compose: \code{mongo:7.0}, one Hazelcast~5.7 member in cluster
+\code{tarantino}, the four services built from one \code{Dockerfile}, and nginx. No service sets
+\code{container_name}, so \texttt{docker compose up -{}-scale crawler=3 -{}-scale indexer=3 -{}-scale query=2} works,
+while \code{control} always runs once. Only nginx publishes ports. It resolves the service names through Docker's DNS
+(\code{127.0.0.11}, \code{valid=5s}) with the upstream in a variable, so replicas added by \texttt{-{}-scale} receive
+requests without restarting it, and it retries another replica when one does not answer. Every service has a
+healthcheck on \code{/health} and never restarts on its own, so the recovery tests decide when a crashed service comes
+back. One shared block gives every service the same timing variables and \code{-Xmx512m -XX:+ExitOnOutOfMemoryError}.
+
+Two lessons from building it shaped the configuration:
+\begin{itemize}
+\item \textbf{A timeout that is not infinite.} The Hazelcast client first used the ``infinite'' cluster connect
+  timeout, $-1$, which Hazelcast stores as \code{Long.MAX_VALUE} and subtracts the elapsed time from. On a freshly
+  started VM the clock stepped back a few milliseconds between two attempts, the subtraction overflowed into a negative
+  wait, and the client shut down. \code{control} then died at startup whenever Hazelcast was not ready yet. The timeout
+  is now ten years: in practice it never gives up, and it cannot overflow.
+\item \textbf{A thread that dies quietly.} A batch keeps the term frequencies and postings of all its books in memory,
+  about 0.7\,MB per book. In a pilot with batches of 500 books and a 512\,MB heap, the indexing thread threw
+  \code{OutOfMemoryError} and died, but the JVM and its HTTP server did not. \code{/health} kept answering \code{UP}
+  while the batch's books stayed \code{INDEXING}. Since then every JVM runs with \code{-XX:+ExitOnOutOfMemoryError}, so
+  it exits and recovers like a crash, and batches stop at 250 books. The same holds for any other failure: every worker
+  thread and periodic task of a service is started through \code{WorkerThreads}, which exits the service with code 1
+  if anything escapes the task, instead of leaving it dead behind a healthy \code{/health}.
+\end{itemize}
+
+\subsection{Testing and continuous integration}
+\label{sec:testing}
+
+Tests follow the hexagonal layout: commands run on in-memory fakes, adapters on a real MongoDB in Testcontainers, and
+every conditional write is raced by two claimants at once. \code{TwoAtOnce} releases the same call from two threads
+through a barrier. For example, two indexers claiming the same books never share one, and of two publications of a
+batch only one matches. Publishing and abandoning at the lease boundary never both match, and two rebuild requests open
+one rebuild without an error. Commands are tested with a fake lease that is lost at a chosen step, and the tests check
+that the crash points are reached in order. Routes run on a real Javalin server with fake ports, checking status
+codes, \code{Location} headers, Problem Details and the exact snake\_case JSON.
+
+On 7 November 2026, \texttt{mvn clean verify} on the delivered code (\code{8c26405}, the last commit that changes code)
+ran 646 tests, all passing, in 90\,s (Table~\ref{tab:tests}). JaCoCo measures in the same build the lines and branches
+each module's own tests run: 83\,\% of the lines and 83\,\% of the branches of \code{common} and the four services.
+\code{checks} is low because it runs against the live stack in continuous integration, not in unit tests. GitHub Actions requires five checks before anything merges into \code{dev} or \code{main}:
+the build with every test, failing if the MongoDB tests were skipped; the end-to-end API checks in every mode; the shell
+and workflow linters; CodeQL; and the whole failure matrix with 1, 2 and 3 replicas on the benchmark corpus, which runs
+on every pull request to \code{main} and on those to \code{dev} that change the recovery scripts.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Size of each module, its tests and the share of its lines they run, at \code{8c26405}. Lines include blank
+lines; coverage counts executable lines, as JaCoCo does.}
+\label{tab:tests}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Module & Main files & Main lines & Test lines & Tests & Line coverage \\
+\midrule
+\code{common} & 62 & 2{,}512 & 2{,}128 & 135 & 82\,\% \\
+\code{crawler} & 31 & 1{,}311 & 2{,}245 & 93 & 82\,\% \\
+\code{indexer} & 37 & 1{,}532 & 1{,}794 & 75 & 77\,\% \\
+\code{query} & 20 & 1{,}063 & 1{,}046 & 47 & 89\,\% \\
+\code{control} & 63 & 2{,}396 & 2{,}804 & 95 & 86\,\% \\
+\code{bench} & 89 & 6{,}050 & 3{,}851 & 187 & 79\,\% \\
+\code{checks} & 26 & 1{,}883 & 315 & 14 & 13\,\% \\
+\midrule
+Total & 328 & 16{,}747 & 14{,}183 & 646 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+\section{Design Decisions}
+\label{sec:decisions}
+
+\subsection{Coordination mechanism}
+
+We chose choreography over a broker for the normal path, MongoDB as the only arbiter of who owns each job, and a
+periodic reconciliation as the safety net (Section~\ref{sec:coordination}). Three reasons drove the choice:
+\begin{itemize}
+\item \textbf{No process in the data path.} A free worker takes a book as soon as it is queued, and replicas scale by
+  competing for the same queue. No central process calls every service for every book, so none can become the
+  bottleneck or the single point of failure of the pipeline.
+\item \textbf{Exactly one winner without transactions.} Messages can be lost or repeated, so they cannot decide
+  anything. A conditional single-document write gives exactly one winner per transition, without locks or
+  transactions, and it is valid across machines because it compares against MongoDB's clock.
+\item \textbf{Recovery from persistent state.} Every repair works from \code{book_states}, so a lost message, an expired
+  lease or a lost announcement is found and fixed by reading MongoDB. Hazelcast can restart with empty queues.
+\end{itemize}
+
+The design has costs, and we accepted them knowingly. It has more moving parts than an orchestrator: leases, the
+heartbeat and a six-step reconciliation. It runs two systems, Hazelcast and MongoDB, where polling MongoDB alone would
+work. Batching adds wait, because a book waits for its batch to fill or for 30\,s. And the safety net is slow on
+purpose: \code{TARANTINO_REQUEUE_SECONDS} is 120\,s, and it must stay above the batch timeout so that \code{control}
+never requeues books an indexer is still holding.
+
+\subsection{The five modes measured, and the winner}
+\label{sec:winner}
+
+The assignment allows any coordination mechanism, so we also built the four alternatives of Table~\ref{tab:modes} and
+measured all five in one campaign (Section~\ref{sec:modes}). The decision rule was written on 5~November, before the
+campaign ran:
+\begin{enumerate}
+\item Correctness is a gate: every applicable row of the failure matrix must recover with the same answers.
+\item A difference only counts when \code{pairs.csv} marks it as significant, that is, when the 95\,\% confidence
+  interval of the difference between two modes excludes zero.
+\item The criteria are then applied in this order: pipeline performance (throughput and time to publication),
+  visibility, cost (the CPU of the coordinator and of MongoDB, the containers and the code of the mode), robustness
+  (lost work, a broker restart, \code{control} down), and fit for Stage~3.
+\item The default stays \mode{hazelcast} in this delivery, and a mode the data favours is proposed for Stage~3.
+\end{enumerate}
+
+Table~\ref{tab:decision} applies the rule. Every mode passes the gate: all 165 recovery runs recovered, and
+\code{recovery-compare} found the same books and answers for each row in every mode.
+
+\begin{table}[ht]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Decision matrix of the five coordination modes, in the order of the decision rule. Pipeline, visibility and
+CPU figures are means over the 5 repetitions of \run{20261106-012054-coordination-variants-c1376c7} of each
+repetition's value, as \code{pairs.csv} holds them: a p50 here is the mean of the five repetitions' medians, not the
+median of their pooled values that \code{summary.csv} gives, so the two differ slightly. Recovery figures come from
+the 165 recovery runs and \run{20261106-073911-recovery-delay-c1376c7}. ``N'' is the number of \code{crawler} and
+\code{indexer} replicas together, and ``*'' marks a significant difference against \mode{hazelcast}.}
+\label{tab:decision}
+\begin{tabularx}{\textwidth}{@{}L{2.45cm}YYYYY@{}}
+\toprule
+Criterion & \mode{hazelcast} & \mode{activemq} & \mode{activemq-persistent} & \mode{polling} & \mode{orchestrator} \\
+\midrule
+Gate: rows recovered & 14 of 14 & 14 of 14 & 14 of 14 & 11 of 11 & 13 of 13 \\
+\addlinespace
+Throughput, books/s, N = 1 / 2 / 3 & 28.5 / 46.7 / 58.6 & 28.4 / 45.5 / 57.5 & 28.1 / 43.3 / 55.0* & 27.5 / 47.9 / 55.5 & 27.7 / 44.7 / 34.6* \\
+Time to publication p50, s, N = 1 / 2 / 3 & 50.0 / 30.6 / 24.6 & 50.9 / 32.5 / 25.7 & 49.1 / 31.6 / 23.1* & 53.2* / 30.8 / 26.8* & 54.7* / 35.3* / 30.1* \\
+\addlinespace
+Visibility p50, ms & 38--45 & 39--48 & 38--48 & 2{,}279--2{,}712* & 168--211* \\
+\addlinespace
+Coordinator CPU, \% of a core, N = 1 / 3 & 3.6 / 8.3 & 5.4* / 12.8* & 7.8* / 16.6* & 3.6 / 7.0* & 10.8* / 12.7* \\
+MongoDB CPU, N = 3 & 224\,\% & 219\,\%* & 219\,\% & 247\,\%* & 140\,\%*, doing less work \\
+Coordination containers & 1, Hazelcast & 1, ActiveMQ & 1, ActiveMQ with a disk store & None & None \\
+Main code of the mode & 192 lines & 328 lines & 328 lines & 104 lines & 506 lines \\
+\addlinespace
+Lost work (rows 04, 05) & \code{control} requeues after 11.7--11.8\,s & \code{control} requeues after 11.7--11.8\,s & Broker redelivers; reclaimed in 3.8--5.0\,s & Nothing to lose & \code{control} redispatches after 9.7\,s \\
+Broker restart (row 12) & Queues lost; download messages requeued after 12\,s, index messages once \code{books-to-index} empties, 82--207\,s & Queues lost; download messages requeued after 11.7\,s & Messages survive; reclaimed in 6.0\,s & No broker & No broker \\
+\code{control} down (row 11) & Pipeline goes on & Pipeline goes on & Pipeline goes on & Pipeline goes on & Pipeline stops \\
+\addlinespace
+Stage~3 fit (argued, not measured) & Native cluster with partition backups, in memory & Network of brokers or a shared store & A shared or replicated disk store; capped at 1{,}460 messages/s & MongoDB load grows with every worker & One dispatcher: a bottleneck and a single point of failure \\
+\midrule
+Verdict & \textbf{Winner} & Ties on performance, costs more & \textbf{Runner-up}: best recovery & Out on visibility & Out on performance \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Performance.} \mode{orchestrator} loses: 41\,\% less throughput with 3 replicas, because one thread dispatches
+every book one \code{POST} at a time, and a median time to publication 4.7--5.5\,s longer at every N. \mode{polling}
+keeps the throughput, but its median time to publication is 2.2--3.2\,s longer with 1 and 3 replicas.
+\mode{hazelcast} and \mode{activemq} never differ significantly. \mode{hazelcast} and \mode{activemq-persistent} only
+differ with 3 replicas, in opposite directions: \mode{hazelcast} publishes 6\,\% more books per second, and
+\mode{activemq-persistent} has a 1.6\,s (6\,\%) lower median time to publication, 23.05 against 24.62\,s in
+\code{pairs.csv}, which Table~\ref{tab:decision} rounds to 23.1 and 24.6. Its median is lower because persistent sends
+feed the crawlers more slowly than they take books. A book waits 1\,ms in \code{books-to-download} instead of 0.8\,s, and slightly less in
+\code{books-to-index}, so part of the gain is a later start of each book's clock, not faster work. The same throttling
+costs the 6\,\% of throughput. Performance therefore leaves three modes in a tie.
+
+\textbf{Visibility and cost.} \mode{hazelcast}, \mode{activemq} and \mode{activemq-persistent} make a batch searchable
+within 38--48\,ms, so visibility does not separate them. Cost does: \mode{hazelcast}'s coordinator uses significantly
+less CPU than both ActiveMQ modes at every N, 35\,\% less than \mode{activemq} and 50\,\% less than
+\mode{activemq-persistent} with 3 replicas. It also needs no disk store and has the least code of the three. The rule
+stops here: \textbf{\mode{hazelcast} wins}, and it remains the mode of Stage~2.
+
+\textbf{What the rule leaves to Stage~3.} Robustness, the criterion after cost, favours \mode{activemq-persistent}.
+It is the only mode whose lost work comes back without \code{control}: the broker redelivers what a dead consumer did
+not acknowledge, and the book is claimed again 3.8--6.0\,s after the failure, against 11.7\,s for a requeue by
+\code{control}. If robustness came before cost, \mode{activemq-persistent} would win. That is why its property, not its
+broker, goes into the Stage~3 plan (Section~\ref{sec:stage3}). \code{control} stays necessary in every mode, because it
+also releases expired leases and drives rebuilds, and persistence caps the broker at about 1{,}460 messages/s. At the
+500--670 books/s that ingestion reaches, with two messages per book, that cap is close.
+
+\subsection{Single-machine deployment}
+
+Everything runs on one host with Docker Compose, as the assignment requires. Addresses are Compose service names, the
+datalake is a local volume, and there is one MongoDB server and one broker. Ports, addresses, data paths, replica
+counts, thread counts and every timing are environment variables with working defaults, validated at startup.
+Replicas are added with \texttt{-{}-scale} and need no restart, because nginx resolves service names on every request
+through Docker's DNS. Only nginx publishes ports, and the front-end and operational ports are separate, so a front-end
+can never reach an administrative route.
+
+\subsection{API design}
+
+\begin{itemize}
+\item \textbf{One search endpoint} with optional filters and pagination, as the assignment asks, plus book details and
+  filter values for the front-end use cases.
+\item \textbf{Asynchronous state changes}: \code{202} with a \code{Location} to poll, or \code{200} if already done.
+  Handlers stay in the millisecond range, cannot exhaust the HTTP pool, and repeated or concurrent requests duplicate
+  nothing.
+\item \textbf{Consistent reads}: every search reads one immutable snapshot of published batches, so a request never
+  mixes two states of the index, and a rebuild switches the whole snapshot at once.
+\item \textbf{Problem Details for every error}, including nginx's, with a stable \code{code} and the failing
+  \code{parameter}, so a client handles errors without parsing text.
+\end{itemize}
+
+\subsection{Storage}
+
+The datalake keeps the Stage~1 \code{batch} layout, which won the Stage~1 comparison: $O(1)$ store and lookup with one
+directory per 1{,}000 ids. The inverted index stays in MongoDB, also chosen in Stage~1, but with one postings document
+per term and batch instead of one per term (Section~\ref{sec:indexer}). Metadata moves from SQLite to MongoDB: SQLite
+allows one writer at a time, which several indexer replicas cannot share, and MongoDB avoids running a third database
+for it. Book states also live in MongoDB, because conditional single-document writes are exactly what claims and leases
+need. Each generation of the index has its own collections, so a rebuild never disturbs what \code{query} serves.
+
+\subsection{Concurrency model and configuration}
+
+Replicas coordinate only through conditional writes and the broker, and threads inside a process share only immutable
+snapshots and \code{java.util.concurrent} structures, so no lock is ever taken. Table~\ref{tab:config} gives the
+configuration we keep and the measurement behind each setting.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Configuration decisions and the evidence behind them (Section~\ref{sec:benchmarks}).}
+\label{tab:config}
+\begin{tabularx}{\textwidth}{@{}L{3.0cm}L{3.1cm}Y@{}}
+\toprule
+Setting & Kept & Evidence \\
+\midrule
+Books per batch & 100; 250 with a larger heap & 250 gives 17\,\% more books/s than 100, but the indexer container peaks at 745--808\,MiB with \code{-Xmx512m}; 500 ran out of memory \\
+\code{indexer} replicas & As many as MongoDB allows & Indexing limits the pipeline; 2 and 3 replicas give $\times$1.70 and $\times$2.10, while MongoDB's CPU grows faster than the indexers' \\
+\code{crawler} replicas and workers & 1 replica, 8 to 16 workers & Replicas add nothing (521--548 against 504 books/s); 16 workers add 24\,\% over 8; one crawler already downloads about 18 times faster than one indexer publishes \\
+\code{query} replicas & 2 & The second replica adds 29\,\% requests/s and cuts latency by 22\,\%; the third adds nothing \\
+HTTP threads & Javalin's default, 8 to 250 & 128 threads add nothing over 32 and lose 4\,\% of the requests/s; 8 threads with 32 clients raise latency by 77\,\% \\
+Batch announcements & Topic listener plus a 5\,s refresh & A batch is visible in 44\,ms on average with the listener and 2.6\,s without it, at no measurable CPU cost \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Smaller decisions}
+
+Table~\ref{tab:small-decisions} lists the smaller decisions that shaped the code, each with the alternative it
+rejected.
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Smaller decisions, with the alternative each one rejected.}
+\label{tab:small-decisions}
+\begin{tabularx}{\textwidth}{@{}L{3.6cm}YL{3.4cm}@{}}
+\toprule
+Decision & Why & Rejected \\
+\midrule
+Java~25 & Allowed by the course; virtual threads carry the lease heartbeats cheaply, and records model messages and snapshots & Java~17 of the example \\
+Jackson & Javalin's default mapper; one \code{ObjectMapper} for the API, MongoDB documents and broker messages & Gson of the example \\
+Generation pointer for rebuilds & Switching it is one atomic write & Renaming three collections, which is not atomic \\
+One conditional write per transition, on \code{$$NOW} & Single-document atomicity needs no transactions, and MongoDB's clock is the only clock & Read, decide in Java, write \\
+A lease is lost only by a renewal that does not match & A moment without MongoDB should not cost a batch & Losing the lease on any exception \\
+A service exits when a worker thread dies or its JVM runs out of memory & A dead thread behind a healthy \code{/health} is never recovered & Catching \code{Error} in the worker and going on \\
+Ten-year Hazelcast connect timeout & The infinite one overflows when the clock steps back & $-1$ \\
+JMH with three forks and the protocol in annotations & The error covers differences between JVMs, and every way of launching keeps the protocol & One fork, protocol in a runner \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\section{Benchmarks and Results}
+\label{sec:benchmarks}
+
+\subsection{Setup and methodology}
+
+Every figure in this section comes from one official campaign on one machine (Table~\ref{tab:host}). The script
+\code{scripts/bench/all.sh} ran every experiment and the whole failure matrix in the five modes, in 187 steps and
+9\,h~45\,min, from a clean commit of \code{dev}. Only one step failed: \code{broker-latency}, because Git Bash rewrote
+the folder it passed to the container. Once the script passed a relative path, that step ran again alone, from a commit
+that only changed scripts. Appendix~\ref{app:runs} gives the run, command and raw data behind every table and figure.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Host and fixed conditions of every official run, as each \code{manifest.json} and \code{corpus.json} record
+them.}
+\label{tab:host}
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}Y@{}}
+\toprule
+Host & Intel Core Ultra 9 275HX, 24 hardware threads (8 P-cores and 16 E-cores), 31.4\,GiB, 1\,TB disk, Windows~11 \\
+Containers & Docker Desktop 29.9.2 with 24 CPUs and 15.3\,GiB; every service JVM with \code{-Xmx512m} \\
+Corpus & 2{,}800 books and 755{,}974 distinct terms from the local mirror, checked against \code{workload/corpus.sha256} before every run, so the network is never measured \\
+Campaign & \run{20261105-215348-campaign-c1376c7}, from \code{dev} at \code{c1376c7}, overnight on 5--6 November 2026 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{itemize}
+\item \textbf{One factor at a time.} Each experiment varies one factor around a baseline, and its script prints the
+  hypotheses to the run's \code{log.txt} before measuring.
+\item \textbf{Five interleaved repetitions.} Repetition 1 of every configuration runs first, then repetition 2, and so
+  on, so any drift over the night, such as heat, spreads over every configuration instead of falling on one.
+\item \textbf{Statistics.} Tables give the mean $\pm$ the half-width of its 95\,\% confidence interval over the
+  repetitions, with Student's $t$ for $n-1$ degrees of freedom. Percentiles pool the values of every repetition: books,
+  \code{docker stats} samples or requests.
+\item \textbf{Three levels of concurrency, kept apart.} Client concurrency is the closed-loop clients of the load
+  generator; threads are the workers or HTTP threads inside one process; replicas are processes. Each table states the
+  three, and each trial records them in \code{manifest.json}.
+\end{itemize}
+
+To fit the campaign into one night, it reused two runs from 3 and 4 November on the same machine, because
+\code{git diff} shows that the code they measure did not change. These are \code{search-latency} and the indexer's JMH.
+The coordination cost comes from the \mode{hazelcast} trials of \code{coordination-variants}, which follow the same
+procedure. Rows 09 to 12 of the failure matrix ran with one replica only outside \mode{hazelcast}, because their time is
+mostly processing the whole corpus, which \code{coordination-variants} already measures for every mode and replica
+count.
+
+\subsection{Microbenchmarks}
+
+JMH~\cite{jmh} runs in each service's \code{src/test/java} with 5 warmup and 10 measurement iterations, three forks and a fixed
+heap, so its error also covers differences between JVMs. Each bound in Table~\ref{tab:jmh} was stated before measuring
+and is checked with at least three sizes.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{JMH results, average time per operation $\pm$ JMH's 99.9\,\% error. Indexer:
+\run{20261103-204454-index-throughput-6925d4e}; crawler: \run{20261105-215351-ingest-throughput-c1376c7}; query:
+\run{20261104-140900-search-latency-8e1c1e8}.}
+\label{tab:jmh}
+\begin{tabularx}{\textwidth}{@{}L{3.0cm}L{3.0cm}rL{2.15cm}Y@{}}
+\toprule
+Benchmark & Input & Time & Per unit & Bound \\
+\midrule
+\multirow{3}{3.0cm}{\code{Tokenizer}, terms of a body} & Book 1080, 20\,KB body & 0.206 $\pm$ 0.004\,ms & 10.4\,ms/MB & \multirow{3}{=}{Linear in the body: holds} \\
+ & Book 84, 429\,KB & 4.83 $\pm$ 0.01\,ms & 11.3\,ms/MB & \\
+ & Book 2600, 3.34\,MB & 36.7 $\pm$ 0.1\,ms & 11.0\,ms/MB & \\
+\addlinespace
+\multirow{3}{3.0cm}{\code{HeaderParser}} & Book 1080 & 6.9 $\pm$ 0.9\,\textmu s & -- & \multirow{3}{=}{Constant: holds} \\
+ & Book 84 & 7.54 $\pm$ 0.09\,\textmu s & -- & \\
+ & Book 2600 & 7.09 $\pm$ 0.03\,\textmu s & -- & \\
+\addlinespace
+\multirow{4}{3.0cm}{Writing a batch to MongoDB} & 1 book & 19.8 $\pm$ 0.7\,ms & 19.8\,ms/book & \multirow{4}{=}{Cost per book falls with the batch: holds} \\
+ & 10 books & 338 $\pm$ 3\,ms & 33.8\,ms/book & \\
+ & 100 books & 2{,}806 $\pm$ 33\,ms & 28.1\,ms/book & \\
+ & 1{,}000 books & 12{,}535 $\pm$ 175\,ms & 12.5\,ms/book & \\
+\addlinespace
+\multirow{3}{3.0cm}{Crawler: split header and body} & Book 1080, 40\,KB & 102 $\pm$ 10\,\textmu s & -- & \multirow{3}{=}{Linear in the text} \\
+ & Book 84, 450\,KB & 1.62 $\pm$ 0.01\,ms & -- & \\
+ & Book 2600, 3.4\,MB & 12.3 $\pm$ 0.4\,ms & -- & \\
+\addlinespace
+\multirow{3}{3.0cm}{Query over 1{,}000 books} & TF-IDF ranking, 3 words & 60.2 $\pm$ 0.4\,\textmu s & -- & \multirow{3}{=}{About 1\,\% of a request end to end} \\
+ & Search without filters & 44.9 $\pm$ 0.2\,\textmu s & -- & \\
+ & Search with filters & 12.3 $\pm$ 0.1\,\textmu s & -- & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The tokenizer costs 10.4--11.3\,ms per MB across a 168-fold range of sizes, so it is linear, and the header parser
+takes about 7\,\textmu s whatever the book. Writing a batch costs less per book from 10 to 1{,}000 books, because books
+share terms and each term gets one postings document per batch. The single book is cheaper only because it is book 1,
+an 11\,KB body. Splitting a book in the crawler takes at most 12\,ms, and ranking takes 60\,\textmu s. None of these
+operations is what limits the pipeline, as the next sections show.
+
+\subsection{Ingestion throughput}
+\label{sec:ingest}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Books downloaded per second by \code{crawler} replicas and download workers per replica, over the whole window
+(first claim to last download) and the steady window (10\,\% to 90\,\% of the books).
+\run{20261105-215351-ingest-throughput-c1376c7}.}
+\label{tab:ingest}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+Replicas & Workers per replica & Whole window (books/s) & Steady 10--90\,\% (books/s) \\
+\midrule
+1 & 4 & 370 $\pm$ 51 & 393 $\pm$ 51 \\
+1 & 8 & 504 $\pm$ 135 & 560 $\pm$ 132 \\
+1 & 16 & 623 $\pm$ 27 & 671 $\pm$ 44 \\
+2 & 8 & 548 $\pm$ 73 & 603 $\pm$ 84 \\
+3 & 8 & 521 $\pm$ 17 & 572 $\pm$ 17 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Workers help with a shrinking gain} (Table~\ref{tab:ingest}): +36\,\% from 4 to 8 and +24\,\% from 8 to
+  16. The curve bends but does not flatten by 16 workers, as the hypothesis expected.
+\item \textbf{Replicas do not help}, against the hypothesis: 2 and 3 replicas of 8 workers download as many books per
+  second as one, within their intervals.
+\item \textbf{The workers wait on the file I/O they share} (Table~\ref{tab:ingest-workers}). In every trial the
+  workers are busy for 94--100\,\% of the window. Between two books, the enqueue, the poll of \code{books-to-download}
+  and the claim in MongoDB take 1.5--2.9\,ms from 4 to 24 threads, so neither the queue nor MongoDB holds ingestion
+  back. The work of a book grows instead, from 9.4\,ms with 4 threads to 23.6\,ms with 16 in one replica and 40.6\,ms
+  with 3 replicas of 8, while the CPU it costs within one replica stays at 6.7--7.5\,ms: the threads mostly wait. The
+  host has CPU to spare, 956--1{,}281\,\% of its 2{,}400\,\% in use (Table~\ref{tab:resources}). What that work shares is
+  file I/O: reading the book from the mirror, a folder of the Windows host mounted into Docker Desktop's VM, and writing
+  its header and body to the datalake volume. These runs cannot tell the read from the write; a run with the mirror
+  inside a Docker volume would.
+\item \textbf{Replicas cost CPU without adding books.} With 2 and 3 replicas a book costs 10.2 and 12.0\,ms of CPU,
+  because each JVM warms up its own code within a window of about 5\,s. That is why 16 workers in one replica download
+  more than 3 replicas of 8.
+\end{itemize}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{How the download workers of Table~\ref{tab:ingest} spend their time: the work of a book, from its claim to its
+download by the same thread, the gap until that thread's next claim, and the crawlers' CPU during the ingestion, in
+total and per book (the total divided by the books per second). Mean $\pm$ 95\,\% interval of 5 repetitions.
+\code{workers.csv} and \code{summary.csv} of \run{20261105-215351-ingest-throughput-c1376c7}.}
+\label{tab:ingest-workers}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+Replicas & Workers & Work per book (ms) & Gap (ms) & Crawlers' CPU (\%) & CPU per book (ms) \\
+\midrule
+1 & 4 & 9.4 $\pm$ 1.3 & 1.5 $\pm$ 0.3 & 247 $\pm$ 14 & 6.7 \\
+1 & 8 & 14.7 $\pm$ 4.6 & 1.8 $\pm$ 0.4 & 354 $\pm$ 71 & 7.0 \\
+1 & 16 & 23.6 $\pm$ 1.1 & 2.1 $\pm$ 0.1 & 469 $\pm$ 24 & 7.5 \\
+2 & 8 & 26.2 $\pm$ 4.2 & 2.6 $\pm$ 0.2 & 558 $\pm$ 86 & 10.2 \\
+3 & 8 & 40.6 $\pm$ 1.6 & 2.9 $\pm$ 0.1 & 625 $\pm$ 51 & 12.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Indexing throughput and latency}
+\label{sec:index}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.7cm},
+  report,
+  width=7.6cm, height=5.2cm,
+  ymin=0,
+  ylabel={Books per second},
+  error bars/y dir=both, error bars/y explicit,
+]
+\nextgroupplot[
+  xmode=log, log basis x=10,
+  xtick={1,10,100,250}, xticklabels={1,10,100,250},
+  xmin=0.8, xmax=420,
+  xlabel={Books per batch, 1 replica},
+  ymax=40,
+  title={Batch size},
+]
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt},
+  nodes near coords, point meta=y, every node near coord/.style={font=\scriptsize, color=inkprimary, anchor=north west, /pgf/number format/fixed, /pgf/number format/fixed zerofill, /pgf/number format/precision=1}]
+  table[x=batch, y=mean, y error=ci, restrict expr to domain={\thisrow{replicas}}{1:1}] {\indexresults};
+\nextgroupplot[
+  xtick={1,2,3},
+  xmin=0.7, xmax=3.3,
+  xlabel={\code{indexer} replicas, batches of 100},
+  ymax=90,
+  title={Replicas},
+  clip=false,
+]
+\addplot[color=inkmuted, dashed, line width=0.8pt, mark=none, forget plot] coordinates {(1,28.51) (2,57.02) (3,85.53)};
+\node[font=\scriptsize, color=inksecondary, anchor=south east] at (axis cs:1.95,58) {linear scaling};
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt}]
+  table[x=replicas, y=mean, y error=ci, restrict expr to domain={\thisrow{batch}}{100:100}] {\indexresults};
+\node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:1.03,27) {28.5};
+\node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:2.03,46) {48.4, $\times$1.70};
+\node[font=\scriptsize, color=inkprimary, anchor=north] at (axis cs:3,56.8) {59.8, $\times$2.10};
+\end{groupplot}
+\end{tikzpicture}
+\caption{Books indexed per second over a whole rebuild of the 2{,}800 books, mean and 95\,\% confidence interval of 5
+repetitions. Left: batch size with one replica. Right: replicas with batches of 100, against linear scaling from one
+replica. \run{20261105-220915-index-throughput-c1376c7}.}
+\label{fig:index}
+\end{figure}
+
+\begin{itemize}
+\item \textbf{Bigger batches pay off, then flatten} (Figure~\ref{fig:index}), as expected: $\times$2.3 from 1 to 10
+  books, $\times$2.3 from 10 to 100, and only +17\,\% from 100 to 250. Each batch pays a fixed cost (its lease,
+  publication and marking) that more books share.
+\item \textbf{Replicas help less than linearly}, as expected: $\times$1.70 with 2 and $\times$2.10 with 3, that is 85\,\%
+  and 70\,\% of linear.
+\item \textbf{A rebuild is not the whole pipeline.} These trials rebuild a corpus already in the datalake, from the
+  first index claim to the last batch published, with no download running. Table~\ref{tab:decision} gives
+  \mode{hazelcast} 46.7 and 58.6 books/s with 2 and 3 replicas instead, because \code{coordination-variants} counts
+  from the first download to the last publication, with crawlers and indexers working at the same time. The intervals
+  of the two experiments overlap.
+\item \textbf{Batches of 250 fit in a 512\,MB heap}, as expected: no indexer ran out of memory, and the container
+  peaked at 745--808\,MiB per trial with batches of 250, against 587--778\,MiB with batches of 100.
+\item \textbf{MongoDB is where the time goes.} JMH writes a batch of 100 books in 2.81\,s, which alone caps one
+  indexer at 36 books/s, close to the 28.5 measured end to end. Counting the terms of the largest book takes 37\,ms.
+  During indexing MongoDB's CPU grows faster than the indexers' (Table~\ref{tab:resources}).
+\end{itemize}
+
+\textbf{Indexing latency.} Over a whole rebuild, each book costs the inverse of the throughput: 0.18\,s with batches of
+1, 0.035\,s with 100 and 0.017\,s with three replicas of 100. A single book also waits for its batch: from its claim
+to its batch's publication it takes 3.45\,s with one replica and 4.93\,s with three (Table~\ref{tab:coordination}).
+
+\subsection{Search latency under concurrency}
+\label{sec:search}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.7cm},
+  report,
+  width=7.6cm, height=5.2cm,
+  xmode=log, log basis x=2,
+  xtick={1,8,32,64}, xticklabels={1,8,32,64},
+  xlabel={Closed-loop clients},
+  ymin=0,
+  clip=false,
+  error bars/y dir=both, error bars/y explicit,
+]
+\nextgroupplot[ylabel={Requests per second}, ymax=5000, title={Throughput}, yticklabel style={/pgf/number format/1000 sep={{,}}}]
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt}]
+  table[x=clients, y=rps, y error=rps_ci, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {\searchresults};
+\node[font=\scriptsize, color=inkprimary, anchor=south east] at (axis cs:1.15,700) {646};
+\node[font=\scriptsize, color=inkprimary, anchor=north west] at (axis cs:8.4,3550) {3{,}618};
+\node[font=\scriptsize, color=inkprimary, anchor=south east] at (axis cs:64,4520) {4{,}374 and 4{,}381};
+\nextgroupplot[ylabel={Latency (ms)}, ymax=30, xmax=110, title={Latency}, legend style={at={(0.03,0.97)}, anchor=north west}]
+\addplot[color=modehazelcast, mark=*, mark size=2.4pt, error bars/error bar style={line width=0.7pt}]
+  table[x=clients, y=mean_ms, y error=ci_ms, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {\searchresults};
+\addlegendentry{mean}
+\addplot[color=modeactivemq, mark=square*, mark size=2.2pt, dashed]
+  table[x=clients, y=p95_ms, restrict expr to domain={\thisrow{threads}*10+\thisrow{replicas}}{321:321}] {\searchresults};
+\addlegendentry{p95}
+\node[font=\scriptsize, color=inkprimary, anchor=east] at (axis cs:60,27.2) {27.2};
+\node[font=\scriptsize, color=inkprimary, anchor=west] at (axis cs:66,14.5) {14.5};
+\end{groupplot}
+\end{tikzpicture}
+\caption{\code{GET /search} with one \code{query} replica and 32 HTTP threads, as the closed-loop clients grow. Mean and
+95\,\% confidence interval of 5 repetitions of 120\,s each, after 30\,s of warmup; the p95 is the mean of each
+repetition's p95. \run{20261104-140900-search-latency-8e1c1e8}.}
+\label{fig:search}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{\code{GET /search} by clients, HTTP threads and \code{query} replicas, cycling through
+\code{workload/queries.txt}; 18{,}496{,}487 requests in all. \run{20261104-140900-search-latency-8e1c1e8}.}
+\label{tab:search-latency}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+Clients & HTTP threads & Replicas & Mean latency (ms) & p95 (ms) & Requests/s \\
+\midrule
+1 & 32 & 1 & 1.54 $\pm$ 0.02 & 2.73 & 646 $\pm$ 8 \\
+8 & 32 & 1 & 2.20 $\pm$ 0.06 & 3.87 & 3{,}618 $\pm$ 99 \\
+32 & 32 & 1 & 7.29 $\pm$ 0.04 & 14.5 & 4{,}374 $\pm$ 26 \\
+64 & 32 & 1 & 14.5 $\pm$ 0.2 & 27.2 & 4{,}381 $\pm$ 50 \\
+32 & 8 & 1 & 12.9 $\pm$ 1.3 & 19.3 & 2{,}493 $\pm$ 254 \\
+32 & 128 & 1 & 7.56 $\pm$ 0.06 & 15.1 & 4{,}217 $\pm$ 36 \\
+32 & 32 & 2 & 5.66 $\pm$ 0.02 & 10.1 & 5{,}625 $\pm$ 24 \\
+32 & 32 & 3 & 5.82 $\pm$ 0.04 & 10.5 & 5{,}471 $\pm$ 39 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{One replica saturates at about 4{,}400 requests/s} with 32 clients (Figure~\ref{fig:search}). From 32
+  to 64 clients the throughput stays the same and the latency doubles, which is Little's law~\cite{little} for a saturated server:
+  64 clients / 4{,}381 requests/s = 14.6\,ms, the measured 14.5\,ms.
+\item \textbf{Threads must cover the clients.} With 8 HTTP threads and 32 clients, requests queue and latency is
+  77\,\% higher than with 32 threads; 128 threads add nothing and lose 4\,\% of the requests/s
+  (Table~\ref{tab:search-latency}).
+\item \textbf{A second replica helps, a third does not.} Two replicas give +29\,\% requests/s and $-22$\,\% latency;
+  three give the same as two. With two replicas the limit is no longer the \code{query} JVM but what the replicas
+  share: nginx, MongoDB and the host's CPUs, which the load generator also uses.
+\item \textbf{The ranking is not the cost.} JMH ranks a three-word query in 60\,\textmu s, about 1\,\% of the 5--7\,ms
+  each request takes. The rest is reading postings and metadata from MongoDB, HTTP and JSON.
+\item \textbf{Answers stay correct.} Every request answered \code{200} except 170 \code{503}s, 168 of them with 64
+  clients: 0.006\,\% of that configuration's 2{,}628{,}660 requests.
+\end{itemize}
+
+\subsection{Coordination cost}
+\label{sec:coordcost}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Where a book's time goes in mode \mode{hazelcast}, by replicas of \code{crawler} and \code{indexer} together:
+the wait in \code{books-to-download} and in \code{books-to-index}, the work, and the time from enqueue to publication.
+Mean of 5 repetitions $\pm$ 95\,\% interval,
+from the transition logs. \mode{hazelcast} trials of \run{20261106-012054-coordination-variants-c1376c7}.}
+\label{tab:coordination}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+N & Wait for a crawler & Download & Wait for an indexer & Indexing & Enqueue to publication \\
+\midrule
+1 & 1{,}383 $\pm$ 327 ms & 12.6 $\pm$ 1.6 ms & 46.6 $\pm$ 1.9 s & 3.45 $\pm$ 0.13 s & 51.4 $\pm$ 1.9 s \\
+2 & 670 $\pm$ 115 ms & 27.0 $\pm$ 3.8 ms & 27.0 $\pm$ 2.7 s & 4.19 $\pm$ 0.41 s & 31.9 $\pm$ 3.1 s \\
+3 & 736 $\pm$ 127 ms & 44.4 $\pm$ 4.5 ms & 19.9 $\pm$ 0.7 s & 4.93 $\pm$ 0.21 s & 25.6 $\pm$ 0.9 s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Coordination costs far more time than the work}, as expected (Table~\ref{tab:coordination}): with one
+  replica a book waits 1.4\,s for a crawler to download it in 13\,ms.
+\item \textbf{More consumers on one queue help little.} The wait for a crawler halves with 2 replicas and does not fall
+  further with 3, while the download itself gets slower with every replica, 13, 27 and 44\,ms.
+\item \textbf{Indexing is the bottleneck of the pipeline.} The wait in \code{books-to-index} is 91\,\% of the time to
+  publication with one replica. It falls 42\,\% with 2 replicas and 57\,\% with 3; from 1 to 3 replicas that is more
+  than the 47\,\% of the download wait, against the hypothesis. Books wait for an indexer, not for their batch to fill: with one replica the p95 of that wait is
+  87\,s, far above the 30\,s a batch waits at most.
+\end{itemize}
+
+\subsection{Resource usage}
+\label{sec:resources}
+
+\begin{table}[ht]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{CPU, in percent of one core as \code{docker stats} counts it, and memory during each phase, by replicas of
+\code{crawler} and \code{indexer}. ``One replica'' is one crawler during ingestion or one indexer during indexing, a
+container that runs one JVM, with its memory as mean / p99; ``Replicas'' adds up the CPU of all of them, ``Stack''
+every container, and ``Host'' is the whole machine, with 31.4\,GiB. \run{20261105-235758-resource-usage-c1376c7}.}
+\label{tab:resources}
+\begin{tabular}{@{}rlrrrrrrrr@{}}
+\toprule
+& & \multicolumn{2}{c}{One replica} & Replicas & MongoDB & \multicolumn{2}{c}{Stack} & \multicolumn{2}{c}{Host} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-5}\cmidrule(lr){6-6}\cmidrule(lr){7-8}\cmidrule(l){9-10}
+N & Phase & CPU (\%) & Memory (MiB) & CPU (\%) & CPU (\%) & CPU (\%) & Memory (MiB) & CPU (\%) & Memory (GiB) \\
+\midrule
+1 & Ingestion & 378 $\pm$ 94 & 413 / 625 & 378 $\pm$ 94 & 50 $\pm$ 9 & 505 $\pm$ 105 & 1{,}199 $\pm$ 122 & 956 $\pm$ 85 & 19.5 $\pm$ 1.3 \\
+2 & Ingestion & 256 $\pm$ 37 & 332 / 529 & 512 $\pm$ 74 & 62 $\pm$ 11 & 680 $\pm$ 109 & 1{,}398 $\pm$ 125 & 1{,}163 $\pm$ 155 & 19.0 $\pm$ 1.1 \\
+3 & Ingestion & 179 $\pm$ 18 & 334 / 497 & 537 $\pm$ 53 & 65 $\pm$ 4 & 717 $\pm$ 32 & 1{,}723 $\pm$ 73 & 1{,}281 $\pm$ 71 & 19.7 $\pm$ 0.7 \\
+1 & Indexing & 64 $\pm$ 2 & 470 / 683 & 64 $\pm$ 2 & 77.9 $\pm$ 0.4 & 147 $\pm$ 2 & 2{,}264 $\pm$ 199 & 208 $\pm$ 7 & 19.0 $\pm$ 0.6 \\
+2 & Indexing & 59 $\pm$ 5 & 452 / 633 & 119 $\pm$ 10 & 150 $\pm$ 3 & 277 $\pm$ 7 & 2{,}967 $\pm$ 148 & 346 $\pm$ 12 & 19.6 $\pm$ 0.6 \\
+3 & Indexing & 59 $\pm$ 4 & 446 / 662 & 176 $\pm$ 11 & 220 $\pm$ 3 & 406 $\pm$ 10 & 3{,}930 $\pm$ 134 & 494 $\pm$ 11 & 20.7 $\pm$ 0.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Crawlers share a fixed rate.} Their total CPU grows with replicas, but each crawler uses less, 378, 256
+  and 179\,\%, instead of staying flat as expected: the same books per second are split among more crawlers, and the
+  24 hardware threads are never near saturation.
+\item \textbf{MongoDB follows the indexers.} During ingestion the crawlers use 7.6--8.3 times MongoDB's CPU; during
+  indexing MongoDB uses more CPU than the indexers and grows with them, from 78\,\% to 220\,\%, as expected.
+\item \textbf{Memory is bounded.} A crawler or indexer container reaches 497--683\,MiB at p99, above its
+  \code{-Xmx512m} in all but one configuration, because \code{docker stats} counts the whole JVM (heap, metaspace,
+  thread stacks and buffers), not the heap. No container grows with the load; \code{control} and \code{query} stay
+  below 270\,MiB.
+\item \textbf{The host pays for Docker.} The host uses 1.7--1.9 times the stack's CPU during ingestion and 1.2--1.4
+  times during indexing: the rest runs in Docker Desktop's VM and Windows. Its used memory stays at 19.0--20.7\,GiB in
+  every phase, while the stack's grows from 1.2 to 3.8\,GiB.
+\end{itemize}
+
+\subsection{Coordination mechanisms compared}
+\label{sec:modes}
+
+\code{coordination-variants} ran the whole corpus through the five modes of Table~\ref{tab:modes}, with 1, 2 and 3
+replicas of \code{crawler} and \code{indexer} together, 5 interleaved repetitions each: 75 trials. Its
+\code{pairs.csv} holds the difference of every pair of modes, for every metric and replica count, with its 95\,\%
+confidence interval. Figure~\ref{fig:modes} shows the pipeline metrics, and Table~\ref{tab:decision} in
+Section~\ref{sec:winner} the rest.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{groupplot}[
+  group style={group size=2 by 1, horizontal sep=1.7cm},
+  report,
+  width=7.6cm, height=5.6cm,
+  xtick={1,2,3}, xmin=0.75, xmax=3.25,
+  xlabel={Replicas of \code{crawler} and \code{indexer}},
+  ymin=0,
+]
+\nextgroupplot[ylabel={Books per second}, ymax=70, title={Pipeline throughput}, legend to name=modeslegend, legend columns=5, legend style={/tikz/every even column/.append style={column sep=0.35cm}}]
+\addplot[color=modehazelcast, mark=*, modeline] table[x expr=\thisrow{replicas}-0.08, y=hz, y error=hzci] {\modesthroughput};
+\addlegendentry{\mode{hazelcast}}
+\addplot[color=modeactivemq, mark=square*, modeline] table[x expr=\thisrow{replicas}-0.04, y=amq, y error=amqci] {\modesthroughput};
+\addlegendentry{\mode{activemq}}
+\addplot[color=modepersistent, mark=diamond*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}, y=amqp, y error=amqpci] {\modesthroughput};
+\addlegendentry{\mode{activemq-persistent}}
+\addplot[color=modepolling, mark=triangle*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}+0.04, y=poll, y error=pollci] {\modesthroughput};
+\addlegendentry{\mode{polling}}
+\addplot[color=modeorchestrator, mark=pentagon*, modeline, mark size=2.8pt] table[x expr=\thisrow{replicas}+0.08, y=orch, y error=orchci] {\modesthroughput};
+\addlegendentry{\mode{orchestrator}}
+\node[font=\scriptsize, color=inkprimary, anchor=north east] at (axis cs:3.2,33) {\mode{orchestrator}: 34.6};
+\nextgroupplot[ylabel={Mean time to publication (s)}, ymax=62, title={Time from enqueue to publication}]
+\addplot[color=modehazelcast, mark=*, modeline] table[x expr=\thisrow{replicas}-0.08, y=hz, y error=hzci] {\modespublication};
+\addplot[color=modeactivemq, mark=square*, modeline] table[x expr=\thisrow{replicas}-0.04, y=amq, y error=amqci] {\modespublication};
+\addplot[color=modepersistent, mark=diamond*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}, y=amqp, y error=amqpci] {\modespublication};
+\addplot[color=modepolling, mark=triangle*, modeline, mark size=3pt] table[x expr=\thisrow{replicas}+0.04, y=poll, y error=pollci] {\modespublication};
+\addplot[color=modeorchestrator, mark=pentagon*, modeline, mark size=2.8pt] table[x expr=\thisrow{replicas}+0.08, y=orch, y error=orchci] {\modespublication};
+\end{groupplot}
+\node at ($(group c1r1.south)!0.5!(group c2r1.south)+(0,-1.25cm)$) {\pgfplotslegendfromname{modeslegend}};
+\end{tikzpicture}
+\caption{The same pipeline in each coordination mode: books published per second over the whole corpus, and mean time
+from a book's enqueue to the publication of its batch. Mean and 95\,\% confidence interval of 5 repetitions; the modes
+are shifted slightly along the x axis so their intervals do not overlap.
+\run{20261106-012054-coordination-variants-c1376c7}.}
+\label{fig:modes}
+\end{figure}
+
+The script stated one hypothesis per mode before measuring. The common hypothesis, that the work per book is the same
+in every mode, holds for indexing but not for downloads. In \mode{activemq-persistent} and \mode{orchestrator} a
+download takes 8--15\,ms at p50 with 2 and 3 replicas, against 21--45\,ms elsewhere, because books reach the crawlers
+more slowly than the crawlers take them, so fewer downloads overlap. That changes milliseconds against a time to
+publication of tens of seconds.
+
+\begin{itemize}
+\item \textbf{\mode{activemq}} has the throughput and time to publication of \mode{hazelcast} at every N, within
+  their intervals, as expected, with 1.5 times its coordinator CPU.
+\item \textbf{\mode{activemq-persistent}} has the throughput of \mode{activemq} at every N, as expected, with 1.3--1.4
+  times its broker CPU.
+\item \textbf{\mode{polling}} has the throughput of \mode{hazelcast} at every N and 10--12\,\% more MongoDB CPU, from
+  the sorted claims and the idle polls. Visibility at p50 is 2.3--2.7\,s, about half the 5\,s refresh period. All three
+  matched the hypotheses.
+\item \textbf{\mode{orchestrator}} keeps the throughput with 1 and 2 replicas and loses 41\,\% with 3, which its
+  hypothesis allowed, because one thread sends one \code{POST} at a time. Its mean time to publication is 4.3--6.3\,s
+  above \mode{hazelcast} (Figure~\ref{fig:modes}), and its median 4.7--5.5\,s (Table~\ref{tab:decision}), not the two
+  ticks expected: books wait in MongoDB until \code{control} dispatches them, 4.2--5.6\,s on average against
+  0.7--1.4\,s in \code{books-to-download}. Its visibility is 168--211\,ms at p50, under the expected 300\,ms.
+\item \textbf{Coordination is cheap in every mode.} The broker or \code{control} uses at most 17\,\% of one core,
+  against MongoDB's 80--247\,\%.
+\end{itemize}
+
+\textbf{Publication visibility.} The time from a batch's publication to the moment a \code{query} replica holds it
+in its snapshot depends on how \code{query} learns of the batch (Table~\ref{tab:visibility}). With the topic listener
+a batch is searchable in about 40\,ms, under the expected 100\,ms. Without it, delays spread between 0 and the 5\,s
+period, with a median of 2.7\,s. The listener costs no CPU that the run can see: each \code{query} replica uses about
+3\,\% of a core either way.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Publication visibility with 2 \code{query} replicas, one value per batch and replica.
+\run{20261106-002208-publication-visibility-c1376c7}.}
+\label{tab:visibility}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\code{published-batches} listener & Mean (ms) & p50 (ms) & p95 (ms) & p99 (ms) \\
+\midrule
+On & 43.6 $\pm$ 7.3 & 37 & 54 & 145 \\
+Off & 2{,}605 $\pm$ 251 & 2{,}672 & 4{,}880 & 4{,}965 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Broker latency in isolation.} \code{broker-latency} sends 30{,}000 messages per trial through each broker, with
+1, 3 and 8 consumers (Figure~\ref{fig:broker}). Every p50 is between 0.1 and 0.2\,ms: 102--105\,\textmu s for Hazelcast,
+137--139\,\textmu s for ActiveMQ and 180--185\,\textmu s for persistent ActiveMQ. Persistence costs 1.3 times the latency,
+not the 3 times expected, but it caps the throughput at about 1{,}460 messages/s whatever the consumers, because each
+send waits for its disk write~\cite{activemq}. Non-persistent ActiveMQ scales with consumers, $\times$2.8 from 1 to 8, while Hazelcast
+stays at about 8{,}700 messages/s. A message is never what a book waits for: the slowest p50, 185\,\textmu s, is about
+7{,}700 times shorter than the median wait in \code{books-to-download} with one replica.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  report,
+  width=12cm, height=5.2cm,
+  ybar, bar width=0.42cm,
+  symbolic x coords={1,3,8}, xtick=data,
+  enlarge x limits=0.22,
+  xlabel={Consumers},
+  ylabel={Messages per second},
+  ymin=0, ymax=32000,
+  scaled y ticks=false,
+  yticklabel style={/pgf/number format/fixed, /pgf/number format/1000 sep={{,}}},
+  legend style={at={(0.02,0.97)}, anchor=north west},
+  error bars/y dir=both, error bars/y explicit,
+  every axis plot/.append style={draw=none, error bars/error bar style={draw=inkprimary, line width=0.6pt}},
+]
+\addplot[fill=modehazelcast] table[x=consumers, y=hz, y error=hzci] {\brokerresults};
+\addlegendentry{Hazelcast}
+\addplot[fill=modeactivemq] table[x=consumers, y=amq, y error=amqci] {\brokerresults};
+\addlegendentry{ActiveMQ, non-persistent}
+\addplot[fill=modepersistent] table[x=consumers, y=amqp, y error=amqpci] {\brokerresults};
+\addlegendentry{ActiveMQ, persistent}
+\end{axis}
+\end{tikzpicture}
+\caption{Throughput of each broker in isolation, mean and 95\,\% confidence interval of 5 repetitions of 30{,}000
+messages: Hazelcast 8{,}513--8{,}872 messages/s, non-persistent ActiveMQ 9{,}350, 18{,}338 and 25{,}904, persistent
+ActiveMQ 1{,}454--1{,}475. \run{20261106-123534-broker-latency-b4667d8}.}
+\label{fig:broker}
+\end{figure}
+
+\subsection{Recovery}
+
+Each of the 165 recovery runs causes one failure of the matrix (Appendix~\ref{app:failures}) and measures the time
+until every book is \code{PUBLISHED}, found exactly once by \code{/search} and in a single published batch
+(Table~\ref{tab:recovery}). The runs use the short leases of \code{scripts/recovery/recovery.env} (6\,s) and run once
+per row, mode and replica count, so they have no confidence interval. \code{recovery-compare} checks that the runs of a
+row give the same books and search answers whatever the replicas and mode, and it passed for all 14 rows.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Seconds from the failure to correct answers. Rows 09--12 seed the whole mirror, so their time includes
+processing the 2{,}800 books; the others seed the 20 sample books. Runs \code{2026110[56]-...-recovery-<nn>[-<mode>]-r<N>-c1376c7},
+summarized by \run{20261106-073908-recovery-summary-c1376c7}.}
+\label{tab:recovery}
+\begin{tabularx}{\textwidth}{@{}lYrL{3.5cm}L{3.9cm}@{}}
+\toprule
+Rows & Failure & Corpus & \mode{hazelcast}, N = 1/2/3 & Other modes \\
+\midrule
+01--04 & \code{crawler} crash points & sample & 8.6--18.8 & 7.2--22.8 \\
+05--08 & \code{indexer} crash points & sample & 6.3--17.7 & 6.6--16.9 \\
+09 & \code{crawler} paused longer than its lease & mirror & 373 / 276 / 225 & 363--373, N = 1 \\
+10 & \code{indexer} paused longer than its lease & mirror & 382 / 278 / 241 & 368--441, N = 1 \\
+11 & \code{control} killed while seeding & mirror & 367 / 255 / 253 & 365--373, N = 1 \\
+12 & Broker restarted & mirror & 374 / 261 / 235 & 372 and 384, ActiveMQ modes, N = 1 \\
+13 & MongoDB stopped for 10\,s & sample & 16.6 / 15.9 / 14.8 & 14.7--22.6 \\
+14 & A \code{query} replica killed & sample & -- / 0.9 / 0.7 & 0.2--1.2 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Every row recovers in every mode where it applies, with the same answers. The crash points of \code{crawler} and
+\code{indexer} recover within 23\,s with the 20 sample books. Rows 09--12 take 225--441\,s, mostly ingesting and
+indexing the corpus, and that time falls with N as indexing gets faster. Killing one of two or three \code{query}
+replicas costs at most 1.2\,s of search answers, because nginx sends the requests to the others.
+
+\textbf{How lost work comes back.} \code{recovery-delay} reads the 29 runs of rows 04, 05 and 12, where a crash or a
+broker restart loses work after its message was taken, and measures for each book the time from the failure to its
+requeue and to its next claim (Table~\ref{tab:delay}). In \mode{hazelcast} and \mode{activemq}, \code{control} requeues
+the books of rows 04 and 05 11.7--11.8\,s after the failure at the median, and every one of them within
+10.8--11.8\,s, as expected. \mode{activemq-persistent} requeues nothing: the broker redelivers, and books are claimed
+again in 3.8--6.0\,s at the median. The orchestrator dispatches again 9.7\,s after the failure at the median, and every
+book within 9.5--10.1\,s, because its 10\,s count from the book's last dispatch, which comes before the crash.
+
+\textbf{Row 12 loses two kinds of messages.} Download messages come back like those of rows 04 and 05: the median
+requeue of each run is 11.7--12.7\,s after the restart, whatever N. Index messages wait a median of 207, 97 and 82\,s
+in the runs with 1, 2 and 3 replicas, because \code{control} only requeues into an empty queue (\spec{5.3}, step~4).
+After the restart the crawlers keep enqueuing the books they download, so \code{books-to-index} only empties once the
+indexers, with the batches of 5 of the recovery tests, have taken every one of them. The transition lines of the
+three runs show it: the requeue comes in the first reconciliation after the indexers take the last message of the
+queue. The wait therefore follows indexing, and the more indexers the shorter it is. In \mode{activemq-persistent}
+neither kind is lost, and books are claimed again 6.0 and 11.7\,s after the restart at the median.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Median seconds from the failure to a book's requeue (or new dispatch) and to its next claim, over the books
+of every run of the row, with the mean of the two middle values when their number is even; row 12 apart for the books
+that were waiting for a download and for an index. \run{20261106-073911-recovery-delay-c1376c7}.}
+\label{tab:delay}
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{2}{c}{Rows 04 / 05} & \multicolumn{2}{c}{Row 12, download / index messages} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Mode & Requeue & Claim & Requeue & Claim \\
+\midrule
+\mode{hazelcast} & 11.8 / 11.7 & 11.5 / 5.6 & 11.9 / 96.8 & 9.3 / 134.3 \\
+\mode{activemq} & 11.8 / 11.7 & 10.8 / 8.5 & 11.7 / -- & 13.5 / -- \\
+\mode{activemq-persistent} & none & 3.8 / 5.0 & none & 6.0 / 11.7 \\
+\mode{orchestrator} & 9.7 / 9.7 & 5.0 / 9.8 & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Bottlenecks and the limits of this evidence}
+\label{sec:limits}
+
+\begin{enumerate}
+\item \textbf{Indexing limits the pipeline.} One indexer publishes 28.5 books/s, while one crawler downloads about 500.
+  Books therefore wait 20--47\,s in \code{books-to-index}, and an indexer spends its time writing postings to the one
+  MongoDB.
+\item \textbf{Ingestion stops at 500--670 books/s} with 8 or more workers, whatever the replicas, with at most 53\,\% of
+  the host's CPU in use. The download workers wait on the file I/O they share, the mirror and the datalake volume; the
+  queue and MongoDB take under 3\,ms per book.
+\item \textbf{Search saturates one \code{query} replica at about 4{,}400 requests/s.} A second replica adds 29\,\%,
+  and a third adds nothing.
+\item \textbf{Coordination is not a bottleneck in any mode.} A message takes 0.1--0.2\,ms, and the broker or
+  \code{control} uses less than 17\,\% of a core. The mode changes how soon a book is searchable, at the median:
+  38--48\,ms with a listener, 168--211\,ms with the orchestrator, and 2.3--2.7\,s with polling
+  (Table~\ref{tab:decision}).
+\end{enumerate}
+
+These results describe one host. Every replica shares its CPUs, its disk, and the one MongoDB and broker, so a speedup
+here shows how the design uses one machine, not how it will scale across several. The evidence has other limits too:
+\begin{itemize}
+\item \code{search-latency} and the indexer's JMH come from 3 and 4 November, reused because their code did not change.
+\item After the campaign, \code{dev} changed one class of \code{control} (\code{65095a7}): the orchestrator now asks
+  \code{query} to refresh once per tick with new batches, not once per batch. Only the visibility of mode
+  \mode{orchestrator} can differ from what was measured at \code{c1376c7}.
+\item A code review after the campaign fixed eleven defects (\code{SPEC.md} 1.11). One touches a measured path: in both
+  \mode{activemq} modes, every queue size \code{control} read, two per reconciliation and two per
+  \code{GET /control/status}, which \code{bench wait} asks every second, left a temporary queue in the broker until the
+  trial ended. Their coordinator CPU includes that extra work, which was not measured on its own, so it is an upper
+  bound.
+\item The campaign left an idle ActiveMQ container running during the recovery runs of \mode{polling} and
+  \mode{orchestrator}. No service of those modes connects to it, and the scripts bring every mode down since
+  \code{b4667d8}.
+\item Docker Desktop on Windows adds a VM: the host uses 1.2--1.9 times the CPU of the containers. \code{docker stats}
+  reports a container's whole memory, not the JVM heap.
+\item An ingestion phase lasts about 5\,s, about 10 \code{docker stats} samples per repetition, so its CPU means are
+  coarse. Recovery runs have one sample per row, mode and replica count, and in the four alternative modes rows 09--12
+  only ran with one replica.
+\end{itemize}
+\section{Conclusions and Future Improvements}
+\label{sec:conclusions}
+
+\subsection{What the measurements say}
+
+\textbf{Strengths.} The design is correct under every failure we could cause. All 165 recovery runs recover with the
+same answers whatever the mode and the replica count, and no book ever appeared twice. Coordination costs little: a
+message takes 0.1--0.2\,ms, and the broker uses at most 17\,\% of one core. Indexer and \code{query} replicas raise
+throughput on one host, $\times$2.10 with three indexers and +29\,\% with a second \code{query}. A book becomes
+searchable about 40\,ms after its batch is published. The contracts held: the API checks pass in every mode and
+with one or three \code{query} replicas, and every figure traces to a run.
+
+\textbf{Weaknesses.} Indexing is the bottleneck: one indexer publishes 28.5 books/s against about 500 downloaded, and
+its time goes into MongoDB writes. Crawler replicas add nothing beyond 500--670 books/s, because their workers wait on
+the file I/O they all share, not on the queue or MongoDB. \code{control} is a single process that every mode needs,
+since it alone releases leases and drives rebuilds. When the broker loses messages, \code{control} brings them back
+after \code{TARANTINO_REQUEUE_SECONDS}, slower than the redelivery of a persistent broker, and only into an empty queue:
+after a Hazelcast restart, lost index messages waited 82--207\,s for \code{books-to-index} to empty.
+
+\subsection{From one host to the Stage~3 cluster}
+\label{sec:stage3}
+
+The conditional writes already work across machines. Claims, leases and expirations compare with MongoDB's clock,
+never a host's, and no process holds a lock that another needs. What Stage~3 has to replace is everything named after
+the host (Table~\ref{tab:stage3}): Compose service names and nginx's resolver \code{127.0.0.11}, the local
+\code{datalake} volume, the single Hazelcast member and MongoDB server, and, in mode \mode{orchestrator}, the JVM's DNS
+cache through which \code{control} finds the \code{query} replicas.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Each measured limit, the single-host assumption behind it, and the change Stage~3 makes.}
+\label{tab:stage3}
+\begin{tabularx}{\textwidth}{@{}L{4.0cm}L{4.1cm}Y@{}}
+\toprule
+Measured limit & Single-host cause & Stage~3 change \\
+\midrule
+Indexing: 28.5 books/s per indexer, $\times$2.10 with 3, with MongoDB's CPU growing faster than the indexers' & Every indexer writes postings to one MongoDB server & Postings sharded by \code{term} across a sharded MongoDB, so indexers on several nodes write to different shards; the batch, its lease and its publication stay single-document writes \\
+Ingestion: 500--670 books/s whatever the replicas, with the CPU far from full & Every crawler reads the one mirror and writes the one datalake volume of the host & Crawlers on several nodes, each with its own disk: the datalake split by \code{book_id} across the nodes, with each book's node in \code{book_states}, so file I/O grows with the nodes \\
+Search: one \code{query} replica saturates at about 4{,}400 requests/s, and a third adds nothing to two & Replicas share nginx, the one MongoDB and the host's CPUs with the load generator & \code{query} replicas on several nodes behind a load balancer, reading a MongoDB replica set; the snapshot already lets each replica answer on its own \\
+Recovery: lost messages wait for \code{control}'s requeue & \code{control} is one process, acceptable on one host & \code{control} on several nodes with one leader, elected through a lease document in MongoDB; lost work acknowledged after the job (below) \\
+Mode \mode{orchestrator}: 41\,\% less throughput with 3 replicas & One thread dispatches every book, one \code{POST} at a time & Not carried to Stage~3 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Communication and storage across machines.} Services keep talking only through the broker and MongoDB, so
+moving them to other nodes changes addresses, not code. Hazelcast becomes a cluster of three members, where each queue
+item has a synchronous backup on another member, so one member can fail without losing queued work. MongoDB becomes a
+replica set, with majority writes for every conditional write, so a failover never loses a claim. The datalake moves to
+storage that every node mounts.
+
+\textbf{Distribution of tasks and requests.} Crawlers and indexers keep competing for queues, which needs no
+coordination between them. Partitioning \code{books-to-download} and \code{books-to-index} by \code{book_id} spreads
+them over the members, so no member holds every message. Search requests are spread by a load balancer, as nginx does
+now.
+
+\textbf{Consistency and unavailable nodes.} Publication stays one conditional write, and \code{query} keeps reading a
+snapshot of published batches, so a reader never sees a half-built index on any node. A node that disappears leaves
+leases that expire, and \code{control} releases them exactly as it does after a crash today: rows 01 to 10 of the
+failure matrix already exercise that path. A network partition cannot create two owners of a book, because ownership
+is a MongoDB document, not a broker message.
+
+\subsection{The winning mode in Stage~3}
+
+\mode{hazelcast} wins under the decision rule fixed before the campaign (Section~\ref{sec:winner}), so Stage~3 keeps it
+and does not migrate to another broker. The runner-up, \mode{activemq-persistent}, showed the one property worth
+taking: lost work comes back without \code{control}, in 3.8--6.0\,s instead of about 12\,s, because the message is
+acknowledged only after the job. Stage~3 adds that property to the Hazelcast design and measures it with the same
+rows and the same \code{recovery-delay} experiment:
+\begin{enumerate}
+\item Take each book inside a Hazelcast transaction that commits after the claim and the job, so a consumer that dies
+  returns its message to the queue. Hazelcast's transactional queue offers that rollback~\cite{hazelcast}, and the claim in MongoDB
+  still drops any duplicate it produces.
+\item Requeue lost messages without waiting for their queue to empty, for example as soon as a queue holds fewer
+  messages than the books that wait for it, and measure row 12 again.
+\item Elect the \code{control} leader through a lease in MongoDB, so reconciliation survives the loss of a node.
+\item Repeat \code{coordination-variants} for \mode{hazelcast} and \mode{activemq-persistent} on the cluster. If the
+  transactional queue does not close the gap in rows 04, 05 and 12, persistent ActiveMQ replaces Hazelcast as the
+  broker. The rest of the code stays the same, because both already sit behind the same ports.
+\end{enumerate}
+
+A smaller improvement follows from this report: batches of 250 books once the indexer has a larger heap, which gave
+17\,\% more throughput. The rebuild race of Section~\ref{sec:indexer} is already closed in \code{SPEC.md} 1.11.
+
+\subsection{Lessons}
+
+\begin{itemize}
+\item \textbf{Measure the alternatives.} Arguing against orchestration and polling was easy; measuring them showed
+  where each one actually loses, by how much, and what the runner-up does better.
+\item \textbf{Keep the truth in one place.} Treating every message as a hint and every transition as one conditional
+  write made 14 different failures recoverable by the same reconciliation.
+\item \textbf{Keep the evidence with the results.} Five interleaved repetitions, hypotheses written before measuring,
+  and a versioned run behind every figure made every number in this report checkable against its raw data, and we
+  checked them all before submitting it.
+\end{itemize}
+\section{Statement on AI Usage}
+\label{sec:ai}
+
+In accordance with the course guidelines, we disclose the use of AI tools during this stage, mainly Claude
+(Anthropic) through Claude Code. AI was used as an assistant to speed up routine work. The architecture, the contracts
+in \code{SPEC.md}, the design of every experiment, the decision rule for the coordination modes and the interpretation
+of the results were decided and reviewed by the team. Specific uses included:
+
+\begin{itemize}
+\item \textbf{Code and tests.} Drafting and reviewing implementation code, tests and scripts against \code{SPEC.md},
+  including parts of the alternative coordination modes. Every change went through a pull request and the five
+  required checks of continuous integration before it reached \code{dev}.
+\item \textbf{Reviews and audits.} Checking the repository against the assignment and the specification, and finding
+  inconsistencies between the documents, the code and the results.
+\item \textbf{Data processing and writing.} Extracting tables from the run files, checking every figure in this report
+  against the raw data, and drafting and formatting the documentation and this report in \LaTeX.
+\end{itemize}
+
+Every piece of AI-assisted code or text was reviewed, tested and integrated by the team member who owns it, to keep
+it consistent with the specification and with academic integrity.
+\begin{thebibliography}{99}
+\addcontentsline{toc}{section}{References}
+
+\bibitem{assignment}
+Big Data, Universidad de Las Palmas de Gran Canaria.
+\newblock \emph{Stage 2: Building a Service-Oriented Architecture}. Search Engine Project, 2026--2027.
+
+\bibitem{stage1}
+Query Tarantino.
+\newblock \emph{Search Engine Project: Stage 1, Building the Data Layer}. Report, 2026.
+
+\bibitem{rfc9457}
+M.~Nottingham, E.~Wilde and S.~Dalal.
+\newblock \emph{Problem Details for HTTP APIs}. RFC 9457, IETF, 2023.
+
+\bibitem{openapi}
+OpenAPI Initiative.
+\newblock \emph{OpenAPI Specification}, version 3.1.0, 2021.
+
+\bibitem{mongodb}
+MongoDB, Inc.
+\newblock \emph{MongoDB 7.0 Manual}: updates with aggregation pipelines, the \code{$$NOW} variable and \code{findOneAndUpdate}.
+\newblock \url{https://www.mongodb.com/docs/v7.0/}.
+
+\bibitem{hazelcast}
+Hazelcast, Inc.
+\newblock \emph{Hazelcast Platform 5.7 Documentation}: queues, topics, backups and transactions.
+\newblock \url{https://docs.hazelcast.com/hazelcast/5.7/}.
+
+\bibitem{activemq}
+The Apache Software Foundation.
+\newblock \emph{Apache ActiveMQ Classic 6 Documentation}: persistence and message acknowledgement.
+\newblock \url{https://activemq.apache.org/components/classic/}.
+
+\bibitem{jmh}
+OpenJDK.
+\newblock \emph{Java Microbenchmark Harness (JMH)}, version 1.37.
+\newblock \url{https://github.com/openjdk/jmh}.
+
+\bibitem{little}
+J.~D.~C. Little.
+\newblock A proof for the queuing formula $L = \lambda W$.
+\newblock \emph{Operations Research}, 9(3):383--387, 1961.
+
+\end{thebibliography}
+
+\appendix
+\clearpage
+\section{Reproducibility}
+\label{app:runs}
+
+Every run lives in \code{benchmarks/runs/<run_id>/} of the repository, and its \code{run_id} ends with the commit it
+ran from. Each run keeps its \code{manifest.json} (commit and clean tree, exact command, host, Docker resources, JVM
+flags, every \code{TARANTINO_*} variable, and replicas and threads per trial), \code{corpus.json}, \code{log.txt} with
+the hypotheses printed before measuring, the logs of every service, the raw data and \code{summary.csv}. Every cited
+run comes from a clean tree on the official machine. The campaign that produced them is
+\run{20261105-215348-campaign-c1376c7} (\code{./scripts/bench/all.sh}); its \code{runs.txt} lists the 187 steps with
+their exit codes. \run{20261106-123526-campaign-b4667d8} (\code{./scripts/bench/all.sh --only broker-latency}) reran the
+one step that failed.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\caption{Source of every table and figure of Section~\ref{sec:benchmarks} and of Table~\ref{tab:decision}.}
+\label{tab:runs}
+\begin{tabularx}{\textwidth}{@{}L{2.2cm}L{5.4cm}L{3.6cm}Y@{}}
+\toprule
+In this report & Run & Command & Raw data \\
+\midrule
+Tables~\ref{tab:ingest} and \ref{tab:ingest-workers}; crawler JMH & \run{20261105-215351-ingest-throughput-c1376c7} & \code{./scripts/bench/ingest-throughput.sh} & \code{ingest.csv}, \code{workers.csv}, \code{stats.csv}, \code{host.csv}, \code{jmh/crawler.csv} \\
+Figure~\ref{fig:index} & \run{20261105-220915-index-throughput-c1376c7} & \code{./scripts/bench/index-throughput.sh --without-jmh} & \code{index.csv}, \code{stats.csv} \\
+Indexer JMH & \run{20261103-204454-index-throughput-6925d4e} & \code{./scripts/bench/index-throughput.sh} & \code{jmh/indexer.json}, \code{jmh/indexer.csv} \\
+Figure~\ref{fig:search}, Table~\ref{tab:search-latency}; query JMH & \run{20261104-140900-search-latency-8e1c1e8} & \code{./scripts/bench/search-latency.sh} & \code{load/<trial>.csv.gz}, \code{jmh/query.csv}, \code{explain/} \\
+Tables~\ref{tab:decision}, \ref{tab:coordination}; Figure~\ref{fig:modes} & \run{20261106-012054-coordination-variants-c1376c7} & \code{./scripts/bench/coordination-variants.sh} & \code{coordination.csv}, \code{visibility.csv}, \code{stats.csv}, \code{variants.csv}, \code{pairs.csv} \\
+Table~\ref{tab:resources} & \run{20261105-235758-resource-usage-c1376c7} & \code{./scripts/bench/resource-usage.sh} & \code{stats.csv}, \code{host.csv} \\
+Table~\ref{tab:visibility} & \run{20261106-002208-publication-visibility-c1376c7} & \code{./scripts/bench/publication-visibility.sh} & \code{visibility.csv}, \code{coordination.csv} \\
+Figure~\ref{fig:broker} & \run{20261106-123534-broker-latency-b4667d8} & \code{./scripts/bench/broker-latency.sh} & \code{broker.csv}, \code{load/} \\
+Table~\ref{tab:recovery} & The 165 runs \code{...-recovery-<nn>[-<mode>]-r<N>-c1376c7}, listed in \code{sources.txt} of \run{20261106-073908-recovery-summary-c1376c7} & \code{TARANTINO_VARIANT=<mode> ./scripts/recovery/<nn>-<row>.sh <N>} & \code{checks.json}, \code{summary.csv} \\
+Table~\ref{tab:delay} & \run{20261106-073911-recovery-delay-c1376c7} & \code{./scripts/bench/recovery-delay.sh <recovery runs>} & \code{recovery-delay.csv} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Each table and chart of this report takes its numbers from the \code{summary.csv}, \code{variants.csv},
+\code{pairs.csv} or \code{workers.csv} of the run named in its caption. The rows they use are written into this
+report's source, \code{QueryTarantino_Stage2_Report.tex}, at the root of the repository. The medians of
+Table~\ref{tab:delay} come from \code{recovery-delay.csv}, over the books of every run of each row, and in row 12 apart
+by their \code{status}. \code{bench ingest-workers} and \code{bench resources} added \code{workers.csv} and the CPU rows
+of the ingestion run after the campaign, from the transition lines and the \code{stats.csv} the run already kept. To
+summarize a run again, delete its \code{summary.csv} and run its \code{bench} commands on the run folder, for example:
+\begin{lstlisting}
+java -jar bench/target/bench-1.0-SNAPSHOT.jar coordination benchmarks/runs/<run_id>
+\end{lstlisting}
+\code{bench charts} redraws the charts of a run. The report itself builds from the root of the repository with:
+\begin{lstlisting}
+tectonic -X compile QueryTarantino_Stage2_Report.tex
+\end{lstlisting}
+\clearpage
+\section{Endpoint Inventory}
+\label{app:endpoints}
+
+Table~\ref{tab:endpoints} lists every HTTP operation of \code{api/openapi.yaml} (\spec{6.1}). Besides the responses
+listed, every endpoint answers \code{500} with Problem Details to an unexpected exception. Every \code{202} carries a
+\code{Location} header to poll, and every \code{503} carries \code{Retry-After: 5}, or \code{1} on the internal routes.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\caption{Every HTTP operation, with its provider, nginx port, consumer and responses.}
+\label{tab:endpoints}
+\begin{tabularx}{\textwidth}{@{}L{1.75cm}L{1.95cm}L{0.95cm}L{4.15cm}L{2.6cm}Y@{}}
+\toprule
+Inventory & Provider & nginx & Method and path & Consumer & Responses \\
+\midrule
+Front-end & \code{query} (7003) & 8080 & \code{GET /search} & Front-end & 200, 400, 503 \\
+Front-end & \code{query} (7003) & 8080 & \code{GET /books/{book_id}} & Front-end & 200, 400, 404, 503 \\
+Front-end & \code{query} (7003) & 8080 & \code{GET /search/filters} & Front-end & 200, 503 \\
+Operational & \code{crawler} (7001) & 8081 & \code{POST /ingest/{book_id}} & Load and admin scripts & 202, 200, 400, 503 \\
+Operational & \code{crawler} (7001) & 8081 & \code{GET /ingest/status/{book_id}} & Whoever got a 202; checks & 200, 400, 404, 503 \\
+Operational & \code{crawler} (7001) & 8081 & \code{GET /ingest/list} & Checks & 200, 503 \\
+Operational & \code{indexer} (7002) & 8081 & \code{POST /index/update/{book_id}} & Admin & 202, 200, 400, 404, 409, 503 \\
+Operational & \code{indexer} (7002) & 8081 & \code{GET /index/status/{book_id}} & Whoever got a 202 & 200, 400, 404, 503 \\
+Operational & \code{indexer} (7002) & 8081 & \code{POST /index/rebuild} & Admin & 202, 503 \\
+Operational & \code{indexer} (7002) & 8081 & \code{GET /index/status} & Admin, benchmarks & 200, 503 \\
+Operational & \code{control} (7004) & 8081 & \code{GET /control/status} & Admin, benchmarks & 200, 503 \\
+Health & Every service & -- & \code{GET /health} & Compose healthchecks & 200, 503 \\
+Internal & \code{crawler} (7001) & 8082 & \code{POST /internal/download} & \code{control}, mode \mode{orchestrator} & 202, 400, 503 \\
+Internal & \code{indexer} (7002) & 8082 & \code{POST /internal/index} & \code{control}, mode \mode{orchestrator} & 202, 400, 503 \\
+Internal & Each \code{query} & -- & \code{POST /internal/snapshot/refresh} & \code{control}, mode \mode{orchestrator} & 202 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[!ht]
+\centering
+\small
+\caption{Answer of each state-changing request, by the book's state (\spec{6.2}). Every response body is the book's
+state: \code{book_id}, \code{status}, \code{attempts}, \code{last_error} and \code{updated_at}.}
+\label{tab:state-answers}
+\begin{tabularx}{\textwidth}{@{}L{5.6cm}Y@{}}
+\toprule
+Request and book state & Response \\
+\midrule
+\code{POST /ingest}, no document & ``Create the state'' and enqueue: \code{202} with \code{QUEUED} \\
+\code{POST /ingest}, \code{FAILED} & ``Retry a \code{FAILED} book'': \code{202} with \code{QUEUED} and \code{attempts} back to 0 \\
+\code{POST /ingest}, \code{QUEUED} or \code{DOWNLOADING} & \code{202} with its state, without enqueuing it again \\
+\code{POST /ingest}, \code{DOWNLOADED}, \code{INDEXING} or \code{PUBLISHED} & \code{200} with its state \\
+\code{POST /index/update}, no document & \code{404 BOOK_NOT_FOUND} \\
+\code{POST /index/update}, \code{QUEUED}, \code{DOWNLOADING} or \code{FAILED} & \code{409 NOT_DOWNLOADED}; a \code{FAILED} book goes forward with \code{POST /ingest} \\
+\code{POST /index/update}, \code{DOWNLOADED} & \code{202} with its state, and a \code{BookTask} to \code{books-to-index}; a duplicate does no harm \\
+\code{POST /index/update}, \code{INDEXING} & \code{202} with its state, without enqueuing \\
+\code{POST /index/update}, \code{PUBLISHED} & \code{200} with its state \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\clearpage
+\section{Failure Matrix}
+\label{app:failures}
+
+Each row of Table~\ref{tab:failures} has its own script, \code{scripts/recovery/<nn>-<row>.sh <N>}. The script brings
+the stack up, causes the failure, restarts what went down, and checks three things: every book ends
+\code{PUBLISHED}, \code{/search} finds it exactly once, and no book is in two published batches of the current
+generation (\spec{8}). A crash point stops the service with \code{Runtime.halt(1)}, without shutdown hooks, the first
+time it reaches the named point.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\caption{What each failure leaves behind, who notices and how the system recovers, in mode \mode{hazelcast}. In the
+other modes, rows 04, 05 and 12 recover by redelivery or a new dispatch, or do not apply (\spec{11.5}).}
+\label{tab:failures}
+\begin{tabularx}{\textwidth}{@{}L{0.65cm}L{2.75cm}L{2.85cm}L{2.2cm}YL{2.65cm}@{}}
+\toprule
+Row & What goes down & What is left & Who notices & How it recovers & How it is caused \\
+\midrule
+01 & \code{crawler} while downloading & A \code{DOWNLOADING} book with a lease & \code{control}, when it expires & Back to \code{QUEUED} and to the queue & \code{after-claim} \\
+02 & \code{crawler} after the datalake write & The book in the datalake, still \code{DOWNLOADING} & \code{control}, when it expires & Back to \code{QUEUED}; the next claim finds it in the datalake & \code{after-datalake-write} \\
+03 & \code{crawler} after \code{DOWNLOADED}, before enqueuing & A \code{DOWNLOADED} book without a message & \code{control}: empty queue, old \code{enqueued_at} & Enqueued again & \code{after-downloaded} \\
+04, 05 & \code{crawler} or \code{indexer} after taking messages & Books without a message: an \code{IQueue} has no acknowledgement & \code{control}: empty queue, old \code{enqueued_at} & Enqueued again & \code{after-dequeue} \\
+06 & \code{indexer} while writing a batch & A \code{WRITING} batch, \code{INDEXING} books, half-written postings & \code{control}, when the batch expires & \code{ABANDONED}; books back to the queue; postings deleted later & \code{during-batch-write} \\
+07 & \code{indexer} after publishing, before marking & A \code{PUBLISHED} batch with \code{INDEXING} books & \code{control} & Completes the publication & \code{after-publish} \\
+08 & \code{indexer} after marking, before notifying & A published batch without \code{BatchPublished} & \code{query}, on its refresh & Seen within 5\,s & \code{after-mark} \\
+09 & \code{crawler} stopped longer than its lease & A zombie worker that may still write & \code{control}, when the lease expires & Requeued; the zombie's writes fail on \code{claim_id}, and its rename only replaces a complete copy & \code{docker pause} for 10\,s \\
+10 & \code{indexer} stopped longer than its lease & A zombie indexer that keeps writing & Its own renewal fails & It stops writing; its publication fails, and \code{control} deletes its postings, also late ones & \code{docker pause} for 10\,s \\
+11 & \code{control} & At most books in a new state without their message & Its reconciliation, once back & Reconciles from MongoDB and requeues & \code{docker kill} while seeding \\
+12 & Hazelcast & Empty queues & \code{control}: empty queue, old \code{enqueued_at} & Requeues every waiting book & \code{docker restart} \\
+13 & MongoDB & No half-done transition: each one is a single write & Healthchecks; services answer \code{503} & Everything continues from the last state & \code{docker stop}, 10\,s \\
+14 & One \code{query} replica & Nothing: it does not write & nginx & The other replicas serve; it rebuilds its snapshot at startup & \code{docker kill} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\clearpage
+\section{Configuration}
+\label{app:config}
+
+Every service reads its configuration from environment variables through \code{TarantinoConfig}, which validates
+them at startup and stops the service naming any invalid one (\spec{4.7}). Table~\ref{tab:variables} lists the
+variables that set ports, addresses, data paths, replicas, threads and timing. Compose passes the same timing values to
+every service, and \code{scripts/recovery/recovery.env} shortens them for the recovery tests while keeping the
+invariants: heartbeat $\leq$ lease / 3, garbage collection and orphan age $\geq$ 10 leases, and requeue $>$ batch
+timeout.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\caption{Main configuration variables, their defaults and the recovery-test values.}
+\label{tab:variables}
+\begin{tabularx}{\textwidth}{@{}L{5.55cm}L{2.75cm}L{1.3cm}Y@{}}
+\toprule
+Variable & Default & Recovery & Purpose \\
+\midrule
+\code{TARANTINO_PORT} & 7001--7004 & & HTTP port of \code{crawler}, \code{indexer}, \code{query}, \code{control} \\
+\code{TARANTINO_HTTP_THREADS} & Javalin's, 8--250 & & Maximum request threads \\
+\code{TARANTINO_MONGO_URI}, \code{TARANTINO_HAZELCAST} & \code{localhost} & & MongoDB and Hazelcast addresses; Compose points them to its services \\
+\code{TARANTINO_DATALAKE}, \code{TARANTINO_WORKLOAD}, \code{TARANTINO_MIRROR} & \code{datalake}, \code{workload}, none & & Datalake root, workload folder and local Gutenberg mirror \\
+\code{TARANTINO_CANDIDATES} & \code{sample_ids.txt} & & Books that \code{control} seeds, or \code{mirror} \\
+\code{TARANTINO_PARALLEL_DOWNLOADS} & 8 & & Download workers per \code{crawler} replica \\
+\code{TARANTINO_MAX_ATTEMPTS} & 3 & & Downloads of a book before \code{FAILED} \\
+\code{TARANTINO_INDEX_BATCH} & 100 & 5 & Books per batch \\
+\code{TARANTINO_BATCH_TIMEOUT_SECONDS} & 30 & 5 & Longest wait to close a batch \\
+\code{TARANTINO_LEASE_SECONDS} & 60 & 6 & Duration of a book or batch lease \\
+\code{TARANTINO_HEARTBEAT_SECONDS} & 20 & 2 & How often a lease is renewed \\
+\code{TARANTINO_RECONCILE_SECONDS} & 30 & 3 & How often \code{control} reconciles \\
+\code{TARANTINO_REQUEUE_SECONDS} & 120 & 10 & Age after which a lost message is requeued \\
+\code{TARANTINO_GC_SECONDS} & 600 & 60 & Wait before deleting abandoned postings and old generations \\
+\code{TARANTINO_SNAPSHOT_SECONDS} & 5 & 2 & Periodic refresh of the \code{query} snapshot \\
+\code{TARANTINO_CORS_ORIGIN} & \code{*} & & Origin that \code{query} allows \\
+\code{TARANTINO_COORDINATION} & \code{hazelcast} & & Coordination mode \\
+\code{TARANTINO_SNAPSHOT_ON_PUBLISH} & \code{true} & & Topic listener in \code{query} \\
+\code{TARANTINO_ACTIVEMQ_PERSISTENT} & \code{false} & & Persistent delivery and acknowledgement after the job \\
+\code{TARANTINO_POLL_MILLIS} & 200 & & Sleep after an empty poll, mode \mode{polling} \\
+\code{TARANTINO_ORCHESTRATOR_TICK_MILLIS} & 200 & & Pause between ticks, mode \mode{orchestrator} \\
+\code{JAVA_TOOL_OPTIONS} & \code{-Xmx512m}, exit when out of memory & & Fixed heap; a JVM out of memory exits instead of losing a thread \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}

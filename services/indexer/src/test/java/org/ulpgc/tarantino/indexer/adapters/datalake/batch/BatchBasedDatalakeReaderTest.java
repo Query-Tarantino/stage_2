@@ -35,4 +35,12 @@ class BatchBasedDatalakeReaderTest {
         assertTrue(new BatchBasedDatalakeReader(root).bookText(7).isEmpty());
         assertTrue(new BatchBasedDatalakeReader(root.resolve("missing")).bookText(7).isEmpty());
     }
+
+    @Test
+    void ignoresBooksWithoutHeader() throws IOException {
+        Files.createDirectories(root.resolve("0"));
+        Files.writeString(root.resolve("0/7.body.txt"), "body");
+
+        assertTrue(new BatchBasedDatalakeReader(root).bookText(7).isEmpty());
+    }
 }
