@@ -26,6 +26,14 @@ class LocalMirrorDownloaderTest {
     }
 
     @Test
+    void replacesBytesThatAreNotUtf8AsTheHttpDownloadDoes() throws IOException {
+        Files.createDirectories(mirror.resolve("84"));
+        Files.write(mirror.resolve("84/pg84.txt"), new byte[]{'F', 'r', (byte) 0xE9, 'e'});
+
+        assertEquals("Fr�e", new LocalMirrorDownloader(mirror).rawText(84));
+    }
+
+    @Test
     void reportsABookMissingFromTheMirrorAsNotFound() {
         DownloadException failure = assertThrows(DownloadException.class, () -> new LocalMirrorDownloader(mirror).rawText(84));
 

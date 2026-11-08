@@ -8,7 +8,6 @@ import org.ulpgc.tarantino.common.http.InternalTasks;
 import org.ulpgc.tarantino.common.messaging.BookTasks;
 import org.ulpgc.tarantino.common.messaging.Broker;
 import org.ulpgc.tarantino.common.messaging.MessagingContracts;
-import org.ulpgc.tarantino.common.model.BookTask;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.operations.CrashPoints;
 import org.ulpgc.tarantino.common.operations.Lease;
@@ -95,14 +94,9 @@ public final class CrawlerFactory {
 
     /** Without a broker nothing is enqueued: a {@code QUEUED} book is polled or dispatched (SPEC §11.3 and §11.4). */
     private static TaskQueue downloadQueueOnEachUse(Connections connections) {
-        return connections.broker().<TaskQueue>map(broker -> task -> offerOnOwnHandle(broker, task)).orElse(task -> {
-        });
-    }
-
-    private static void offerOnOwnHandle(Broker broker, BookTask task) {
-        try (BookTasks downloads = broker.queue(MessagingContracts.BOOKS_TO_DOWNLOAD)) {
-            downloads.offer(task);
-        }
+        return connections.broker().<TaskQueue>map(broker -> task -> broker.offer(MessagingContracts.BOOKS_TO_DOWNLOAD, task))
+                .orElse(task -> {
+                });
     }
 
     public static IngestBookCommand ingestCommand(TarantinoConfig config) {

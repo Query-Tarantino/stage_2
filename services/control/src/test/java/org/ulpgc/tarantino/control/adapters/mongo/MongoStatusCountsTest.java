@@ -5,14 +5,13 @@ import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.ulpgc.tarantino.common.http.ProblemException;
 import org.ulpgc.tarantino.common.model.BookStatus;
-import org.ulpgc.tarantino.common.model.ProblemCode;
 import org.ulpgc.tarantino.common.mongo.BookStates;
 import org.ulpgc.tarantino.common.mongo.IndexState;
 import org.ulpgc.tarantino.common.mongo.MongoCollections;
 import org.ulpgc.tarantino.common.mongo.MongoDatabases;
 import org.ulpgc.tarantino.common.mongo.MongoFields;
+import org.ulpgc.tarantino.common.mongo.NoGenerationPointerException;
 import org.ulpgc.tarantino.common.mongo.TemporaryMongoDatabase;
 
 import java.util.List;
@@ -44,10 +43,8 @@ class MongoStatusCountsTest {
     }
 
     @Test
-    void answersUnavailableUntilThePointerExists() {
-        ProblemException unavailable = assertThrows(ProblemException.class, () -> counts().currentGeneration());
-
-        assertEquals(ProblemCode.DEPENDENCY_UNAVAILABLE, unavailable.code());
+    void hasNoGenerationUntilThePointerExists() {
+        assertThrows(NoGenerationPointerException.class, () -> counts().currentGeneration());
     }
 
     private MongoStatusCounts counts() {

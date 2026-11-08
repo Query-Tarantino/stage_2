@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.ulpgc.tarantino.common.json.TarantinoJson;
 import org.ulpgc.tarantino.common.messaging.BrokerUnavailableException;
 import org.ulpgc.tarantino.common.model.ProblemCode;
+import org.ulpgc.tarantino.common.mongo.NoGenerationPointerException;
 
 import java.time.Duration;
 
@@ -19,7 +20,8 @@ import java.time.Duration;
  * Answers every error as Problem Details (RFC 9457, SPEC §6.6): {@code parameter} only in {@code 400} responses,
  * {@code Retry-After} on every {@code 503}, {@code 500} without {@code code} for anything unexpected and {@code 404} without
  * {@code code} for a path or method the service does not have, as nginx answers an unknown path (SPEC §6.6). Mongo or
- * the broker of the mode not answering is {@code 503} with {@code DEPENDENCY_UNAVAILABLE} (SPEC §4.5 and §11).
+ * the broker of the mode not answering, or a generation pointer that does not exist yet, is {@code 503} with
+ * {@code DEPENDENCY_UNAVAILABLE} (SPEC §4.5 and §11).
  */
 public final class ProblemDetails {
 
@@ -40,6 +42,7 @@ public final class ProblemDetails {
         app.exception(MongoSocketException.class, (error, context) -> unavailable(context, MONGO_DOWN));
         app.exception(HazelcastClientOfflineException.class, (error, context) -> unavailable(context, HAZELCAST_DOWN));
         app.exception(BrokerUnavailableException.class, (error, context) -> unavailable(context, error.getMessage()));
+        app.exception(NoGenerationPointerException.class, (error, context) -> unavailable(context, error.getMessage()));
         app.exception(Exception.class, (error, context) -> {
             LOGGER.error("Unexpected error answering {} {}", context.method(), context.path(), error);
             answer(context, HttpStatus.INTERNAL_SERVER_ERROR, null, null, null);

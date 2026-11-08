@@ -7,6 +7,7 @@ import org.ulpgc.tarantino.common.config.TarantinoConfig;
 import org.ulpgc.tarantino.common.config.TarantinoService;
 import org.ulpgc.tarantino.common.http.TarantinoServer;
 import org.ulpgc.tarantino.common.model.RebuildStatus;
+import org.ulpgc.tarantino.common.mongo.NoGenerationPointerException;
 import org.ulpgc.tarantino.indexer.model.rebuild.IndexStatus;
 import org.ulpgc.tarantino.indexer.model.rebuild.Rebuild;
 import org.ulpgc.tarantino.indexer.model.rebuild.RebuildProgress;
@@ -60,6 +61,23 @@ class IndexRoutesTest {
         assertEquals("{\"generation\":1,\"books_indexed\":2800,\"batches_published\":28,"
                 + "\"last_update\":\"2026-10-21T10:06:00Z\",\"index_size_mb\":512.4,"
                 + "\"rebuild\":{\"target_generation\":2,\"status\":\"RUNNING\",\"books_pending\":1200}}", response.body());
+    }
+
+    @Test
+    void answersUnavailableUntilTheGenerationPointerExists() throws IOException, InterruptedException {
+        start(new IndexRoutes(() -> {
+            throw new NoGenerationPointerException();
+        }, () -> {
+            throw new NoGenerationPointerException();
+        }));
+
+        HttpResponse<String> rebuild = post("/index/rebuild");
+        HttpResponse<String> status = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + app.port()
+                + "/index/status")).build(), HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(503, rebuild.statusCode());
+        assertEquals(503, status.statusCode());
+        assertEquals("5", status.headers().firstValue("Retry-After").orElseThrow());
     }
 
     private void start(IndexRoutes routes) throws IOException {

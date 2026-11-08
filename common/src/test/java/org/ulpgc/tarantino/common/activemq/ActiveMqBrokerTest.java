@@ -2,6 +2,7 @@ package org.ulpgc.tarantino.common.activemq;
 
 import org.apache.activemq.broker.BrokerPlugin;
 import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.broker.region.RegionBroker;
 import org.apache.activemq.plugin.StatisticsBrokerPlugin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,18 @@ class ActiveMqBrokerTest {
         }
 
         assertEquals(450, broker.size(MessagingContracts.BOOKS_TO_INDEX));
+    }
+
+    @Test
+    void leavesNoTemporaryQueueBehindAfterReadingSizes() throws Exception {
+        int port = freePort();
+        server = startServer(port);
+        broker = ActiveMqBroker.connect("failover:(tcp://localhost:" + port + ")?timeout=1000", false, 100);
+        awaitConnected();
+
+        IntStream.range(0, 5).forEach(read -> broker.size(MessagingContracts.BOOKS_TO_DOWNLOAD));
+
+        assertEquals(0, ((RegionBroker) server.getRegionBroker()).getTempQueueRegion().getDestinationMap().size());
     }
 
     static BrokerService startServer(int port) throws Exception {

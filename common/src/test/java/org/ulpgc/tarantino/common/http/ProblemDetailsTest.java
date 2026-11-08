@@ -7,6 +7,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.ulpgc.tarantino.common.model.ProblemCode;
+import org.ulpgc.tarantino.common.mongo.NoGenerationPointerException;
 
 import java.io.IOException;
 import java.net.http.HttpResponse;
@@ -84,6 +85,16 @@ class ProblemDetailsTest {
     }
 
     @Test
+    void answersAMissingGenerationPointerAsUnavailable() throws IOException, InterruptedException {
+        HttpResponse<String> response = server.get("/no-pointer");
+
+        assertEquals(503, response.statusCode());
+        assertEquals(Optional.of("5"), response.headers().firstValue("Retry-After"));
+        assertEquals("{\"type\":\"about:blank\",\"title\":\"Service Unavailable\",\"status\":503,"
+                + "\"code\":\"DEPENDENCY_UNAVAILABLE\",\"detail\":\"The generation pointer does not exist yet\"}", response.body());
+    }
+
+    @Test
     void answersAnythingUnexpectedWithoutCode() throws IOException, InterruptedException {
         HttpResponse<String> response = server.get("/bug");
 
@@ -107,6 +118,9 @@ class ProblemDetailsTest {
         });
         app.get("/mongo", context -> {
             throw new ProblemException(ProblemCode.DEPENDENCY_UNAVAILABLE, "MongoDB does not answer");
+        });
+        app.get("/no-pointer", context -> {
+            throw new NoGenerationPointerException();
         });
         app.get("/bug", context -> {
             throw new IllegalStateException("a bug");

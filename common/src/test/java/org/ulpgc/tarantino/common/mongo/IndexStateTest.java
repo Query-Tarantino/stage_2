@@ -12,6 +12,7 @@ import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class IndexStateTest {
 
@@ -53,6 +54,13 @@ class IndexStateTest {
         state.createPointer();
 
         assertEquals(1, state.currentGeneration());
+    }
+
+    @Test
+    void hasNoGenerationUntilAServiceCreatesThePointer() {
+        IndexState state = new IndexState(MongoDatabases.database(mongo.uri()));
+
+        assertThrows(NoGenerationPointerException.class, state::currentGeneration);
     }
 
     @Test

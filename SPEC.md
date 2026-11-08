@@ -1,6 +1,6 @@
 # Query Tarantino · Stage 2 · SPEC
 
-Version 1.10 · November 5, 2026
+Version 1.11 · November 7, 2026
 
 Stage 2 contracts. Everything shared by two or more modules has its literal name here and, in code, lives only in `common`. If something is not here, ask before inventing it.
 
@@ -102,7 +102,7 @@ How the design keeps replicas and threads from getting in each other's way:
 
 ```text
 stage_2/
-├── SPEC.md, README.md
+├── SPEC.md, README.md, QueryTarantino_Stage2_Report.tex and its PDF
 ├── pom.xml                  parent: modules and every version
 ├── docker-compose.yml, docker-compose.mirror.yml, Dockerfile, .dockerignore, .gitignore
 ├── docker-compose.activemq.yml, docker-compose.activemq-persistent.yml, docker-compose.polling.yml, docker-compose.orchestrator.yml
@@ -142,16 +142,16 @@ stage_2/
 ### 2.4 Docker Compose
 
 - Services: `mongo`, `hazelcast`, `crawler`, `indexer`, `query`, `control` and `nginx`, plus `bench` under the `tools` profile, which only starts with `docker compose run`. None uses `container_name`, so that `docker compose up -d --scale crawler=3 --scale indexer=3 --scale query=2` works. `control` always has one replica.
-- Only nginx publishes ports on the host: 8080 and 8081. For debugging, use `docker compose exec`.
+- Only nginx publishes ports on the host: 8080, and 8081 only on `127.0.0.1`, because the operational routes have no authentication and anyone on the network could otherwise open rebuilds or ingest arbitrary ids. For debugging, use `docker compose exec`.
 - Pinned image versions, never `latest`: `mongo:7.0`, as in Stage 1; `hazelcast/hazelcast` with `HZ_CLUSTERNAME=tarantino`; `nginx`; and for the four services one shared `Dockerfile` on `eclipse-temurin:25-jre`, which copies the service jar and adds `curl` for the healthcheck, because the image does not ship it.
 - Addresses: `TARANTINO_MONGO_URI=mongodb://mongo:27017/tarantino` and `TARANTINO_HAZELCAST=hazelcast:5701`.
 - Volumes: the `datalake` volume at `/data/datalake` in `crawler`, `indexer` and `control`, with `TARANTINO_DATALAKE=/data/datalake`; `./workload`, read-only, at `/app/workload` in `indexer`, `query` and `control`, with `TARANTINO_WORKLOAD=/app/workload`. When the local mirror is used, `docker-compose.mirror.yml` mounts `benchmarks/mirror/` read-only in `crawler` and `control` and points `TARANTINO_MIRROR` to that path; without it, `crawler` downloads over HTTP.
-- The timing variables (§4.7) are defined once in a shared block and reach every service with the same values. The same block sets `JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xmx512m -XX:+ExitOnOutOfMemoryError}`, so every JVM has a fixed heap, which `manifest.json` records (§9), and a JVM that runs out of memory exits. Without that flag an `OutOfMemoryError` only kills the thread that threw it: an indexer lost its batch loop that way while `/health` kept answering `UP`.
+- The timing variables (§4.7) are defined once in a shared block and reach every service with the same values. The same block sets `JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xmx512m -XX:+ExitOnOutOfMemoryError}`, so every JVM has a fixed heap, which `manifest.json` records (§9), and a JVM that runs out of memory exits. Without that flag an `OutOfMemoryError` only kills the thread that threw it: an indexer lost its batch loop that way while `/health` kept answering `UP`. For the same reason a service exits with code 1 when one of its worker threads or periodic tasks (§2.2) dies with anything the task does not handle itself; `WorkerThreads`, in `common`, starts and wraps them.
 - `crawler` gets `TARANTINO_CRASH_AT: ${CRAWLER_CRASH_AT:-}` and `indexer` gets `TARANTINO_CRASH_AT: ${INDEXER_CRASH_AT:-}`, outside the shared block, because the point must belong to the service that starts (§4.7). A recovery script sets one with `CRAWLER_CRASH_AT=after-claim docker compose up -d --scale crawler=N crawler` and removes it by running the same command without the variable. It always passes `--scale`, or Compose goes back to one replica.
 - `query` gets `TARANTINO_CORS_ORIGIN: ${TARANTINO_CORS_ORIGIN:-*}`.
 - `bench` runs `bench/target/bench-1.0-SNAPSHOT.jar` on `eclipse-temurin:25-jre`, with `./workload` read-only at `/app/workload` and `./benchmarks/runs` at `/app/benchmarks/runs`. It reaches Mongo through `TARANTINO_MONGO_URI` and nginx at `http://nginx:8080` and `http://nginx:8081`. Scripts launch it with `docker compose run --rm bench <command>`.
 - Healthchecks: each service, `curl -fsS http://localhost:<port>/health`; `mongo`, `mongosh --quiet --eval "db.adminCommand('ping')"`.
-- Startup: each service opens its HTTP port first and retries the connection to Mongo and Hazelcast without limit. Until it connects, `/health` answers `503` and it consumes no queues, so startup order does not matter.
+- Startup: each service opens its HTTP port first and retries the connection to Mongo and Hazelcast without limit. Until it connects, `/health` answers `503` and it consumes no queues, so startup order does not matter. If anything else fails while it starts, such as reading `stopwords.txt` or the candidates, it exits with code 1 instead of answering `UP` with no worker behind it.
 - Services do not restart on their own (`restart: "no"`): the recovery tests decide when each one comes back.
 - The other coordination modes (§11) start with an override after `docker-compose.yml` and `docker-compose.mirror.yml`: `docker-compose.activemq.yml`, `docker-compose.activemq-persistent.yml` (always after the first), `docker-compose.polling.yml` and `docker-compose.orchestrator.yml`. Each sets `TARANTINO_COORDINATION` in the four services and `deploy: {replicas: 0}` in `hazelcast`.
 - The `activemq` service runs `apache/activemq-classic` under the `activemq` profile, so it only starts with `COMPOSE_PROFILES=activemq`, in both `activemq` modes. Like `hazelcast`, it publishes no ports and has no healthcheck.
@@ -316,13 +316,13 @@ The rebuild (`index_state.rebuild.status`) only has `RUNNING`, written by `POST 
 | `INVALID_PARAMETER` | 400 | A malformed or out-of-range parameter or id |
 | `BOOK_NOT_FOUND` | 404 | The book is not in `book_states` or, in `query`, not in the snapshot |
 | `NOT_DOWNLOADED` | 409 | `POST /index/update` for a book that is not downloaded |
-| `DEPENDENCY_UNAVAILABLE` | 503 | Mongo or Hazelcast do not answer, `query` has no snapshot yet, `control` has no generation pointer yet or nginx finds no replica (§6.6) |
+| `DEPENDENCY_UNAVAILABLE` | 503 | Mongo or Hazelcast do not answer, `query` has no snapshot yet, the generation pointer does not exist yet or nginx finds no replica (§6.6) |
 
 ### 4.6 Datalake
 
 - Stage 1 `batch` layout: `<TARANTINO_DATALAKE>/<book_id / 1000>/<book_id>.header.txt` and `<book_id>.body.txt`, with integer division. Book 1342 goes in `datalake/1/` and book 84 in `datalake/0/`. The paths come from `DatalakePaths`, in `common`.
 - Each file is written to `<final name>.<uuid>.tmp`, in the same directory, and renamed with `Files.move(tmp, final, ATOMIC_MOVE)`, which on Linux replaces any existing file. For example, `datalake/1/1342.body.txt.3f2b8c1e-9a4d-4c2e-8f1a-6b7d5e9c0a12.tmp`. Header first and body second, as in Stage 1.
-- A book is in the datalake when its final header and body exist; since the body is written last, checking the body is enough. A header without a body does not count and is overwritten on retry.
+- A book is in the datalake when its final header and body exist, and `crawler` and `indexer` check both. Since the body is written last, a header without a body is a download that did not finish: it does not count and is overwritten on retry. A body without its header only happens if something outside the services deletes the header: the indexer fails the book with `NOT_IN_DATALAKE` and `POST /ingest` downloads it again.
 - A `.tmp` only exists while it is being written, because the whole book is downloaded into memory before saving. That is why a `.tmp` whose `mtime` is older than `TARANTINO_TMP_MAX_AGE_SECONDS` is an orphan.
 - Only `control` deletes, every `TARANTINO_CLEANUP_SECONDS`, and only those `.tmp` files. `crawler` never deletes anything, and `indexer` only reads.
 - No datalake path is ever exposed through the API.
@@ -466,7 +466,7 @@ Dates compared across processes use the Mongo server's time (`$$NOW`), never the
 | Release its books | `control` | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `ABANDONED` or without a document | `[{$set: {status: "DOWNLOADED", enqueued_at: "$$NOW", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; then `BookTask` to `books-to-index` | Someone changed it first: nothing |
 | Complete a publication *(common)* | `indexer`, after “Publish a batch”; `control`, in step 3 of §5.3 | `{_id: id, status: "INDEXING", batch_id: B}`, with `B` `PUBLISHED` | `[{$set: {status: "PUBLISHED", published_at: "$$NOW", updated_at: "$$NOW"}}]` | Already done |
 | Reindex into another generation | `control` | `{_id: id, status: "PUBLISHED", generation: {$lt: w}}` | `[{$set: {status: "DOWNLOADED", enqueued_at: "$$NOW", updated_at: "$$NOW"}}, {$unset: "batch_id"}]`, keeping `generation`; then `BookTask` to `books-to-index` | Already reindexed: nothing |
-| Open a rebuild | `POST /index/rebuild` | `{_id: "rebuild", status: {$ne: "RUNNING"}}`, with upsert | `[{$set: {target_generation: g + 1, status: "RUNNING", requested_at: "$$NOW", switched_at: null}}]` | One is already running: the upsert fails with code 11000 and the existing one is returned (§5.4) |
+| Open a rebuild | `POST /index/rebuild` | `{_id: "rebuild", status: {$ne: "RUNNING"}}`, with upsert and `findOneAndUpdate` with `ReturnDocument.AFTER` | `[{$set: {target_generation: {$add: [{$ifNull: ["$target_generation", g]}, 1]}, status: "RUNNING", requested_at: "$$NOW", switched_at: null}}]` | One is already running: the upsert fails with code 11000 and the existing one is returned (§5.4) |
 | Switch generation | `control` | `{_id: "current", generation: t - 1}` | `[{$set: {generation: t, switched_at: "$$NOW"}}]` | Someone already switched it |
 | Finish the rebuild | `control` | `{_id: "rebuild", status: "RUNNING", target_generation: t}` | `[{$set: {status: "DONE", switched_at: "$$NOW"}}]` | Already finished |
 
@@ -496,7 +496,7 @@ Only a `DOWNLOADED` book can be claimed. An `INDEXING` book only goes back to `D
 
 A generation pointer is used, not `renameCollection`: renaming three collections is not atomic, and between one rename and the next `query` would see postings from one generation with batches from another. Switching the pointer is a single write.
 
-1. `POST /index/rebuild` reads `g = current.generation` and applies “Open a rebuild”. If one is already running, the filter `{_id: "rebuild", status: {$ne: "RUNNING"}}` does not match and MongoDB tries to insert another document with the same `_id`, which fails with code 11000 (Duplicate Key). The driver throws a `MongoWriteException` with `updateOne` and a `MongoCommandException` with `findOneAndUpdate`, and both extend `MongoServerException`. The service catches `MongoServerException` and, if `getCode() == 11000`, reads the existing document in `index_state` and answers `202` with its current state instead of failing; with any other code, the exception propagates.
+1. `POST /index/rebuild` reads `g = current.generation` and applies “Open a rebuild”, which targets the generation after the last rebuild's `target_generation`, or after `g` if there never was a rebuild. A rebuild only finishes once the pointer is at its target, so both are `g + 1`; taking the old target inside the same write keeps a switch that lands between the read and the write from opening a rebuild of the generation already served. The answer's `generation` is the new target minus one. If one is already running, the filter `{_id: "rebuild", status: {$ne: "RUNNING"}}` does not match and MongoDB tries to insert another document with the same `_id`, which fails with code 11000 (Duplicate Key). The driver throws a `MongoWriteException` with `updateOne` and a `MongoCommandException` with `findOneAndUpdate`, and both extend `MongoServerException`. The service catches `MongoServerException` and, if `getCode() == 11000`, reads the existing document in `index_state` and answers `202` with its current state instead of failing; with any other code, the exception propagates.
 2. The write generation is `target_generation` while a rebuild is `RUNNING`, and `current.generation` otherwise. Each indexer reads it before opening each batch and ensures that generation's indexes before its first write to it.
 3. On every reconciliation, `control` sends back to `DOWNLOADED`, and enqueues, every `PUBLISHED` book with `generation < target_generation`, including those that an old batch that was already open publishes late.
 4. When no book is left with `generation < target_generation` except the `FAILED` ones, and no book with `generation == target_generation` is in state `DOWNLOADED` or `INDEXING`, `control` switches the pointer with “Switch generation” and marks the rebuild with “Finish the rebuild”. Books without `generation` (never indexed) do not count. The books that block the switch are those matching `{$or: [{generation: {$lt: t}, status: {$ne: "FAILED"}}, {generation: t, status: {$in: ["DOWNLOADED", "INDEXING"]}}]}`; that filter lives in `common` and both `control` and `books_pending` (§6.5) use it.
@@ -640,7 +640,7 @@ nginx's own errors use the same format. An unknown path on 8080 or 8081 gives `4
 
 - Whatever changes state answers `202` and is checked later at its `Location`, or `200` if it was already done. An accepted book has finished when its state is `PUBLISHED`, and has failed when it is `FAILED`, with the reason in `last_error`.
 - Outside a rebuild, a book shows up in `/search` when each `query` replica refreshes after its batch is published: at once on `BatchPublished`, and at most `TARANTINO_SNAPSHOT_SECONDS` later if the message is lost. Its state is not in step with that: it can read `INDEXING` while the book is already searchable, until the indexer marks it or, after a crash, `control` completes the publication (§8), and it can read `PUBLISHED` up to `TARANTINO_SNAPSHOT_SECONDS` before a replica shows it. So a client, and the checks, wait for `PUBLISHED` at the `Location` and then give `/search` up to `TARANTINO_SNAPSHOT_SECONDS`. During a rebuild, new books wait for the switch (§5.4).
-- Handlers never wait for long jobs: they answer in milliseconds. A client can use a 5 s timeout and, on a `503`, retry after `Retry-After`.
+- Handlers never wait for long jobs: they answer in milliseconds. If MongoDB does not answer, its clients give up selecting a server after 2 s and the handler answers `503`, so a client can use a 5 s timeout and, on a `503`, retry after `Retry-After`.
 - Repeating a `POST` duplicates nothing: state lives in Mongo and every transition is conditional.
 - `query` allows CORS from `TARANTINO_CORS_ORIGIN`; nginx adds no headers.
 
@@ -706,7 +706,7 @@ Each row is an F3 test with its script in `scripts/recovery/<nn>-<row>.sh` (Reco
 - `indexer`, after “Open a batch” and before “Claim its books”: as `after-dequeue`, plus an empty batch that `control` abandons with no books to release.
 - `indexer`, after “Claim its books” and before the first postings `bulkWrite`: as `during-batch-write`.
 
-If Mongo or Hazelcast fail halfway through a job outside these tests, the service does the same as after a crash: it drops the job without marking anything, the leases expire and `control` redoes it. A JVM that runs out of memory exits (§2.4), so it also recovers like a crash at that point.
+If Mongo or Hazelcast fail halfway through a job outside these tests, the service does the same as after a crash: it drops the job without marking anything, the leases expire and `control` redoes it. A JVM that runs out of memory exits (§2.4), and so does a service whose worker thread or periodic task dies, so both recover like a crash at that point.
 
 **Recovery scripts.** There are 14, one per row and service: the `after-dequeue` row is split into `crawler` and `indexer`. Scripts 09 to 12 seed `TARANTINO_CANDIDATES=mirror`, so there is work in flight when the failure arrives; the rest seed `sample_ids.txt`.
 
@@ -747,7 +747,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 
 - `run_id` is `<YYYYMMDD-HHMMSS>-<experiment>-<short commit>`, for example `20261110-153000-search-latency-3f2a9c1`. In a recovery run, `<experiment>` is `recovery-<nn>-r<N>`, as in `20261110-153000-recovery-04-r2-3f2a9c1`, and `recovery-<nn>-<mode>-r<N>` in a mode other than `hazelcast`, as in `20261110-153000-recovery-04-polling-r2-3f2a9c1`.
 - The experiments are `ingest-throughput` (A), `index-throughput` (B), `search-latency` (C), `coordination-cost` and `resource-usage` (D), and `publication-visibility`, `broker-latency`, `recovery-delay` and `coordination-variants` (B). Each has its script, `scripts/bench/<experiment>.sh`, and each §8 row has its own, `scripts/recovery/<nn>-<row>.sh`. All of them write `benchmarks/runs/<run_id>/`, which is versioned.
-- Scripts only start containers and launch jars. The load generator and result processing (`coordination.csv`, `ingest.csv`, `index.csv`, `summary.csv` and the charts, with XChart) are Java, in the `bench` module.
+- Scripts only start containers and launch jars. The load generator and result processing (`coordination.csv`, `ingest.csv`, `workers.csv`, `index.csv`, `summary.csv` and the charts, with XChart) are Java, in the `bench` module.
 - Before measuring, the script checks the corpus against `workload/corpus.sha256` (id and SHA-256 of each text) and stops if it does not match: Gutenberg updates its texts, so two caches filled on different days may differ.
 - Books come from the local mirror, as in Stage 1, so the network is not measured. One factor changes at a time, with the hypothesis written before measuring.
 - An experiment that measures several configurations, or repeats one, in a single run splits it into trials, one per configuration and repetition, named `<factor>-<value>-…-rep-<n>`, as in `replicas-2-workers-8-rep-1`. Once each trial's stack is up, the script runs `bench manifest trial <run dir> <trial>`, which adds that trial's replicas and threads per service to `manifest.json`, and when the trial ends it saves the trial's logs in `logs/<trial>/`. `bench wait <state|queue> [<minimum> [<timeout seconds>]]` returns once that state or queue holds at least `<minimum>`, 1 by default, so a trial can start and end on a whole phase instead of the first book, and gives up after the timeout, 300 s by default. `bench wait generation <n> [<timeout seconds>]` returns once `GET /control/status` reports a `generation` of at least `<n>`, so a trial can end when a rebuild has switched generation (§5.4), and gives up after the same timeout and default. `bench wait snapshot <books> [<timeout seconds>]` returns once the snapshot of every `query` replica, asked directly at each address of the `query` service name rather than through nginx, holds at least `<books>` books in `GET /search/filters`, so a trial that measures publication visibility saves its logs only after every replica has logged the `snapshot` line of its last batch (§4.8), however late its periodic refresh comes.
@@ -767,6 +767,7 @@ If Mongo or Hazelcast fail halfway through a job outside these tests, the servic
 | `logs/<service>.log` | `docker compose logs --no-color --timestamps <service>` of each service, with the transition logs (§4.8); in a run with trials, `logs/<trial>/<service>.log` |
 | `coordination.csv` | Queue wait and time to publication for each book, and for each trial in a run with trials, derived from the transition logs in `logs/` |
 | `ingest.csv` | `ingest-throughput` only: one row per trial with its factors, its repetition, and the books, seconds and books per second of two windows. The whole window runs from the first download claim to the last book downloaded, and the steady one from the download that completes 10 % of the books to the one that completes 90 %. `summary.csv` holds them as `ingest_throughput` and `ingest_throughput_steady` |
+| `workers.csv` | `ingest-throughput` only: one row per trial with its factors, its repetition, its books and how its download workers spend their time, from the transition lines of each worker thread: the mean work of a book, from its download claim to its download, and the mean gap from a download to the same worker's next claim. `summary.csv` holds them as `download_work` and `download_gap`, and `bench resources` adds the CPU of each service during the ingestion |
 | `index.csv` | `index-throughput` only: one row per trial with its factors, its repetition, and the books, seconds and books per second of its whole window, from the first index claim to the last batch published, in the highest generation a batch of that trial was published in. `summary.csv` holds it as `index_throughput` |
 | `checks.json` | Recovery runs only: `GET /control/status` and the `/search` answers to `workload/queries.txt` once recovered (§8) |
 | `explain/` | `explain("executionStats")` of each measured Mongo query |
@@ -810,7 +811,7 @@ With `TARANTINO_SNAPSHOT_ON_PUBLISH=false`, `query` registers no listener in any
 - The URL is `failover:(tcp://activemq:61616)?timeout=1000`: a send while the broker is down fails after 1 s, and the handlers answer `503`. Each process opens one connection on a background thread that retries every 2 s; until it starts, the broker reports itself not connected and every queue handle throws.
 - Each `BookTasks` handle owns a session and a producer, and creates its consumer on its first `poll` or `drain`, with `consumer.prefetchSize=1` on `books-to-download` and `TARANTINO_INDEX_BATCH` on `books-to-index`. `published-batches` is a non-durable topic with one listener per `query` replica.
 - With `TARANTINO_ACTIVEMQ_PERSISTENT=false`: non-persistent delivery and automatic acknowledgement, the guarantees of an `IQueue`. With `true`: persistent delivery and client acknowledgement, called when the job returns, so a message not acknowledged when its consumer dies goes to another consumer.
-- Queue sizes come from the statistics plugin, `ActiveMQ.Statistics.Destination.<queue>`.
+- Queue sizes come from the statistics plugin, `ActiveMQ.Statistics.Destination.<queue>`, which answers on a temporary queue that is deleted after each read, because a temporary queue otherwise lives as long as its connection.
 
 ### 11.3 `polling`
 
