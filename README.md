@@ -15,6 +15,45 @@ through Hazelcast by default or in one of three other modes, and everything runs
   the search algorithm, the failure matrix and the benchmark runs.
 - [api/openapi.yaml](api/openapi.yaml) is the HTTP API in OpenAPI 3.1, derived from `SPEC.md` §6.
 
+## Structure
+
+The folders of this repository at run time, in the default mode `hazelcast`: `control` seeds the book ids of
+`workload/`, `crawler` downloads them into the datalake, `indexer` publishes them in batches and `query` searches them
+behind nginx. The four services share `common/` and one image built from the `Dockerfile`, and MongoDB is the source of
+truth. `SPEC.md` §2.1 has the full diagram, with every message, port and thread, and §11 what the other modes change.
+
+```mermaid
+flowchart TB
+  FE["Front-end"]
+  OPS["checks/, scripts/ and admin"]
+  WL["workload/<br/>book ids to seed"]
+  GB["Gutenberg's mirror<br/>or benchmarks/mirror/"]
+  BN["bench/<br/>recovery checks and results"]
+  RUNS["benchmarks/runs/"]
+  subgraph HOST["One host: docker-compose.yml"]
+    NG["nginx<br/>nginx/nginx.conf"]
+    CT["control ×1<br/>services/control"]
+    QD[["books-to-download<br/>Hazelcast queue"]]
+    CR["crawler ×N<br/>services/crawler"]
+    QI[["books-to-index<br/>Hazelcast queue"]]
+    IX["indexer ×N<br/>services/indexer"]
+    TP(("published-batches<br/>Hazelcast topic"))
+    Q["query ×N<br/>services/query"]
+    DL[("datalake volume")]
+    M[("MongoDB<br/>source of truth")]
+  end
+  FE -->|":8080"| NG
+  OPS -->|":8080 and :8081"| NG
+  NG --> Q
+  NG --> CT & CR & IX
+  WL --> CT
+  CT --> QD --> CR --> QI --> IX --> TP --> Q
+  GB --> CR
+  CR --> DL --> IX
+  CT & CR & IX & Q <--> M
+  OPS -.-> BN --> RUNS
+```
+
 ## Status
 
 The system runs end to end in its five coordination modes: `control` seeds the candidates and reconciles, `crawler`
