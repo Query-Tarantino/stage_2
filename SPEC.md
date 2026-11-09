@@ -122,6 +122,7 @@ stage_2/
 │   ├── fill_cache.sh        from Stage 1
 │   ├── bench/<experiment>.sh, trials.sh, modes.sh, all.sh
 │   └── recovery/<nn>-<row>.sh
+├── docs/running.md          running and configuration
 ├── workload/                sample_ids.txt, book_ids.txt, queries.txt, stopwords.txt, corpus.sha256
 └── benchmarks/README.md, benchmarks/runs/<run_id>/
 ```
