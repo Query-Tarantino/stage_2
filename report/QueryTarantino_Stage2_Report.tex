@@ -2035,7 +2035,7 @@ Table~\ref{tab:delay} & \run{20261106-073911-recovery-delay-c1376c7} & \code{./s
 
 Each table and chart of this report takes its numbers from the \code{summary.csv}, \code{variants.csv},
 \code{pairs.csv} or \code{workers.csv} of the run named in its caption. The rows they use are written into this
-report's source, \code{QueryTarantino_Stage2_Report.tex}, at the root of the repository. The medians of
+report's source, \code{QueryTarantino_Stage2_Report.tex}, in the \code{report/} folder of the repository. The medians of
 Table~\ref{tab:delay} come from \code{recovery-delay.csv}, over the books of every run of each row, and in row 12 apart
 by their \code{status}. \code{bench ingest-workers} and \code{bench resources} added \code{workers.csv} and the CPU rows
 of the ingestion run after the campaign, from the transition lines and the \code{stats.csv} the run already kept. To
@@ -2043,7 +2043,7 @@ summarize a run again, delete its \code{summary.csv} and run its \code{bench} co
 \begin{lstlisting}
 java -jar bench/target/bench-1.0-SNAPSHOT.jar coordination benchmarks/runs/<run_id>
 \end{lstlisting}
-\code{bench charts} redraws the charts of a run. The report itself builds from the root of the repository with:
+\code{bench charts} redraws the charts of a run. The report itself builds from the \code{report/} folder with:
 \begin{lstlisting}
 tectonic -X compile QueryTarantino_Stage2_Report.tex
 \end{lstlisting}

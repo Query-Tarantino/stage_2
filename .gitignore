@@ -4,7 +4,7 @@ target/
 !**/src/test/**/target/
 .kotlin
 *.pdf
-!/QueryTarantino_Stage2_Report.pdf
+!/report/QueryTarantino_Stage2_Report.pdf
 .idea/
 plan-stage-2.md
 CLAUDE.md
